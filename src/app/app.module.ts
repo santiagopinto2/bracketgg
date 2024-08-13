@@ -3,14 +3,20 @@ import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { SharedMaterialModule } from './shared-material/shared-material.module';
+import { BracketComponent } from './components/bracket/bracket.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    BracketComponent
   ],
   imports: [
     BrowserModule,
-    AppRoutingModule
+    AppRoutingModule,
+    BrowserAnimationsModule,
+    SharedMaterialModule
   ],
   providers: [],
   bootstrap: [AppComponent]
