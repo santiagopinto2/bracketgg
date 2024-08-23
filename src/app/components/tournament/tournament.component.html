@@ -1,7 +1,7 @@
 <app-search></app-search>
 
 <div class="row" *ngFor="let maxR of maxRound; let side = index; let last = last" style="margin-top: 20px;">
-    <!-- <div class="col d-flex flex-column justify-content-around"
+    <div class="col d-flex flex-column justify-content-around"
         *ngFor="let _ of [].constructor(maxRound[side]); let i = index"
         style="height: 1000px; max-width: 250px; margin-right: 20px;">
         <div class="row" *ngFor="let set of getRoundSets((i + 1) * maxRoundModifier[side])"
@@ -21,7 +21,7 @@
                 </div>
             </div>
         </div>
-    </div> -->
+    </div>
 
-    <!-- <hr *ngIf="winnersIndex != -1 && !last" style="margin-top: 50px;"> -->
+    <hr *ngIf="winnersIndex != -1 && !last" style="margin-top: 50px;">
 </div>

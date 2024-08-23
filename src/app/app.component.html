@@ -22,14 +22,13 @@
 </mat-toolbar>
 
 <mat-sidenav-container class="sidenav-container">
-    <mat-sidenav #sidenav>
-        <mat-nav-list style="width: 150px; padding: 0">
-            <a mat-list-item class="sidenav-option" [routerLink]="'/bracket'" (click)="sidenav.close()"> Bracket </a>
-            <a mat-list-item class="sidenav-option" [routerLink]="'/about'" (click)="sidenav.close()"> About </a>
+    <mat-sidenav #sidenav mode="side" opened="true">
+        <mat-nav-list style="width: 250px; padding: 0">
+            <a mat-list-item *ngFor="let event of events" class="sidenav-option" [routerLink]="'/' + event.slug">{{event.name}}</a>
         </mat-nav-list>
     </mat-sidenav>
 
-    <mat-sidenav-content>
+    <mat-sidenav-content style="margin-left: 251px">
         <div>
             <router-outlet></router-outlet>
         </div>

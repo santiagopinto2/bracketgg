@@ -1,25 +1,37 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { map, mergeMap } from 'rxjs';
 import { StartggService } from 'src/app/services/startgg/startgg.service';
+import { TournamentDataService } from 'src/app/services/tournamentData/tournamentData.service';
 
 @Component({
-    selector: 'app-bracket',
-    templateUrl: './bracket.component.html',
-    styleUrls: ['./bracket.component.scss']
+    selector: 'app-tournament',
+    templateUrl: './tournament.component.html',
+    styleUrls: ['./tournament.component.scss']
 })
-export class BracketComponent {
+export class TournamentComponent implements OnInit {
 
     sets = [];
     winnersIndex = -1;
     maxRound = [0, 0];
     maxRoundModifier = [1, -1];
 
-    constructor(private startggService: StartggService) {
-        //a-la-zeub-3-phryge-la-goat/event/tournoi
-        //fighthouse-weeklies-august-13th/event/rw7-78-super-smash-bros-ultimate
-        //port-city-smash-heroes-beacon-117-aug-13-2024/event/gg-strive
-        //tgz-smashing-tuesdays-141/event/ultimate-singles
-        /* this.startggService.getEvent(`tournament/monday-night-melee-424/event/melee-singles`)
+    constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService) {
+    }
+
+    ngOnInit() {
+        this.tournamentDataService.currentUrl.subscribe(url => {
+            /* this.getBracket(); */
+        })
+
+        this.tournamentDataService.currentEvent.subscribe(event => {
+            this.getBracket(event);
+        })
+    }
+
+    getBracket(eventId) {
+        if (eventId == -1) return;
+
+        this.startggService.getEventById(eventId)
             .pipe(
                 map(data => {
                     if (data.errors) { console.log('error', data.errors[0].message); return; }
@@ -41,9 +53,7 @@ export class BracketComponent {
 
                 this.maxRound[0] = this.sets[this.sets.length - 1].round;
                 this.maxRound[1] = Math.abs(this.sets[0].round);
-
-                console.log('test1', this.sets)
-            }); */
+            });
     }
 
     getRoundSets(round) {

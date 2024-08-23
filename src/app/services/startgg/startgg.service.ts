@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 export class StartggService {
 
     private baseUrl: string = 'https://api.start.gg/gql/alpha';
-    private apiKey: string = 'ENTER API KEY';
+    private apiKey: string = 'API KEY';
 
     headers = new HttpHeaders({
         'Authorization': `Bearer ${this.apiKey}`,
@@ -18,10 +18,41 @@ export class StartggService {
 
     constructor(private http: HttpClient) { }
 
-    getEvent(tournamentSlug): Observable<any> {
+    getTournamentEvents(tourneySlug): Observable<any> {
         const body = {
             query: `query {
-                event(slug: "${tournamentSlug}") {
+                tournament(slug: "${tourneySlug}") {
+                    id
+                    name
+                    events {
+                        id
+                        name
+                        slug
+                    }
+                }
+            }`
+        };
+
+        return this.http.post(this.baseUrl, body, { headers: this.headers });
+    }
+
+    getEventBySlug(tourneySlug): Observable<any> {
+        const body = {
+            query: `query {
+                event(slug: "${tourneySlug}") {
+                    id
+                    name
+                }
+            }`
+        };
+
+        return this.http.post(this.baseUrl, body, { headers: this.headers });
+    }
+    
+    getEventById(eventId): Observable<any> {
+        const body = {
+            query: `query {
+                event(id: "${eventId}") {
                     id
                     name
                 }
@@ -50,7 +81,6 @@ export class StartggService {
                             round
                             fullRoundText
                             winnerId
-                            displayScore
                             slots {
                                 id
                                 entrant {
