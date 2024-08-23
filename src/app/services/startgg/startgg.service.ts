@@ -36,6 +36,48 @@ export class StartggService {
         return this.http.post(this.baseUrl, body, { headers: this.headers });
     }
 
+    getPhaseSets(phaseId): Observable<any> {
+        const body = {
+            query: `query {
+                phase(id: ${phaseId}) {
+                    id
+                    name
+                    sets(
+                        page: 1
+                        perPage: 100
+                        sortType: ROUND
+                    ) {
+                        pageInfo {
+                            total
+                        }
+                        nodes {
+                            id
+                            round
+                            fullRoundText
+                            winnerId
+                            slots {
+                                id
+                                entrant {
+                                    id
+                                    name
+                                }
+                                standing {
+                                    stats {
+                                        score {
+                                            value
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                  }
+            }`
+        };
+
+        return this.http.post(this.baseUrl, body, { headers: this.headers });
+    }
+
     getEventBySlug(tourneySlug): Observable<any> {
         const body = {
             query: `query {
@@ -48,13 +90,17 @@ export class StartggService {
 
         return this.http.post(this.baseUrl, body, { headers: this.headers });
     }
-    
+
     getEventById(eventId): Observable<any> {
         const body = {
             query: `query {
                 event(id: "${eventId}") {
                     id
                     name
+                    phases(phaseId: 0) {
+                        id
+                        name
+                    }
                 }
             }`
         };
@@ -62,7 +108,7 @@ export class StartggService {
         return this.http.post(this.baseUrl, body, { headers: this.headers });
     }
 
-    getSets(eventId): Observable<any> {
+    getEventSets(eventId): Observable<any> {
         const body = {
             query: `query {
                 event(id: ${eventId}) {
