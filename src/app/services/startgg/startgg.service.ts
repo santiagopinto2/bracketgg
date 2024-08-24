@@ -36,12 +36,37 @@ export class StartggService {
         return this.http.post(this.baseUrl, body, { headers: this.headers });
     }
 
-    getPhaseSets(phaseId): Observable<any> {
+    getPhase(phaseId): Observable<any> {
         const body = {
             query: `query {
                 phase(id: ${phaseId}) {
                     id
                     name
+                    phaseGroups(query : {
+                        page: 1
+                        perPage: 100
+                    }) {
+                        pageInfo {
+                            total
+                        }
+                        nodes {
+                            id
+                            displayIdentifier
+                        }
+                    }
+                }
+            }`
+        };
+
+        return this.http.post(this.baseUrl, body, { headers: this.headers });
+    }
+
+    getPhaseGroup(phaseGroupId): Observable<any> {
+        const body = {
+            query: `query {
+                phaseGroup(id: ${phaseGroupId}) {
+                    id
+                    displayIdentifier
                     sets(
                         page: 1
                         perPage: 100

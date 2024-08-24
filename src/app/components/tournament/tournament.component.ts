@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { map, mergeMap } from 'rxjs';
 import { StartggService } from 'src/app/services/startgg/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData/tournamentData.service';
 
@@ -12,7 +11,7 @@ export class TournamentComponent implements OnInit {
 
     sets = [];
     winnersIndex = -1;
-    maxRound = [0, 0];
+    maxRounds = [];
     maxRoundModifier = [1, -1];
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService) {
@@ -24,6 +23,7 @@ export class TournamentComponent implements OnInit {
         })
 
         this.tournamentDataService.currentEvent.subscribe(event => {
+            this.sets = [];
             this.getBracket(event);
         })
     }
@@ -33,37 +33,56 @@ export class TournamentComponent implements OnInit {
 
         this.startggService.getEventById(eventId).subscribe(data => {
             if (data.errors) { console.log('error', data.errors[0].message); return; }
-            if (data.data.event.phases.length == 1) {
+            /* if (data.data.event.phases.length == 1) {
                 this.getPhase(data.data.event.phases[0].id);
-            }
+            } */
+
+            //temp
+            this.getPhase(data.data.event.phases[0].id);
         })
     }
 
     getPhase(phaseId) {
-        this.startggService.getPhaseSets(phaseId).subscribe(data => {
+        this.startggService.getPhase(phaseId).subscribe(data => {
             if (data.errors) { console.log('error', data.errors[0].message); return; }
-            this.sets = data.data.phase.sets.nodes;
 
-            if (this.sets[this.sets.length - 1].fullRoundText === 'Grand Final Reset') {
-                if (this.sets[this.sets.length - 1].slots[0].entrant) this.sets[this.sets.length - 1].round++;
-                else this.sets.pop();
+            for (let i = 0; i < data.data.phase.phaseGroups.nodes.length; i++) {
+                this.sets.push();
+                this.getPhaseGroup(data.data.phase.phaseGroups.nodes[i].id, i);
             }
-
-            this.winnersIndex = this.sets.findIndex(set => set.round > 0);
-            let losersRoundChange = Math.abs(this.sets[this.winnersIndex - 1].round) - 1;
-            for (let i = 0; i < this.winnersIndex; i++) this.sets[i].round += losersRoundChange;
-
-            this.maxRound[0] = this.sets[this.sets.length - 1].round;
-            this.maxRound[1] = Math.abs(this.sets[0].round);
         })
     }
 
-    getRoundSets(round) {
-        return this.sets.filter(set => set.round == round);
+    getPhaseGroup(phaseGroupId, phaseGroupIndex) {
+        this.startggService.getPhaseGroup(phaseGroupId).subscribe(data => {
+            let phaseGroup = data.data.phaseGroup;
+            if (phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].fullRoundText === 'Grand Final Reset') {
+                if (phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].slots[0].entrant) phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].round++;
+                else phaseGroup.sets.nodes.pop();
+            }
+
+            this.winnersIndex = phaseGroup.sets.nodes.findIndex(set => set.round > 0);
+            let losersRoundChange = Math.abs(phaseGroup.sets.nodes[this.winnersIndex - 1].round) - 1;
+            for (let i = 0; i < this.winnersIndex; i++) phaseGroup.sets.nodes[i].round += losersRoundChange;
+
+            let winnersMaxRound = phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].round;
+            let losersMaxRound = Math.abs(phaseGroup.sets.nodes[0].round);
+            this.maxRounds.push([winnersMaxRound, losersMaxRound]);
+
+            this.sets[phaseGroupIndex] = phaseGroup;
+        })
+    }
+
+    getRoundSets(phaseGroup, round) {
+        return phaseGroup ? phaseGroup.sets.nodes.filter(set => set.round == round) : [];
     }
 
     isWinner(set, slot) {
         return slot.entrant ? slot.entrant.id == set.winnerId : false;
+    }
+
+    getPhaseGroupIdentifier(phaseGroup) {
+        return phaseGroup ? phaseGroup.displayIdentifier : '';
     }
 
     getScore(slot, set) {
