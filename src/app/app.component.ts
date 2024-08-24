@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme/color-scheme.service';
 import { StartggService } from './services/startgg/startgg.service';
-import { NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData/tournamentData.service';
 
@@ -26,28 +26,44 @@ export class AppComponent implements OnInit, AfterViewInit {
                 filter(event => event instanceof NavigationEnd)
             )
             .subscribe(() => {
-                if (this.router.url.includes('/tournament')) {
-                    this.tournamentDataService.changeUrl(this.router.url.slice(1));
-
-                    let tourneySlug = this.router.url.slice(12);
-                    tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'))
-                    this.startggService.getTournamentEvents(tourneySlug).subscribe(data => {
-                        this.events = data.data.tournament.events;
-                    })
-
-                    if (this.router.url.includes('/event/')) {
-                        let eventSlug = this.router.url.slice(1);
-                        this.startggService.getEventBySlug(eventSlug).subscribe(data => {
-                            this.tournamentDataService.changeEvent(data.data.event.id);
-                        })
-                    }
-                }
+                this.parseUrl(decodeURIComponent(decodeURIComponent(this.router.url)));
             });
     }
 
     ngAfterViewInit() {
         this.windowSize = window.screen.width;
         this.cdr.detectChanges();
+    }
+
+    parseUrl(url) {
+        if (url.includes('/tournament')) {
+            let tourneySlug = url.slice(12);
+            tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'))
+            this.startggService.getTournamentEvents(tourneySlug).subscribe(data => {
+                this.events = data.data.tournament.events;
+            })
+
+            if (url.includes('/event/')) {
+                let eventData: any = {};
+
+                if (url.includes('/brackets?filter=')) eventData.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
+                else if (url.includes('/brackets/')) {
+                    let bracketEndIndex = url.indexOf('/brackets/') + '/brackets/'.length;
+                    if (url.indexOf('/', bracketEndIndex) == -1) eventData.phaseId = Number(url.slice(bracketEndIndex));
+                    else eventData.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
+                }
+
+                let eventSlug = '';
+                if (url.indexOf('/', url.indexOf('/event/') + '/event/'.length) == -1) eventSlug = url.slice(1);
+                else eventSlug = url.slice(1, url.indexOf('/', url.indexOf('/event/') + '/event/'.length));
+
+                this.startggService.getEventBySlug(eventSlug).subscribe(data => {
+                    eventData.eventId = data.data.event.id;
+                    this.tournamentDataService.changeEvent(eventData);
+                })
+            }
+            else this.tournamentDataService.changeEvent({});
+        }
     }
 
     @HostListener('window:resize', ['$event'])
