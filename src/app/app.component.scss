@@ -5,6 +5,13 @@
 .sidenav-container {
     width: 100%;
     min-width: 100%;
+    height: calc(100% - 64px);
+}
+
+@media(max-width: 598px) {
+    .sidenav-container {
+        height: calc(100% - 56px);
+    }
 }
 
 .header-spacer {

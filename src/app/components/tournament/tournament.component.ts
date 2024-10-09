@@ -96,7 +96,10 @@ export class TournamentComponent implements OnInit {
 
     getScore(slot, set) {
         if (!slot.standing) return '‎';
-        if (slot.standing.stats.score.value) return slot.standing.stats.score.value;
+        if (slot.standing.stats.score.value) {
+            //if (slot.standing.stats.score.value == -1) return 'DQ';
+            return slot.standing.stats.score.value;
+        }
 
         let otherSlot = set.slots.find(s => s.id != slot.id);
         return otherSlot.standing ? 0 : '‎';
