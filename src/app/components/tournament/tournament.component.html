@@ -22,10 +22,11 @@
 <div class="row" *ngFor="let phaseGroup of phaseGroups; let i = index let lastPhaseGroup = last">
     <p *ngIf="phaseGroups.length > 1">Pool {{getPhaseGroupIdentifier(phaseGroup)}}</p>
 
-    <div class="row" *ngFor="let maxR of maxRounds[i]; let side = index; let losers = last" style="margin-top: 20px;">
-        <div class="col d-flex flex-column justify-content-around"
+    <div class="row flex-nowrap" *ngFor="let maxR of maxRounds[i]; let side = index; let losers = last"
+        style="margin-top: 20px;">
+        <div class="col d-flex flex-column justify-content-around" [ngClass]="{ 'losers-bracket': losers }"
             *ngFor="let _ of [].constructor(maxRounds[i][side]); let j = index"
-            style="height: 1000px; max-width: 250px; margin-right: 20px;">
+            style="height: 1000px; max-width: 250px; min-width: 250px; padding-right: 32px;">
             <div class="row" *ngFor="let set of getRoundSets(phaseGroup, (j + 1) * maxRoundModifier[side])"
                 style="border: 1px white solid; border-radius: 4px">
 
@@ -37,7 +38,7 @@
                     </div>
                 </div>
 
-                <div class="col p-0" style="max-width: 20px; border-left: 1px white solid; overflow: hidden !important">
+                <div class="col p-0" style="max-width: 20px; border-left: 1px white solid;">
                     <div class="row set-row" *ngFor="let slot of set.slots" [ngClass]="isWinner(set, slot, 'score')">
                         <div class="d-flex justify-content-center p-0">
                             {{getScore(slot, set)}}
@@ -47,7 +48,7 @@
             </div>
         </div>
 
-        <hr *ngIf="winnersIndex != -1 && !losers" style="margin-top: 50px;">
+        <!-- <hr *ngIf="winnersIndex != -1 && !losers" style="margin-top: 50px;"> -->
     </div>
 
     <hr *ngIf="winnersIndex != -1 && !lastPhaseGroup" style="margin-top: 50px; border-top: solid 10px">
