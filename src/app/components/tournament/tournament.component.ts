@@ -86,8 +86,9 @@ export class TournamentComponent implements OnInit {
         return phaseGroup ? phaseGroup.sets.nodes.filter(set => set.round == round) : [];
     }
 
-    isWinner(set, slot) {
-        return slot.entrant ? slot.entrant.id == set.winnerId : false;
+    isWinner(set, slot, typeOfDisplay) {
+        if (!slot.entrant) return '';
+        return slot.entrant.id == set.winnerId ? `winner-${typeOfDisplay}` : `loser-${typeOfDisplay}`;
     }
 
     getPhaseGroupIdentifier(phaseGroup) {
