@@ -26,7 +26,9 @@ export class TournamentComponent implements OnInit {
         })
 
         this.tournamentDataService.currentEvent.subscribe(event => {
+            this.phases = [];
             this.phaseGroups = [];
+            this.maxRounds = [];
             if (!!event.phaseId) {
                 this.getPhasesGeneral(event);
                 this.getPhase(event.phaseId);
@@ -79,7 +81,9 @@ export class TournamentComponent implements OnInit {
     }
 
     changePhase(direction) {
-        this.router.navigate([this.router.url.slice(0, this.router.url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
+        let url = this.router.url;
+        if (url.indexOf('/brackets') == -1) url += '/brackets';
+        this.router.navigate([url.slice(0, url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
     }
 
     getRoundSets(phaseGroup, round) {

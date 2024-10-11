@@ -38,10 +38,13 @@ export class AppComponent implements OnInit, AfterViewInit {
     parseUrl(url) {
         if (url.includes('/tournament')) {
             let tourneySlug = url.slice(12);
-            tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'))
-            this.startggService.getTournamentEvents(tourneySlug).subscribe(data => {
-                this.events = data.data.tournament.events;
-            })
+
+            if (tourneySlug.length > 0) {
+                tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'))
+                this.startggService.getTournamentEvents(tourneySlug).subscribe(data => {
+                    this.events = data.data.tournament.events;
+                })
+            }
 
             if (url.includes('/event/')) {
                 let eventData: any = {};
@@ -59,7 +62,14 @@ export class AppComponent implements OnInit, AfterViewInit {
 
                 this.startggService.getEventBySlug(eventSlug).subscribe(data => {
                     eventData.eventId = data.data.event.id;
-                    this.tournamentDataService.changeEvent(eventData);
+
+                    if (url.slice(url.indexOf('/event/') + 7).indexOf('/') == -1) {
+                        this.startggService.getEventById(eventData.eventId).subscribe(eventByIdData => {
+                            eventData.phaseId = eventByIdData.data.event.phases[0].id;
+                            this.tournamentDataService.changeEvent(eventData);
+                        })
+                    }
+                    else this.tournamentDataService.changeEvent(eventData);
                 })
             }
             else this.tournamentDataService.changeEvent({});

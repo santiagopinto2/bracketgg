@@ -1,5 +1,12 @@
+.round {
+    max-width: 250px;
+    min-width: 250px;
+    padding-right: 32px;
+}
+
 .losers-bracket {
     border-top: 1px solid gray;
+    padding-top: 10px;
 }
 
 .set-row:first-child {
@@ -23,6 +30,7 @@
 .loser-score {
     background-color: #636363;
 }
+
 /* .test:before {
     content: '';
     position: relative;
