@@ -33,19 +33,19 @@
                     <div class="col-12">
                         <div class="row flex-nowrap">
                             <div class="col d-flex justify-content-center round"
-                                [ngClass]="{ 'losers-bracket': losers }"
                                 *ngFor="let _ of [].constructor(maxRounds[i][side]); let j = index">
-                                <p style="font-size: 18px; margin-bottom: 0;">{{phaseGroup ? getRoundSets(phaseGroup, (j
+                                <p class="full-round-text">{{phaseGroup ?
+                                    getRoundSets(phaseGroup, (j
                                     + 1) * maxRoundModifier[side])[0].fullRoundText : ''}}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-12" style="margin-top: -30px;">
                         <div class="row flex-nowrap" style="height: 800px;">
                             <div class="col d-flex flex-column justify-content-around round"
                                 *ngFor="let _ of [].constructor(maxRounds[i][side]); let j = index">
-                                <div class="row"
+                                <div class="row set"
                                     *ngFor="let set of getRoundSets(phaseGroup, (j + 1) * maxRoundModifier[side])"
                                     style="border: 1px white solid; border-radius: 4px">
 

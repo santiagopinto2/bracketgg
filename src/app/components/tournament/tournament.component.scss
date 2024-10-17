@@ -1,12 +1,21 @@
 .round {
     max-width: 250px;
     min-width: 250px;
-    padding-right: 32px;
+    /* padding-right: 32px; */
 }
 
-.losers-bracket {
-    border-top: 1px solid gray;
-    padding-top: 10px;
+.full-round-text {
+    margin-bottom: 0;
+    padding: 8px 22px;
+    font-size: 16px;
+    /* font-weight: bold; */
+    background-color: #424242;
+    border-radius: 4px;
+}
+
+.set {
+    width: 204px;
+    margin-left: 11px;
 }
 
 .set-row:first-child {
