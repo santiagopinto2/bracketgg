@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme/color-scheme.service';
 import { StartggService } from './services/startgg/startgg.service';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData/tournamentData.service';
 

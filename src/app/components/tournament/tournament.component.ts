@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { StartggService } from 'src/app/services/startgg/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData/tournamentData.service';
@@ -8,7 +8,7 @@ import { TournamentDataService } from 'src/app/services/tournamentData/tournamen
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss']
 })
-export class TournamentComponent implements OnInit {
+export class TournamentComponent implements OnInit, AfterViewInit {
 
     phases = [];
     currentPhaseIndex = -1;
@@ -16,6 +16,7 @@ export class TournamentComponent implements OnInit {
     winnersIndex = -1;
     maxRounds = [];
     maxRoundModifier = [1, -1];
+    isGrabbing = false;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
     }
@@ -36,10 +37,43 @@ export class TournamentComponent implements OnInit {
         })
     }
 
-    getPhasesGeneral(event) {this.startggService.getEventById(event.eventId).subscribe(data => {
+    ngAfterViewInit() {
+        // Horizontal drag
+        let mouseDown = false;
+        let startX, scrollLeft;
+        const slider = document.querySelector<HTMLElement>('.mat-sidenav-content');
+
+        const startDragging = event => {
+            this.isGrabbing = true;
+            mouseDown = true;
+            startX = event.pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+        }
+
+        const stopDragging = event => {
+            this.isGrabbing = false;
+            mouseDown = false;
+        }
+
+        const move = event => {
+            event.preventDefault();
+            if (!mouseDown) return;
+            const x = event.pageX - slider.offsetLeft;
+            const scroll = x - startX;
+            slider.scrollLeft = scrollLeft - scroll;
+        }
+
+        slider.addEventListener('mousemove', move, false);
+        slider.addEventListener('mousedown', startDragging, false);
+        slider.addEventListener('mouseup', stopDragging, false);
+        slider.addEventListener('mouseleave', stopDragging, false);
+    }
+
+    getPhasesGeneral(event) {
+        this.startggService.getEventById(event.eventId).subscribe(data => {
             if (data.errors) { console.log('error', data.errors[0].message); return; }
             this.phases = data.data.event.phases;
-            
+
             for (let i = 0; i < this.phases.length; i++) {
                 if (this.phases[i].id == event.phaseId) {
                     this.currentPhaseIndex = i;
