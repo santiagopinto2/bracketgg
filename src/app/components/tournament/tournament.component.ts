@@ -27,9 +27,12 @@ export class TournamentComponent implements OnInit, AfterViewInit {
         })
 
         this.tournamentDataService.currentEvent.subscribe(event => {
+            // Clear all data
             this.phases = [];
             this.phaseGroups = [];
             this.maxRounds = [];
+
+            // Get all phase and phase group data
             if (!!event.phaseId) {
                 this.getPhasesGeneral(event);
                 this.getPhase(event.phaseId);
@@ -39,6 +42,7 @@ export class TournamentComponent implements OnInit, AfterViewInit {
 
     ngAfterViewInit() {
         // Horizontal drag
+
         let mouseDown = false;
         let startX, scrollLeft;
         const slider = document.querySelector<HTMLElement>('.mat-sidenav-content');
@@ -88,6 +92,7 @@ export class TournamentComponent implements OnInit, AfterViewInit {
         this.startggService.getPhase(phaseId).subscribe(data => {
             if (data.errors) { console.log('error', data.errors[0].message); return; }
 
+            // Get all phase groups within the phase
             for (let i = 0; i < data.data.phase.phaseGroups.nodes.length; i++) {
                 this.phaseGroups.push();
                 this.maxRounds.push([]);
@@ -101,19 +106,24 @@ export class TournamentComponent implements OnInit, AfterViewInit {
             if (data.errors) { console.log('error', data.errors[0].message); return; }
             
             let phaseGroup = data.data.phaseGroup;
-            if (phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].fullRoundText === 'Grand Final Reset') {
-                if (phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].slots[0].entrant) phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].round++;
-                else phaseGroup.sets.nodes.pop();
+            let phaseGroupSets = phaseGroup.sets.nodes;
+
+            // Corrects the data to account for a grand final reset
+            if (phaseGroupSets[phaseGroupSets.length - 1].fullRoundText === 'Grand Final Reset') {
+                if (phaseGroupSets[phaseGroupSets.length - 1].slots[0].entrant) phaseGroupSets[phaseGroupSets.length - 1].round++;
+                else phaseGroupSets.pop();
             }
 
-            this.winnersIndex = phaseGroup.sets.nodes.findIndex(set => set.round > 0);
-            let losersRoundChange = Math.abs(phaseGroup.sets.nodes[this.winnersIndex - 1].round) - 1;
+            // Standardizes the round data for each set
+            this.winnersIndex = phaseGroupSets.findIndex(set => set.round > 0);
+            let losersRoundChange = Math.abs(phaseGroupSets[this.winnersIndex - 1].round) - 1;
             if (losersRoundChange != 0) {
-                for (let i = 0; i < this.winnersIndex; i++) phaseGroup.sets.nodes[i].round += losersRoundChange;
+                for (let i = 0; i < this.winnersIndex; i++) phaseGroupSets[i].round += losersRoundChange;
             }
 
-            let winnersMaxRound = phaseGroup.sets.nodes[phaseGroup.sets.nodes.length - 1].round;
-            let losersMaxRound = Math.abs(phaseGroup.sets.nodes[0].round);
+            // Stores the max round number for each side of bracket
+            let winnersMaxRound = phaseGroupSets[phaseGroupSets.length - 1].round;
+            let losersMaxRound = Math.abs(phaseGroupSets[0].round);
             this.maxRounds[phaseGroupIndex] = [winnersMaxRound, losersMaxRound];
 
             this.phaseGroups[phaseGroupIndex] = phaseGroup;
