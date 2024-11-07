@@ -1,9 +1,6 @@
-<form [formGroup]="eventFormControl" (ngSubmit)="submit()">
-    <mat-form-field hideRequiredMarker="true">
+<form style="width: 250px; padding: 0 16px" [formGroup]="eventFormControl" (ngSubmit)="submit()">
+    <mat-form-field style="width: 100%">
         <mat-label>Event Link</mat-label>
         <input formControlName="url" matInput>
     </mat-form-field>
-    <button mat-icon-button type="submit">
-        <mat-icon fontIcon="arrow_forward"></mat-icon>
-    </button>
 </form>

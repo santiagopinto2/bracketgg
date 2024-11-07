@@ -24,6 +24,7 @@
 <mat-sidenav-container class="sidenav-container">
     <mat-sidenav #sidenav mode="side" opened="true">
         <mat-nav-list style="width: 250px; padding: 0">
+            <div mat-list-item style="margin-top: 20px"><app-search></app-search></div>
             <a mat-list-item *ngFor="let event of events" class="sidenav-option" [routerLink]="'/' + event.slug">{{event.name}}</a>
         </mat-nav-list>
     </mat-sidenav>

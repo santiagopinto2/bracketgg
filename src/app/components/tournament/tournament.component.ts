@@ -20,7 +20,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRounds = [];
     maxRoundModifier = [1, -1];
     isGrabbing = false;
-    bracketSideHeight = 700;
     setHeight = 42;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
