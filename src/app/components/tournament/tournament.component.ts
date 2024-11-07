@@ -160,7 +160,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         return phaseGroup.sets.nodes[1][Math.abs(round) - 1];
     }
 
-    getSetMargin(phaseGroup, round, set) {
+    getSetMargin(phaseGroup, round, side, set) {
         let sets = this.getRoundSets(phaseGroup, round);
         let setCount = sets.length;
         let rightRoundSets = this.getRoundSets(phaseGroup, (round + Math.sign(round)));
@@ -170,7 +170,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // If the round set count is a standard amount
         if (setCount == rightRoundSetCount || setCount / 2 == rightRoundSetCount || rightRoundSetCount == 0) {
-            let marginHeight = this.getStandardMarginHeight(setCount);
+            let marginHeight = this.getStandardMarginHeight(phaseGroup, side, setCount);
             return `${marginHeight}px 0`;
         }
 
@@ -188,7 +188,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 let setIndex = (set.id - firstSetId) / 2;
                 let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
-                let marginTop = this.getStandardMarginHeight(setCountFull);
+                let marginTop = this.getStandardMarginHeight(phaseGroup, side, setCountFull);
                 let marginBottom = marginTop + (this.setHeight + marginTop * 2) * (nextSetIndex - setIndex - 1);
                 return `${marginTop}px 0 ${marginBottom}px`;
             }
@@ -201,11 +201,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
                 if (setIndex + 1 == nextSetIndex) {
-                    let marginHeight = this.getStandardMarginHeight(setCountFull);
+                    let marginHeight = this.getStandardMarginHeight(phaseGroup, side, setCountFull);
                     return `${marginHeight}px 0`;
                 }
                 if (setIndex + 2 == nextSetIndex) {
-                    let marginHeight = this.getStandardMarginHeight(setCountFull) * 2 + this.setHeight / 2;
+                    let marginHeight = this.getStandardMarginHeight(phaseGroup, side, setCountFull) * 2 + this.setHeight / 2;
                     return `${marginHeight}px 0`;
                 }
             }
@@ -228,7 +228,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 }
                 let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
-                let marginHeight = this.getStandardMarginHeight(setCountFull);
+                let marginHeight = this.getStandardMarginHeight(phaseGroup, side, setCountFull);
                 let marginTop = setIndexRelative == 0 ? marginHeight + (this.setHeight + marginHeight * 2) * setIndex : marginHeight;
                 let marginBottom = marginHeight + (this.setHeight + marginHeight * 2) * (nextSetIndex - setIndex - 1);
 
@@ -246,7 +246,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             let setIndex = (set.id - firstSetId) / 2;
             let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
-            let marginTop = this.getStandardMarginHeight(setCountFull);
+            let marginTop = this.getStandardMarginHeight(phaseGroup, side, setCountFull);
             let marginBottom = marginTop + (this.setHeight + marginTop * 2) * (nextSetIndex - setIndex - 1);
             return `${marginTop}px 0 ${marginBottom}px`;
         }
@@ -260,11 +260,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
             if (setIndex + 1 == nextSetIndex) {
-                let marginHeight = this.getStandardMarginHeight(setCountFull);
+                let marginHeight = this.getStandardMarginHeight(phaseGroup, side, setCountFull);
                 return `${marginHeight}px 0`;
             }
             if (setIndex + 2 == nextSetIndex) {
-                let marginHeight = this.getStandardMarginHeight(setCountFull) * 2 + this.setHeight / 2;
+                let marginHeight = this.getStandardMarginHeight(phaseGroup, side, setCountFull) * 2 + this.setHeight / 2;
                 return `${marginHeight}px 0`;
             }
         }
@@ -358,14 +358,20 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         return nextSetIndex == -1 ? setCountFull : nextSetIndex;
     }
 
-    getStandardMarginHeight(setCountFull) {
-        return (this.bracketSideHeight - setCountFull * this.setHeight) / (setCountFull * 2);
+    getStandardMarginHeight(phaseGroup, side, setCountFull) {
+        return (this.getPhaseGroupSideHeight(phaseGroup, side) - setCountFull * this.setHeight) / (setCountFull * 2);
     }
 
     changePhase(direction) {
         let url = this.router.url;
         if (url.indexOf('/brackets') == -1) url += '/brackets';
         this.router.navigate([url.slice(0, url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
+    }
+
+    getPhaseGroupSideHeight(phaseGroup, side) {
+        let multiplier = 91;
+        if (side == 0) return Math.max(this.getRoundSets(phaseGroup, 1).length, this.getRoundSets(phaseGroup, 2).length) * multiplier;
+        return Math.max(this.getRoundSets(phaseGroup, -1).length, this.getRoundSets(phaseGroup, -2).length) * multiplier;
     }
 
     isWinner(set, slot, typeOfDisplay) {

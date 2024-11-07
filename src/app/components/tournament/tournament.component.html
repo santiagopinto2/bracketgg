@@ -40,11 +40,11 @@
                     </div>
 
                     <div class="col-12">
-                        <div class="row flex-nowrap" [ngStyle]="{'height': bracketSideHeight + 'px'}">
+                        <div class="row flex-nowrap" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) + 'px'}">
                             <div class="col px-0" [ngStyle]="{'max-width': getColumnWidth(j)}" *ngFor="let _ of [].constructor((maxRounds[i][side]) * 3 - 2); let j = index" id="set-block-column-container">
                                 <div *ngIf="j % 3 == 0" class="d-flex flex-column round" id="set-column">
                                     <div class="row set" *ngFor="let set of getRoundSets(phaseGroup, (j / 3 + 1) * maxRoundModifier[side])" id="set"
-                                        [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], set)}">
+                                        [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}">
                                         <div class="col p-0" id="names">
                                             <div class="row set-row" *ngFor="let slot of set.slots" [ngClass]="isWinner(set, slot, 'name')">
                                                 <div class="set-name">
@@ -66,7 +66,7 @@
                                     <div class="row"
                                         *ngFor="let _ of [].constructor(getRoundSets(phaseGroup, (j / 3 + 2) * maxRoundModifier[side]).length * 4); let blockIndex = index; let blockCount = count"
                                         id="block-container">
-                                        <div style="padding: 0 11px" [ngStyle]="{'height': bracketSideHeight / blockCount + 'px'}" [ngClass]="getBlockClass(j, blockIndex, phaseGroup, side)"
+                                        <div style="padding: 0 11px" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) / blockCount + 'px'}" [ngClass]="getBlockClass(j, blockIndex, phaseGroup, side)"
                                             id="block">
                                         </div>
                                     </div>
