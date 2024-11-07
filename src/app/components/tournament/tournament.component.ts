@@ -19,6 +19,7 @@ export class TournamentComponent implements OnInit, AfterViewInit {
     maxRoundModifier = [1, -1];
     isGrabbing = false;
     bracketSideHeight = 700;
+    setHeight = 42;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
     }
@@ -143,13 +144,204 @@ export class TournamentComponent implements OnInit, AfterViewInit {
         return phaseGroup ? phaseGroup.sets.nodes.filter(set => set.round == round).sort((a, b) => a.id - b.id) : [];
     }
 
+    getSetMargin(phaseGroup, round, set) {
+        let sets = this.getRoundSets(phaseGroup, round);
+        let setCount = sets.length;
+        let rightRoundSets = this.getRoundSets(phaseGroup, (round + Math.sign(round)));
+        let rightRoundSetCount = rightRoundSets.length;
+        let firstSetId = sets[0].id;
+
+
+        // If the round set count is a standard amount
+        if (setCount == rightRoundSetCount || setCount / 2 == rightRoundSetCount || rightRoundSetCount == 0) {
+            let marginHeight = this.getStandardMarginHeight(setCount);
+            return `${marginHeight}px 0`;
+        }
+
+        // If it's loser's side
+        if (round < 0) {
+            // Get the total number of players in the phase group
+            let numberOfPlayers = this.getNumberOfPlayers(phaseGroup);
+            let powerOfPlayersRemainder = Math.log(numberOfPlayers) / Math.log(2) % 1;
+
+            // If winner's round 1 set count is less than 1/4 of the way between powers of 2
+            if (powerOfPlayersRemainder < 0.321928094) {
+                let setCountFull = rightRoundSetCount;
+                let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
+
+                let setIndex = (set.id - firstSetId) / 2;
+                let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
+
+                let marginTop = this.getStandardMarginHeight(setCountFull);
+                let marginBottom = marginTop + (this.setHeight + marginTop * 2) * (nextSetIndex - setIndex - 1);
+                return `${marginTop}px 0 ${marginBottom}px`;
+            }
+            // If winner's round 1 set count is between 1/4 and 1/2 of the way between powers of 2
+            else if (powerOfPlayersRemainder < 0.584962500) {
+                let setCountFull = rightRoundSetCount * 2;
+                let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
+
+                let setIndex = set.id - firstSetId;
+                let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
+
+                if (setIndex + 1 == nextSetIndex) {
+                    let marginHeight = this.getStandardMarginHeight(setCountFull);
+                    return `${marginHeight}px 0`;
+                }
+                if (setIndex + 2 == nextSetIndex) {
+                    let marginHeight = this.getStandardMarginHeight(setCountFull) * 2 + this.setHeight / 2;
+                    return `${marginHeight}px 0`;
+                }
+            }
+            // If winner's round 1 set count is greater than 1/2 of the way between powers of 2
+            else {
+                let setCountFull = rightRoundSetCount;
+                let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, false);
+
+                let setIndexRelative = sets.findIndex(s => s.id == set.id)
+                let setIndex = -1;
+                let count = 0;
+                for (let i = 0; i < addedSetIndexes.length; i++) {
+                    if (addedSetIndexes[i]) {
+                        count++;
+                        if (count == setIndexRelative + 1) {
+                            setIndex = i;
+                            break;
+                        }
+                    }
+                }
+                let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
+
+                let marginHeight = this.getStandardMarginHeight(setCountFull);
+                let marginTop = setIndexRelative == 0 ? marginHeight + (this.setHeight + marginHeight * 2) * setIndex : marginHeight;
+                let marginBottom = marginHeight + (this.setHeight + marginHeight * 2) * (nextSetIndex - setIndex - 1);
+
+                return `${marginTop}px 0 ${marginBottom}px`;
+            }
+
+            return '0';
+        }
+
+        // If it's winner's side and the round set count is less than or equal to the next round set count
+        if (setCount <= rightRoundSetCount) {
+            let setCountFull = rightRoundSetCount;
+            let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
+
+            let setIndex = (set.id - firstSetId) / 2;
+            let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
+
+            let marginTop = this.getStandardMarginHeight(setCountFull);
+            let marginBottom = marginTop + (this.setHeight + marginTop * 2) * (nextSetIndex - setIndex - 1);
+            return `${marginTop}px 0 ${marginBottom}px`;
+        }
+
+        // If it's winner's side and the round set count is greater than the next round set count
+        if (setCount > rightRoundSetCount) {
+            let setCountFull = rightRoundSetCount * 2;
+            let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
+
+            let setIndex = set.id - firstSetId;
+            let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
+
+            if (setIndex + 1 == nextSetIndex) {
+                let marginHeight = this.getStandardMarginHeight(setCountFull);
+                return `${marginHeight}px 0`;
+            }
+            if (setIndex + 2 == nextSetIndex) {
+                let marginHeight = this.getStandardMarginHeight(setCountFull) * 2 + this.setHeight / 2;
+                return `${marginHeight}px 0`;
+            }
+        }
+
+        return '0';
+    }
+
+    getBlockClass(columnIndex, blockIndex, phaseGroup, bracketSide) {
+        let blockColumnIndex = columnIndex % 3;
+        let numberOfPlayers = this.getNumberOfPlayers(phaseGroup);
+        let leftRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 1) * this.maxRoundModifier[bracketSide]).length;
+        let rightRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]).length;
+
+        if (leftRoundSetCount / 2 == rightRoundSetCount) {
+            if (blockColumnIndex == 1) {
+                if (blockIndex % 4 == 1) return 'first-block-column-first-row';
+                else if (blockIndex % 4 == 2) return 'first-block-column-second-row';
+            }
+            else if (blockColumnIndex == 2) {
+                if (blockIndex % 4 == 1) return 'straight-block';
+            }
+        }
+        else if (leftRoundSetCount == rightRoundSetCount) {
+            if (blockIndex % 4 == 1) return 'straight-block';
+        }
+        // If it's loser's side and winner's round 1 set count is greater than 1/2 of the way between powers of 2
+        else if (bracketSide == 1 && Math.log(numberOfPlayers) / Math.log(2) % 1 > 0.584962500) {
+            let setIndex = Math.trunc(blockIndex / 4);
+            for (let i = 0; i < leftRoundSetCount; i++) {
+                if (SetOrderConstants[`sets${rightRoundSetCount}`][rightRoundSetCount - 1 - i] == setIndex && blockIndex % 4 == 1) return 'straight-block';
+            }
+        }
+        else if (leftRoundSetCount < rightRoundSetCount) {
+            let setIndex = Math.trunc(blockIndex / 4);
+            for (let i = 0; i < leftRoundSetCount; i++) {
+                if (SetOrderConstants[`sets${rightRoundSetCount}`][i] == setIndex && blockIndex % 4 == 1) return 'straight-block';
+            }
+        }
+        else if (leftRoundSetCount > rightRoundSetCount) {
+            let leftRoundSetCountFull = rightRoundSetCount * 2;
+            let addedSetIndexes = this.getAddedSetIndexes(leftRoundSetCountFull, leftRoundSetCount, true);
+
+            let leftSetIndex = Math.trunc(blockIndex / 2);
+            // let nextSetIndex = addedSetIndexes.indexOf(true, leftSetIndex + 1);
+            // if (nextSetIndex == -1) nextSetIndex = rightRoundSetCount * 2;
+            let leftNextSetIndex = this.getNextSetIndex(addedSetIndexes, leftSetIndex, leftRoundSetCountFull);
+
+            if (leftSetIndex + 1 == leftNextSetIndex && addedSetIndexes[leftSetIndex]) {
+                if (blockColumnIndex == 1) {
+                    if (blockIndex % 4 == 1) return 'first-block-column-first-row';
+                    else if (blockIndex % 4 == 2) return 'first-block-column-second-row';
+                }
+                else if (blockColumnIndex == 2) {
+                    if (blockIndex % 4 == 1) return 'straight-block';
+                }
+            }
+            if (leftSetIndex + 2 == leftNextSetIndex) {
+                if (blockIndex % 4 == 1) return 'straight-block';
+            }
+        }
+        return '';
+    }
+
+    getNumberOfPlayers(phaseGroup) {
+        let players = [];
+        phaseGroup.sets.nodes.forEach(s => {
+            players.push(s.slots[0].entrant.id);
+            players.push(s.slots[1].entrant.id);
+        });
+        return Array.from(new Set(players)).length;
+    }
+
+    getAddedSetIndexes(length, setCount, isForwards) {
+        let addedSetIndexes = Array(length).fill(false);
+
+        if (isForwards) for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][i]] = true;
+        else for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][length - 1 - i]] = true;
+
+        return addedSetIndexes;
+    }
+
+    getNextSetIndex(addedSetIndexes, setIndex, setCountFull) {
+        let nextSetIndex = addedSetIndexes.indexOf(true, setIndex + 1);
+        return nextSetIndex == -1 ? setCountFull : nextSetIndex;
+    }
+
+    getStandardMarginHeight(setCountFull) {
+        return (this.bracketSideHeight - setCountFull * this.setHeight) / (setCountFull * 2);
+    }
+
     isWinner(set, slot, typeOfDisplay) {
         if (!slot.entrant) return '';
         return slot.entrant.id == set.winnerId ? `winner-${typeOfDisplay}` : `loser-${typeOfDisplay}`;
-    }
-
-    getPhaseGroupIdentifier(phaseGroup) {
-        return phaseGroup ? phaseGroup.displayIdentifier : '';
     }
 
     getScore(slot, set) {
@@ -165,185 +357,5 @@ export class TournamentComponent implements OnInit, AfterViewInit {
 
     getColumnWidth(column) {
         return column % 3 == 0 ? '204px' : '22px';
-    }
-
-    getSetMargin(phaseGroup, round, set) {
-        let setHeight = 42;
-        let sets = this.getRoundSets(phaseGroup, round);
-        let setCount = sets.length;
-        let rightRoundSets = this.getRoundSets(phaseGroup, (round + Math.sign(round)));
-        let rightRoundSetCount = rightRoundSets.length;
-
-
-        if (setCount == rightRoundSetCount || setCount / 2 == rightRoundSetCount || rightRoundSetCount == 0) {
-            let marginHeight = (this.bracketSideHeight - setCount * setHeight) / (setCount * 2);
-            return `${marginHeight}px 0`;
-        }
-        if (round < 0) {
-            let players = [];
-            phaseGroup.sets.nodes.forEach(s => {
-                players.push(s.slots[0].entrant.id);
-                players.push(s.slots[1].entrant.id);
-            });
-            let numberOfPlayers = Array.from(new Set(players)).length;
-
-            if (Math.log(numberOfPlayers) / Math.log(2) % 1 < 0.321928094) {
-                let addedSetIndexes = Array(rightRoundSetCount).fill(false);
-                for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${rightRoundSetCount}`][i]] = true;
-
-                let roundFirstSetId = sets[0].id;
-                let setIndexFull = (set.id - roundFirstSetId) / 2;
-
-                let nextSetIndexFull = addedSetIndexes.indexOf(true, setIndexFull + 1);
-                if (nextSetIndexFull == -1) nextSetIndexFull = rightRoundSetCount;
-
-                let marginTop = (this.bracketSideHeight - rightRoundSetCount * setHeight) / (rightRoundSetCount * 2);
-                let marginBottom = marginTop + (setHeight + marginTop * 2) * (nextSetIndexFull - setIndexFull - 1);
-                return `${marginTop}px 0 ${marginBottom}px`;
-            }
-            else if (Math.log(numberOfPlayers) / Math.log(2) % 1 < 0.584962500) {
-                let addedSetIndexes = Array(rightRoundSetCount * 2).fill(false);
-                for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${rightRoundSetCount * 2}`][i]] = true;
-
-                let roundFirstSetId = sets[0].id;
-                let setIndexFull = set.id - roundFirstSetId;
-
-                let nextSetIndexFull = addedSetIndexes.indexOf(true, setIndexFull + 1);
-                if (nextSetIndexFull == -1) nextSetIndexFull = rightRoundSetCount * 2;
-
-                if (setIndexFull + 1 == nextSetIndexFull) {
-                    let marginHeight = (this.bracketSideHeight - rightRoundSetCount * 2 * setHeight) / (rightRoundSetCount * 2 * 2);
-                    return `${marginHeight}px 0`;
-                }
-                if (setIndexFull + 2 == nextSetIndexFull) {
-                    let marginHeight = (this.bracketSideHeight - rightRoundSetCount * 2 * setHeight) / (rightRoundSetCount * 2) + setHeight / 2;
-                    return `${marginHeight}px 0`;
-                }
-            }
-            else {
-                let addedSetIndexes = Array(rightRoundSetCount).fill(false);
-                for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${rightRoundSetCount}`][rightRoundSetCount - 1 - i]] = true;
-                let setIndex = sets.findIndex(s => s.id == set.id)
-
-                let roundLastSetId = sets[sets.length - 1].id;
-                let setIndexFull = -1;
-                let count = 0;
-                for (let i = 0; i < addedSetIndexes.length; i++) {
-                    if (addedSetIndexes[i]) {
-                        count++;
-                        if (count == setIndex + 1) {
-                            setIndexFull = i;
-                            break;
-                        }
-                    }
-                }
-
-                let nextSetIndexFull = addedSetIndexes.indexOf(true, setIndexFull + 1);
-                if (nextSetIndexFull == -1) nextSetIndexFull = rightRoundSetCount;
-
-                let marginTop = (this.bracketSideHeight - rightRoundSetCount * setHeight) / (rightRoundSetCount * 2);
-                if (setIndex == 0) marginTop = marginTop + (setHeight + marginTop * 2) * (setIndexFull);
-                let marginBottom = marginTop + (setHeight + marginTop * 2) * (nextSetIndexFull - setIndexFull - 1);
-                
-                return `${marginTop}px 0 ${marginBottom}px`;
-            }
-            return '0';
-        }
-        if (setCount <= rightRoundSetCount) {
-            let addedSetIndexes = Array(rightRoundSetCount).fill(false);
-            for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${rightRoundSetCount}`][i]] = true;
-
-            let roundFirstSetId = sets[0].id;
-            let setIndexFull = (set.id - roundFirstSetId) / 2;
-
-            let nextSetIndexFull = addedSetIndexes.indexOf(true, setIndexFull + 1);
-            if (nextSetIndexFull == -1) nextSetIndexFull = rightRoundSetCount;
-
-            let marginTop = (this.bracketSideHeight - rightRoundSetCount * setHeight) / (rightRoundSetCount * 2);
-            let marginBottom = marginTop + (setHeight + marginTop * 2) * (nextSetIndexFull - setIndexFull - 1);
-            return `${marginTop}px 0 ${marginBottom}px`;
-        }
-        if (setCount > rightRoundSetCount) {
-            let addedSetIndexes = Array(rightRoundSetCount * 2).fill(false);
-            for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${rightRoundSetCount * 2}`][i]] = true;
-
-            let roundFirstSetId = sets[0].id;
-            let setIndexFull = set.id - roundFirstSetId;
-
-            let nextSetIndexFull = addedSetIndexes.indexOf(true, setIndexFull + 1);
-            if (nextSetIndexFull == -1) nextSetIndexFull = rightRoundSetCount * 2;
-
-            if (setIndexFull + 1 == nextSetIndexFull) {
-                let marginHeight = (this.bracketSideHeight - rightRoundSetCount * 2 * setHeight) / (rightRoundSetCount * 2 * 2);
-                return `${marginHeight}px 0`;
-            }
-            if (setIndexFull + 2 == nextSetIndexFull) {
-                let marginHeight = (this.bracketSideHeight - rightRoundSetCount * 2 * setHeight) / (rightRoundSetCount * 2) + setHeight / 2;
-                return `${marginHeight}px 0`;
-            }
-        }
-        return '0';
-    }
-
-    getBlockClass(columnIndex, blockIndex, phaseGroup, bracketSide) {
-        let blockColumnIndex = columnIndex % 3;
-
-        let leftRoundSets = this.getRoundSets(phaseGroup, (columnIndex / 3 + 1) * this.maxRoundModifier[bracketSide]);
-        let leftRoundSetCount = leftRoundSets.length;
-        let rightRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]).length;
-
-        let players = [];
-        phaseGroup.sets.nodes.forEach(s => {
-            players.push(s.slots[0].entrant.id);
-            players.push(s.slots[1].entrant.id);
-        });
-        let numberOfPlayers = Array.from(new Set(players)).length;
-
-        if (leftRoundSetCount / 2 == rightRoundSetCount) {
-            if (blockColumnIndex == 1) {
-                if (blockIndex % 4 == 1) return 'first-block-column-first-row';
-                else if (blockIndex % 4 == 2) return 'first-block-column-second-row';
-            }
-            else if (blockColumnIndex == 2) {
-                if (blockIndex % 4 == 1) return 'straight-block';
-            }
-        }
-        else if (leftRoundSetCount == rightRoundSetCount) {
-            if (blockIndex % 4 == 1) return 'straight-block';
-        }
-        else if (bracketSide == 1 && Math.log(numberOfPlayers) / Math.log(2) % 1 > 0.584962500) {
-            let setIndexFull = Math.trunc(blockIndex / 4);
-            for (let i = 0; i < leftRoundSetCount; i++) {
-                if (SetOrderConstants[`sets${rightRoundSetCount}`][rightRoundSetCount - 1 - i] == setIndexFull && blockIndex % 4 == 1) return 'straight-block';
-            }
-        }
-        else if (leftRoundSetCount < rightRoundSetCount) {
-            let setIndexFull = Math.trunc(blockIndex / 4);
-            for (let i = 0; i < leftRoundSetCount; i++) {
-                if (SetOrderConstants[`sets${rightRoundSetCount}`][i] == setIndexFull && blockIndex % 4 == 1) return 'straight-block';
-            }
-        }
-        else if (leftRoundSetCount > rightRoundSetCount) {
-            let addedSetIndexes = Array(rightRoundSetCount * 2).fill(false);
-            for (let i = 0; i < leftRoundSetCount; i++) addedSetIndexes[SetOrderConstants[`sets${rightRoundSetCount * 2}`][i]] = true;
-
-            let leftSetIndexFull = Math.trunc(blockIndex / 2);
-            let nextSetIndexFull = addedSetIndexes.indexOf(true, leftSetIndexFull + 1);
-            if (nextSetIndexFull == -1) nextSetIndexFull = rightRoundSetCount * 2;
-
-            if (leftSetIndexFull + 1 == nextSetIndexFull && addedSetIndexes[leftSetIndexFull]) {
-                if (blockColumnIndex == 1) {
-                    if (blockIndex % 4 == 1) return 'first-block-column-first-row';
-                    else if (blockIndex % 4 == 2) return 'first-block-column-second-row';
-                }
-                else if (blockColumnIndex == 2) {
-                    if (blockIndex % 4 == 1) return 'straight-block';
-                }
-            }
-            if (leftSetIndexFull + 2 == nextSetIndexFull) {
-                if (blockIndex % 4 == 1) return 'straight-block';
-            }
-        }
-        return '';
     }
 }
