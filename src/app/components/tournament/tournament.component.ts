@@ -271,9 +271,11 @@ export class TournamentComponent implements OnInit, AfterViewInit {
                 if (blockIndex % 4 == 1) return 'straight-block';
             }
         }
+
         else if (leftRoundSetCount == rightRoundSetCount) {
             if (blockIndex % 4 == 1) return 'straight-block';
         }
+
         // If it's loser's side and winner's round 1 set count is greater than 1/2 of the way between powers of 2
         else if (bracketSide == 1 && Math.log(numberOfPlayers) / Math.log(2) % 1 > 0.584962500) {
             let setIndex = Math.trunc(blockIndex / 4);
@@ -281,19 +283,19 @@ export class TournamentComponent implements OnInit, AfterViewInit {
                 if (SetOrderConstants[`sets${rightRoundSetCount}`][rightRoundSetCount - 1 - i] == setIndex && blockIndex % 4 == 1) return 'straight-block';
             }
         }
+
         else if (leftRoundSetCount < rightRoundSetCount) {
             let setIndex = Math.trunc(blockIndex / 4);
             for (let i = 0; i < leftRoundSetCount; i++) {
                 if (SetOrderConstants[`sets${rightRoundSetCount}`][i] == setIndex && blockIndex % 4 == 1) return 'straight-block';
             }
         }
+
         else if (leftRoundSetCount > rightRoundSetCount) {
             let leftRoundSetCountFull = rightRoundSetCount * 2;
             let addedSetIndexes = this.getAddedSetIndexes(leftRoundSetCountFull, leftRoundSetCount, true);
 
             let leftSetIndex = Math.trunc(blockIndex / 2);
-            // let nextSetIndex = addedSetIndexes.indexOf(true, leftSetIndex + 1);
-            // if (nextSetIndex == -1) nextSetIndex = rightRoundSetCount * 2;
             let leftNextSetIndex = this.getNextSetIndex(addedSetIndexes, leftSetIndex, leftRoundSetCountFull);
 
             if (leftSetIndex + 1 == leftNextSetIndex && addedSetIndexes[leftSetIndex]) {
@@ -309,6 +311,7 @@ export class TournamentComponent implements OnInit, AfterViewInit {
                 if (blockIndex % 4 == 1) return 'straight-block';
             }
         }
+
         return '';
     }
 
@@ -323,7 +326,7 @@ export class TournamentComponent implements OnInit, AfterViewInit {
 
     getAddedSetIndexes(length, setCount, isForwards) {
         let addedSetIndexes = Array(length).fill(false);
-
+        
         if (isForwards) for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][i]] = true;
         else for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][length - 1 - i]] = true;
 
