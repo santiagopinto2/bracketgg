@@ -17,7 +17,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     phases = [];
     currentPhaseIndex = -1;
     phaseGroups = [];
-    winnersIndex = -1;
     maxRounds = [];
     maxRoundModifier = [1, -1];
     isGrabbing = false;
@@ -33,6 +32,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             .subscribe(event => {
                 // Clear all data
                 this.phases = [];
+                this.currentPhaseIndex = -1;
                 this.phaseGroups = [];
                 this.maxRounds = [];
 
@@ -95,7 +95,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                         break;
                     }
                 }
-            })
+            });
     }
 
     getPhase(phaseId) {
@@ -110,7 +110,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     this.maxRounds.push([]);
                     this.getPhaseGroup(data.data.phase.phaseGroups.nodes[i].id, i);
                 }
-            })
+            });
     }
 
     getPhaseGroup(phaseGroupId, phaseGroupIndex) {
@@ -129,37 +129,42 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 }
 
                 // Standardizes the round data for each set
-                this.winnersIndex = phaseGroupSets.findIndex(set => set.round > 0);
-                let losersRoundChange = Math.abs(phaseGroupSets[this.winnersIndex - 1].round) - 1;
+                let winnersIndex = phaseGroupSets.findIndex(set => set.round > 0);
+                let losersRoundChange = Math.abs(phaseGroupSets[winnersIndex - 1].round) - 1;
                 if (losersRoundChange != 0) {
-                    for (let i = 0; i < this.winnersIndex; i++) phaseGroupSets[i].round += losersRoundChange;
+                    for (let i = 0; i < winnersIndex; i++) phaseGroupSets[i].round += losersRoundChange;
                 }
+
+                // Sorts the round data
+                phaseGroupSets.sort((a, b) => a.round != b.round ? a.round - b.round : a.id - b.id);
 
                 // Stores the max round number for each side of bracket
                 let winnersMaxRound = phaseGroupSets[phaseGroupSets.length - 1].round;
                 let losersMaxRound = Math.abs(phaseGroupSets[0].round);
                 this.maxRounds[phaseGroupIndex] = [winnersMaxRound, losersMaxRound];
 
-                this.phaseGroups[phaseGroupIndex] = phaseGroup;
-            })
-    }
+                // Convert set data into arrays
+                phaseGroup.sets.nodes = [[], []];
+                for (let i = 0; i < winnersMaxRound; i++) phaseGroup.sets.nodes[0].push(Array.from(phaseGroupSets.filter(set => set.round == i + 1)));
+                for (let i = 0; i < losersMaxRound; i++) phaseGroup.sets.nodes[1].push(Array.from(phaseGroupSets.filter(set => set.round == (i + 1) * -1)));
 
-    changePhase(direction) {
-        let url = this.router.url;
-        if (url.indexOf('/brackets') == -1) url += '/brackets';
-        this.router.navigate([url.slice(0, url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
+                this.phaseGroups[phaseGroupIndex] = phaseGroup;
+            });
     }
 
     getRoundSets(phaseGroup, round) {
+        if (!phaseGroup) return [];
         round = Math.trunc(round);
-        return phaseGroup ? phaseGroup.sets.nodes.filter(set => set.round == round).sort((a, b) => a.id - b.id) : [];
+
+        if (Math.sign(round) == 1) return phaseGroup.sets.nodes[0][round - 1];
+        return phaseGroup.sets.nodes[1][Math.abs(round) - 1];
     }
 
     getSetMargin(phaseGroup, round, set) {
         let sets = this.getRoundSets(phaseGroup, round);
         let setCount = sets.length;
         let rightRoundSets = this.getRoundSets(phaseGroup, (round + Math.sign(round)));
-        let rightRoundSetCount = rightRoundSets.length;
+        let rightRoundSetCount = rightRoundSets ? rightRoundSets.length : 0;
         let firstSetId = sets[0].id;
 
 
@@ -328,16 +333,20 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getNumberOfPlayers(phaseGroup) {
         let players = [];
-        phaseGroup.sets.nodes.forEach(s => {
-            players.push(s.slots[0].entrant.id);
-            players.push(s.slots[1].entrant.id);
+        phaseGroup.sets.nodes.forEach(side => {
+            side.forEach(round => {
+                round.forEach(set => {
+                    players.push(set.slots[0].entrant.id);
+                    players.push(set.slots[1].entrant.id);
+                });
+            });
         });
         return Array.from(new Set(players)).length;
     }
 
     getAddedSetIndexes(length, setCount, isForwards) {
         let addedSetIndexes = Array(length).fill(false);
-        
+
         if (isForwards) for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][i]] = true;
         else for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][length - 1 - i]] = true;
 
@@ -351,6 +360,12 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getStandardMarginHeight(setCountFull) {
         return (this.bracketSideHeight - setCountFull * this.setHeight) / (setCountFull * 2);
+    }
+
+    changePhase(direction) {
+        let url = this.router.url;
+        if (url.indexOf('/brackets') == -1) url += '/brackets';
+        this.router.navigate([url.slice(0, url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
     }
 
     isWinner(set, slot, typeOfDisplay) {
