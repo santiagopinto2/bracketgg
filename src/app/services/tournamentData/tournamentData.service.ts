@@ -6,17 +6,14 @@ import { BehaviorSubject } from 'rxjs';
 })
 export class TournamentDataService {
 
-    private urlSource = new BehaviorSubject<string>('Initial Data');
-    currentUrl = this.urlSource.asObservable();
-
-    private eventSource = new BehaviorSubject<any>({});
-    currentEvent = this.eventSource.asObservable();
+    urlSource$ = new BehaviorSubject<string>('Initial Data');
+    eventSource$ = new BehaviorSubject<any>({});
 
     changeUrl(url: string) {
-        this.urlSource.next(url);
+        this.urlSource$.next(url);
     }
 
     changeEvent(event) {
-        this.eventSource.next(event);
+        this.eventSource$.next(event);
     }
 }
