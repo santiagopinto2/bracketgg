@@ -337,7 +337,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getAddedSetIndexes(length, setCount, isForwards) {
         let addedSetIndexes = Array(length).fill(false);
-
+        
         if (isForwards) for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][i]] = true;
         else for (let i = 0; i < setCount; i++) addedSetIndexes[SetOrderConstants[`sets${length}`][length - 1 - i]] = true;
 
