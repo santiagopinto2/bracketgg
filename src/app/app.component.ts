@@ -1,9 +1,11 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, inject, OnInit } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme/color-scheme.service';
 import { StartggService } from './services/startgg/startgg.service';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData/tournamentData.service';
+import { MatDialog } from '@angular/material/dialog';
+import { SettingsComponent } from './components/settings/settings.component';
 
 @Component({
     selector: 'app-root',
@@ -15,6 +17,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     title = 'bracketgg';
     windowSize;
     events = [];
+    settingsDialog = inject(MatDialog);
 
     constructor(public colorSchemeService: ColorSchemeService, private startggService: StartggService, private tournamentDataService: TournamentDataService, private cdr: ChangeDetectorRef, private router: Router) {
         this.colorSchemeService.load();
@@ -85,5 +88,9 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     toggleDarkMode() {
         this.colorSchemeService.update(this.colorSchemeService.currentActive() === 'dark' ? 'light' : 'dark');
+    }
+
+    openSettings() {
+        this.settingsDialog.open(SettingsComponent);
     }
 }

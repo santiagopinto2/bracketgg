@@ -8,13 +8,15 @@ import { SharedMaterialModule } from './shared-material/shared-material.module';
 import { BracketComponent } from './components/bracket/bracket.component';
 import { SearchComponent } from './components/search/search.component';
 import { TournamentComponent } from './components/tournament/tournament.component';
+import { SettingsComponent } from './components/settings/settings.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     BracketComponent,
     SearchComponent,
-    TournamentComponent
+    TournamentComponent,
+    SettingsComponent
   ],
   imports: [
     BrowserModule,
