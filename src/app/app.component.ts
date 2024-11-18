@@ -74,6 +74,10 @@ export class AppComponent implements OnInit, AfterViewInit {
             }
             else this.tournamentDataService.changeEvent({});
         }
+        else {
+            this.tournamentDataService.changeEvent({});
+            this.events = [];
+        }
     }
 
     @HostListener('window:resize', ['$event'])

@@ -1,10 +1,10 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { BracketComponent } from './components/bracket/bracket.component';
 import { TournamentComponent } from './components/tournament/tournament.component';
+import { AboutComponent } from './components/about/about.component';
 
 const routes: Routes = [
-    { path: 'bracket', component: BracketComponent },
+    { path: '', component: AboutComponent },
     {
         path: 'tournament', component: TournamentComponent,
         children: [
@@ -13,8 +13,7 @@ const routes: Routes = [
                 component: TournamentComponent
             }
         ]
-    },
-    { path: '', redirectTo: '/bracket', pathMatch: 'full' }
+    }
 ];
 
 @NgModule({

@@ -2,12 +2,8 @@
     <button mat-icon-button *ngIf="windowSize < 500" (click)="sidenav.toggle()">
         <mat-icon>menu</mat-icon>
     </button>
-    <span style="margin:0 10px">BracketGG</span>
 
-    <div *ngIf="windowSize >= 500">
-        <a mat-button class="header-option" [routerLink]="'/bracket'" (click)="sidenav.close()"> Bracket </a>
-        <a mat-button class="header-option" [routerLink]="'/about'" (click)="sidenav.close()"> About </a>
-    </div>
+    <a mat-button style="font-size: 20px" [routerLink]="'/'">BracketGG</a>
 
     <span class="header-spacer"></span>
 

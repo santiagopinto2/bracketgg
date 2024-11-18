@@ -5,18 +5,18 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { SharedMaterialModule } from './shared-material/shared-material.module';
-import { BracketComponent } from './components/bracket/bracket.component';
 import { SearchComponent } from './components/search/search.component';
 import { TournamentComponent } from './components/tournament/tournament.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import { AboutComponent } from './components/about/about.component';
 
 @NgModule({
     declarations: [
         AppComponent,
-        BracketComponent,
         SearchComponent,
         TournamentComponent,
-        SettingsComponent
+        SettingsComponent,
+        AboutComponent
     ],
     imports: [
         BrowserModule,
