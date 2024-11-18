@@ -17,9 +17,8 @@ export class AppComponent implements OnInit, AfterViewInit {
     title = 'bracketgg';
     windowSize;
     events = [];
-    settingsDialog = inject(MatDialog);
 
-    constructor(public colorSchemeService: ColorSchemeService, private startggService: StartggService, private tournamentDataService: TournamentDataService, private cdr: ChangeDetectorRef, private router: Router) {
+    constructor(public colorSchemeService: ColorSchemeService, private startggService: StartggService, private tournamentDataService: TournamentDataService, private dialog: MatDialog, private cdr: ChangeDetectorRef, private router: Router) {
         this.colorSchemeService.load();
     }
 
@@ -91,6 +90,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     openSettings() {
-        this.settingsDialog.open(SettingsComponent);
+        const dialogRef = this.dialog.open(SettingsComponent, {});
     }
 }

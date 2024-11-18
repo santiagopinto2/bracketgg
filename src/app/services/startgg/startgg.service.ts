@@ -8,15 +8,15 @@ import { Observable } from 'rxjs';
 export class StartggService {
 
     private baseUrl: string = 'https://api.start.gg/gql/alpha';
-    private apiKey: string = 'API KEY';
-
-    headers = new HttpHeaders({
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-    });
-
 
     constructor(private http: HttpClient) { }
+
+    getHeaders() {
+        return new HttpHeaders({
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+        });
+    }
 
     getTournamentEvents(tourneySlug): Observable<any> {
         const body = {
@@ -33,7 +33,7 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.headers });
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
     getPhase(phaseId): Observable<any> {
@@ -58,7 +58,7 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.headers });
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
     getPhaseGroup(phaseGroupId): Observable<any> {
@@ -100,7 +100,7 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.headers });
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
     getEventBySlug(tourneySlug): Observable<any> {
@@ -113,7 +113,7 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.headers });
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
     getEventById(eventId): Observable<any> {
@@ -130,7 +130,7 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.headers });
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
     getEventSets(eventId): Observable<any> {
@@ -172,6 +172,6 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.headers })
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() })
     }
 }

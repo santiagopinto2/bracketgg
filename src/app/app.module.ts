@@ -11,20 +11,20 @@ import { TournamentComponent } from './components/tournament/tournament.componen
 import { SettingsComponent } from './components/settings/settings.component';
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    BracketComponent,
-    SearchComponent,
-    TournamentComponent,
-    SettingsComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    BrowserAnimationsModule,
-    SharedMaterialModule
-  ],
-  providers: [],
-  bootstrap: [AppComponent]
+    declarations: [
+        AppComponent,
+        BracketComponent,
+        SearchComponent,
+        TournamentComponent,
+        SettingsComponent
+    ],
+    imports: [
+        BrowserModule,
+        AppRoutingModule,
+        BrowserAnimationsModule,
+        SharedMaterialModule
+    ],
+    providers: [],
+    bootstrap: [AppComponent]
 })
 export class AppModule { }
