@@ -13,30 +13,11 @@ import { MatSnackBarModule } from "@angular/material/snack-bar";
 import { MatFormFieldModule } from "@angular/material/form-field";
 import { MatInputModule } from "@angular/material/input";
 import { ReactiveFormsModule } from "@angular/forms";
-import { HttpClientModule } from "@angular/common/http";
+import { provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
 import { MatDialogModule } from "@angular/material/dialog";
 
 
-@NgModule({
-    declarations: [
-    ],
-    imports: [
-        MatTableModule,
-        MatIconModule,
-        MatToolbarModule,
-        MatButtonModule,
-        MatSidenavModule,
-        MatCheckboxModule,
-        FormsModule,
-        MatListModule,
-        MatCardModule,
-        MatSnackBarModule,
-        MatFormFieldModule,
-        MatInputModule,
-        ReactiveFormsModule,
-        HttpClientModule,
-        MatDialogModule
-    ],
+@NgModule({ declarations: [],
     exports: [
         MatTableModule,
         MatIconModule,
@@ -51,9 +32,20 @@ import { MatDialogModule } from "@angular/material/dialog";
         MatFormFieldModule,
         MatInputModule,
         ReactiveFormsModule,
-        HttpClientModule,
         MatDialogModule
-    ]
-})
+    ], imports: [MatTableModule,
+        MatIconModule,
+        MatToolbarModule,
+        MatButtonModule,
+        MatSidenavModule,
+        MatCheckboxModule,
+        FormsModule,
+        MatListModule,
+        MatCardModule,
+        MatSnackBarModule,
+        MatFormFieldModule,
+        MatInputModule,
+        ReactiveFormsModule,
+        MatDialogModule], providers: [provideHttpClient(withInterceptorsFromDi())] })
 
 export class SharedMaterialModule { }
