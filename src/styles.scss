@@ -1,6 +1,7 @@
 /* You can add global styles to this file, and also import other style files */
 @use '@angular/material' as mat;
-@include mat.core();
+@include mat.elevation-classes();
+@include mat.app-background();
 
 html,
 body {
@@ -42,7 +43,8 @@ $dark-theme: mat.m2-define-dark-theme((color: (primary: $dark-primary,
         ));
 
 .color-scheme-dark {
-    @include mat.core-color($dark-theme);
+    @include mat.elevation-classes();
+    @include mat.app-background();
     @include mat.button-color($dark-theme);
     @include mat.icon-color($dark-theme);
     @include mat.list-color($dark-theme);
@@ -62,7 +64,8 @@ $dark-theme: mat.m2-define-dark-theme((color: (primary: $dark-primary,
 }
 
 .color-scheme-light {
-    @include mat.core-color($light-theme);
+    @include mat.elevation-classes();
+    @include mat.app-background();
     @include mat.button-color($light-theme);
     @include mat.icon-color($light-theme);
     @include mat.list-color($light-theme);
