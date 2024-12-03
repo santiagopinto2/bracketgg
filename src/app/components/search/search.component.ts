@@ -8,7 +8,6 @@ import { MatInput } from '@angular/material/input';
     selector: 'app-search',
     templateUrl: './search.component.html',
     styleUrls: ['./search.component.scss'],
-    standalone: true,
     imports: [FormsModule, ReactiveFormsModule, MatFormField, MatLabel, MatInput]
 })
 export class SearchComponent {

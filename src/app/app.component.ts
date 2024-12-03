@@ -18,7 +18,6 @@ import { MatNavList, MatListItem } from '@angular/material/list';
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
-    standalone: true,
     imports: [MatToolbar, NgIf, MatIconButton, MatIcon, MatAnchor, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, NgFor, MatListItem, MatSidenavContent, RouterOutlet]
 })
 export class AppComponent implements OnInit, AfterViewInit {

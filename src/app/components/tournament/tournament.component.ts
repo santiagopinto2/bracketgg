@@ -13,7 +13,6 @@ import { MatIcon } from '@angular/material/icon';
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss'],
-    standalone: true,
     imports: [NgIf, MatIconButton, MatIcon, NgFor, NgStyle, NgClass]
 })
 export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
