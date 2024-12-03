@@ -1,16 +1,25 @@
 import { AfterViewInit, ChangeDetectorRef, Component, HostListener, inject, OnInit } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme/color-scheme.service';
 import { StartggService } from './services/startgg/startgg.service';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData/tournamentData.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SettingsComponent } from './components/settings/settings.component';
+import { MatToolbar } from '@angular/material/toolbar';
+import { NgIf, NgFor } from '@angular/common';
+import { MatIconButton, MatAnchor } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
+import { SearchComponent } from './components/search/search.component';
+import { MatNavList, MatListItem } from '@angular/material/list';
 
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss']
+    styleUrls: ['./app.component.scss'],
+    standalone: true,
+    imports: [MatToolbar, NgIf, MatIconButton, MatIcon, MatAnchor, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, NgFor, MatListItem, MatSidenavContent, RouterOutlet]
 })
 export class AppComponent implements OnInit, AfterViewInit {
 

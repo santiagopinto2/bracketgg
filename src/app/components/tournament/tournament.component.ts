@@ -5,11 +5,16 @@ import { TournamentDataService } from 'src/app/services/tournamentData/tournamen
 import { SetOrderConstants } from './set-order-constants';
 import { Subject } from 'rxjs/internal/Subject';
 import { takeUntil } from 'rxjs/operators';
+import { NgIf, NgFor, NgStyle, NgClass } from '@angular/common';
+import { MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 
 @Component({
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
-    styleUrls: ['./tournament.component.scss']
+    styleUrls: ['./tournament.component.scss'],
+    standalone: true,
+    imports: [NgIf, MatIconButton, MatIcon, NgFor, NgStyle, NgClass]
 })
 export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
