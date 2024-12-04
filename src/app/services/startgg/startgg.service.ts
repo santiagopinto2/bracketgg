@@ -25,9 +25,42 @@ export class StartggService {
                     id
                     name
                     events {
-                        id
                         name
                         slug
+                    }
+                }
+            }`
+        };
+
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
+    }
+
+    getEventBySlug(eventSlug): Observable<any> {
+        const body = {
+            query: `query {
+                event(slug: "${eventSlug}") {
+                    id
+                    name
+                    phases {
+                        id
+                        name
+                    }
+                }
+            }`
+        };
+
+        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
+    }
+
+    getEventById(eventId): Observable<any> {
+        const body = {
+            query: `query {
+                event(id: "${eventId}") {
+                    id
+                    name
+                    phases {
+                        id
+                        name
                     }
                 }
             }`
@@ -41,7 +74,6 @@ export class StartggService {
             query: `query {
                 phase(id: ${phaseId}) {
                     id
-                    name
                     phaseGroups(query : {
                         page: 1
                         perPage: 100
@@ -101,77 +133,5 @@ export class StartggService {
         };
 
         return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
-    }
-
-    getEventBySlug(tourneySlug): Observable<any> {
-        const body = {
-            query: `query {
-                event(slug: "${tourneySlug}") {
-                    id
-                    name
-                }
-            }`
-        };
-
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
-    }
-
-    getEventById(eventId): Observable<any> {
-        const body = {
-            query: `query {
-                event(id: "${eventId}") {
-                    id
-                    name
-                    phases(phaseId: 0) {
-                        id
-                        name
-                    }
-                }
-            }`
-        };
-
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
-    }
-
-    getEventSets(eventId): Observable<any> {
-        const body = {
-            query: `query {
-                event(id: ${eventId}) {
-                    id
-                    name
-                    sets(
-                        page: 1
-                        perPage: 100
-                        sortType: ROUND
-                    ) {
-                        pageInfo {
-                            total
-                        }
-                        nodes {
-                            id
-                            round
-                            fullRoundText
-                            winnerId
-                            slots {
-                                id
-                                entrant {
-                                    id
-                                    name
-                                }
-                                standing {
-                                    stats {
-                                        score {
-                                            value
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }`
-        };
-
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() })
     }
 }

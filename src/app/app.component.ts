@@ -65,19 +65,14 @@ export class AppComponent implements OnInit, AfterViewInit {
                 }
 
                 let eventSlug = '';
-                if (url.indexOf('/', url.indexOf('/event/') + '/event/'.length) == -1) eventSlug = url.slice(1);
-                else eventSlug = url.slice(1, url.indexOf('/', url.indexOf('/event/') + '/event/'.length));
+                let eventEndIndex = url.indexOf('/event/') + '/event/'.length;
+                if (url.indexOf('/', eventEndIndex) == -1) eventSlug = url.slice(1);
+                else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
 
                 this.startggService.getEventBySlug(eventSlug).subscribe(data => {
-                    eventData.eventId = data.data.event.id;
-
-                    if (url.slice(url.indexOf('/event/') + 7).indexOf('/') == -1) {
-                        this.startggService.getEventById(eventData.eventId).subscribe(eventByIdData => {
-                            eventData.phaseId = eventByIdData.data.event.phases[0].id;
-                            this.tournamentDataService.changeEvent(eventData);
-                        })
-                    }
-                    else this.tournamentDataService.changeEvent(eventData);
+                    if (!eventData.phaseId) eventData.phaseId = data.data.event.phases[0].id;
+                    eventData.event = data.data.event;
+                    this.tournamentDataService.changeEvent(eventData);
                 })
             }
             else this.tournamentDataService.changeEvent({});

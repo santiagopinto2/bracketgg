@@ -42,7 +42,14 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
                 // Get all phase and phase group data
                 if (!!event.phaseId) {
-                    this.getPhasesGeneral(event);
+                    this.phases = event.event.phases;
+                    for (let i = 0; i < this.phases.length; i++) {
+                        if (this.phases[i].id == event.phaseId) {
+                            this.currentPhaseIndex = i;
+                            break;
+                        }
+                    }
+
                     this.getPhase(event.phaseId);
                 }
             })
@@ -83,23 +90,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.destroy$.next(null);
-    }
-
-    getPhasesGeneral(event) {
-        this.startggService.getEventById(event.eventId)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe(data => {
-                if (data.errors) { console.log('error', data.errors[0].message); return; }
-
-                this.phases = data.data.event.phases;
-
-                for (let i = 0; i < this.phases.length; i++) {
-                    if (this.phases[i].id == event.phaseId) {
-                        this.currentPhaseIndex = i;
-                        break;
-                    }
-                }
-            });
     }
 
     getPhase(phaseId) {
