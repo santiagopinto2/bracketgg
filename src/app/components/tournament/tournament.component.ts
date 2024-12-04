@@ -23,6 +23,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     phaseGroups = [];
     maxRounds = [];
     maxRoundModifier = [1, -1];
+    maxRoundsPhase = -1;
     isGrabbing = false;
     setHeight = 42;
 
@@ -141,10 +142,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 // Sorts the round data
                 phaseGroupSets.sort((a, b) => a.round != b.round ? a.round - b.round : a.id - b.id);
 
-                // Stores the max round number for each side of bracket
+                // Stores the max round number for each side of bracket and updates the max rounds for the phase
                 let winnersMaxRound = phaseGroupSets[phaseGroupSets.length - 1].round;
                 let losersMaxRound = Math.abs(phaseGroupSets[0].round);
                 this.maxRounds[phaseGroupIndex] = [winnersMaxRound, losersMaxRound];
+                this.maxRoundsPhase = Math.max(this.maxRoundsPhase, winnersMaxRound, losersMaxRound);
 
                 // Convert set data into arrays
                 phaseGroup.sets.nodes = [[], []];

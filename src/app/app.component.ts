@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, inject, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme/color-scheme.service';
 import { StartggService } from './services/startgg/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -18,7 +18,7 @@ import { MatNavList, MatListItem } from '@angular/material/list';
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
-    imports: [MatToolbar, NgIf, MatIconButton, MatIcon, MatAnchor, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, NgFor, MatListItem, MatSidenavContent, RouterOutlet]
+    imports: [MatToolbar, NgIf, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, NgFor, MatListItem, MatSidenavContent, RouterOutlet]
 })
 export class AppComponent implements OnInit, AfterViewInit {
 
@@ -91,6 +91,10 @@ export class AppComponent implements OnInit, AfterViewInit {
     @HostListener('window:resize', ['$event'])
     onResize(event) {
         this.windowSize = event.target.innerWidth;
+    }
+
+    goToAboutPage() {
+        this.router.navigate(['/']);
     }
 
     goToDiscord() {

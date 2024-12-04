@@ -60,7 +60,9 @@ $dark-theme: mat.m2-define-dark-theme((color: (primary: $dark-primary,
         color: #969696;
     }
 
-    background-color: #303030;
+    &  {
+        background-color: #303030;
+    }
 }
 
 .color-scheme-light {

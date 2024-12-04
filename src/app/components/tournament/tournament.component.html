@@ -37,8 +37,8 @@
                         </div>
                     </div>
 
-                    <div class="col-12">
-                        <div class="row flex-nowrap" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) + 'px'}">
+                    <div class="col-12" [ngStyle]="{'width': maxRoundsPhase * 248 + 24 + 'px'}">
+                        <div class="row flex-nowrap" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) + 'px', 'width': maxRoundsPhase * 248 + 'px'}">
                             <div class="col px-0" [ngStyle]="{'max-width': getColumnWidth(j)}" *ngFor="let _ of [].constructor((maxRounds[i][side]) * 3 - 2); let j = index" id="set-block-column-container">
                                 <div *ngIf="j % 3 == 0" class="d-flex flex-column round" id="set-column">
                                     <div class="row set" *ngFor="let set of getRoundSets(phaseGroup, (j / 3 + 1) * maxRoundModifier[side])" id="set"
@@ -75,7 +75,7 @@
                 </div>
             </div>
 
-            <hr *ngIf="!lastPhaseGroup" style="margin-top: 50px; border-top: solid 10px">
+            <hr *ngIf="!lastPhaseGroup" style="margin-top: 50px; border-top: solid 10px" [ngStyle]="{'min-width': maxRoundsPhase * 248 + 12 + 'px', 'width': maxRoundsPhase * 248 + 12 + 'px'}">
         </div>
     </div>
 </div>

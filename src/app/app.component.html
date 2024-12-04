@@ -3,7 +3,7 @@
         <mat-icon>menu</mat-icon>
     </button>
 
-    <a mat-button style="font-size: 20px" [routerLink]="'/'">BracketGG</a>
+    <span class="header-name" (click)="goToAboutPage()">BracketGG</span>
 
     <span class="header-spacer"></span>
 
@@ -27,11 +27,11 @@
                 </mat-nav-list>
             </div>
 
-            <div class="row settings" style="height: 40px" (click)="openSettings()">
+            <div class="row settings" (click)="openSettings()">
                 <div class="col d-flex flex-column justify-content-center" style="padding: 0 10px; max-width: 40px; font-size: 20px">
                     <mat-icon inline="true">settings</mat-icon>
                 </div>
-                <div class="col p-0 d-flex flex-column justify-content-center" style="font-size: 14px">
+                <div class="col p-0 d-flex flex-column justify-content-center" style="height: 40px; font-size: 14px">
                     Settings
                 </div>
             </div>
