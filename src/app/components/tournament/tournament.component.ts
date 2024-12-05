@@ -4,7 +4,7 @@ import { StartggService } from 'src/app/services/startgg/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { Subject } from 'rxjs/internal/Subject';
-import { takeUntil } from 'rxjs/operators';
+import { take, takeUntil } from 'rxjs/operators';
 import { NgIf, NgFor, NgStyle, NgClass } from '@angular/common';
 import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -39,6 +39,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.currentPhaseIndex = -1;
                 this.phaseGroups = [];
                 this.maxRounds = [];
+                this.maxRoundsPhase = -1;
 
                 // Get all phase and phase group data
                 if (!!event.phaseId) {
@@ -102,18 +103,18 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 for (let i = 0; i < data.data.phase.phaseGroups.nodes.length; i++) {
                     this.phaseGroups.push();
                     this.maxRounds.push([]);
-                    this.getPhaseGroup(data.data.phase.phaseGroups.nodes[i].id, i);
+                    this.getPhaseGroup(data.data.phase.phaseGroups.nodes[i], i);
                 }
             });
     }
 
-    getPhaseGroup(phaseGroupId, phaseGroupIndex) {
-        this.startggService.getPhaseGroup(phaseGroupId)
-            .pipe(takeUntil(this.destroy$))
+    getPhaseGroup(phaseGroup, phaseGroupIndex) {
+        this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total)
+            .pipe(take(1))
             .subscribe(data => {
                 if (data.errors) { console.log('error', data.errors[0].message); return; }
 
-                let phaseGroup = data.data.phaseGroup;
+                phaseGroup.sets = data;
                 let phaseGroupSets = phaseGroup.sets.nodes;
 
                 // Corrects the data to account for a grand final reset

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { forkJoin, Observable, Subject } from 'rxjs';
 
 @Injectable({
     providedIn: 'root'
@@ -84,6 +84,15 @@ export class StartggService {
                         nodes {
                             id
                             displayIdentifier
+                            sets(
+                                page: 1
+                                perPage: 1
+                                sortType: ROUND
+                            ) {
+                                pageInfo {
+                                    total
+                                }
+                            }
                         }
                     }
                 }
@@ -93,20 +102,31 @@ export class StartggService {
         return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
-    getPhaseGroup(phaseGroupId): Observable<any> {
+    getPhaseGroupSets(phaseGroupId, totalSets): Observable<any> {
+        const perPage = 66;
+        let numberOfPages = Math.ceil(totalSets / perPage);
+        let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
+
+        return new Observable(observer => {
+            for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, perPage);
+
+            forkJoin(phaseGroupSplit).subscribe((data: any) => {
+                let sets = data[0].data.phaseGroup.sets;
+                for (let i = 1; i < numberOfPages; i++) sets.nodes = [...sets.nodes, ...data[i].data.phaseGroup.sets.nodes];
+                observer.next(sets);
+            })
+        });
+    }
+
+    getPhaseGroupSetsPaginated(phaseGroupId, page, perPage): Observable<any> {
         const body = {
             query: `query {
                 phaseGroup(id: ${phaseGroupId}) {
-                    id
-                    displayIdentifier
                     sets(
-                        page: 1
-                        perPage: 100
+                        page: ${page}
+                        perPage: ${perPage}
                         sortType: ROUND
                     ) {
-                        pageInfo {
-                            total
-                        }
                         nodes {
                             id
                             round
