@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { forkJoin, Observable, Subject } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 
 @Injectable({
     providedIn: 'root'
@@ -44,6 +44,28 @@ export class StartggService {
                     phases {
                         id
                         name
+                    }
+                    entrants(query : {
+                        page: 1
+                        perPage: 100
+                    }) {
+                        nodes {
+                            id
+                            name
+                            participants {
+                                gamerTag
+                                user {
+                                    images {
+                                        id
+                                        height
+                                        ratio
+                                        type
+                                        url
+                                        width
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }`
@@ -103,12 +125,12 @@ export class StartggService {
     }
 
     getPhaseGroupSets(phaseGroupId, totalSets): Observable<any> {
-        const perPage = 66;
-        let numberOfPages = Math.ceil(totalSets / perPage);
+        const setsPerPage = 66;
+        let numberOfPages = Math.ceil(totalSets / setsPerPage);
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
 
         return new Observable(observer => {
-            for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, perPage);
+            for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage);
 
             forkJoin(phaseGroupSplit).subscribe((data: any) => {
                 let sets = data[0].data.phaseGroup.sets;
@@ -118,13 +140,13 @@ export class StartggService {
         });
     }
 
-    getPhaseGroupSetsPaginated(phaseGroupId, page, perPage): Observable<any> {
+    getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Observable<any> {
         const body = {
             query: `query {
                 phaseGroup(id: ${phaseGroupId}) {
                     sets(
                         page: ${page}
-                        perPage: ${perPage}
+                        perPage: ${setsPerPage}
                         sortType: ROUND
                     ) {
                         nodes {

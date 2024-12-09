@@ -70,6 +70,8 @@ export class AppComponent implements OnInit, AfterViewInit {
                 else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
 
                 this.startggService.getEventBySlug(eventSlug).subscribe(data => {
+                    if (data.errors) { console.log('error', data.errors[0].message); return; }
+                    
                     if (!eventData.phaseId) eventData.phaseId = data.data.event.phases[0].id;
                     eventData.event = data.data.event;
                     this.tournamentDataService.changeEvent(eventData);

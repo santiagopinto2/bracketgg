@@ -4,20 +4,28 @@ import { StartggService } from 'src/app/services/startgg/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { Subject } from 'rxjs/internal/Subject';
-import { take, takeUntil } from 'rxjs/operators';
-import { NgIf, NgFor, NgStyle, NgClass } from '@angular/common';
+import { map, startWith, take, takeUntil } from 'rxjs/operators';
+import { NgIf, NgFor, NgStyle, NgClass, AsyncPipe } from '@angular/common';
 import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
+import { MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatAutocompleteModule, MatOption } from '@angular/material/autocomplete';
+import { MatInput } from '@angular/material/input';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
 
 @Component({
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss'],
-    imports: [NgIf, MatIconButton, MatIcon, NgFor, NgStyle, NgClass]
+    imports: [NgIf, MatIconButton, MatIcon, NgFor, NgStyle, NgClass, MatFormField, MatLabel, MatAutocompleteModule, MatInput, FormsModule, ReactiveFormsModule, MatOption, AsyncPipe]
 })
 export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     destroy$ = new Subject();
+    entrants = [];
+    entrantCtrl = new FormControl('');
+    filteredEntrants: Observable<any>;
     phases = [];
     currentPhaseIndex = -1;
     phaseGroups = [];
@@ -35,14 +43,22 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe(event => {
                 // Clear all data
+                this.entrants = [];
                 this.phases = [];
                 this.currentPhaseIndex = -1;
                 this.phaseGroups = [];
                 this.maxRounds = [];
                 this.maxRoundsPhase = -1;
 
-                // Get all phase and phase group data
                 if (!!event.phaseId) {
+                    // Get entrants and start filtering the search entrants form
+                    this.entrants = event.event.entrants.nodes;
+                    this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
+                        startWith(''),
+                        map(entrant => (entrant ? this._filterEntrants(entrant) : this.entrants.slice())),
+                    );
+
+                    // Get all phase and phase group data
                     this.phases = event.event.phases;
                     for (let i = 0; i < this.phases.length; i++) {
                         if (this.phases[i].id == event.phaseId) {
@@ -50,7 +66,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                             break;
                         }
                     }
-
                     this.getPhase(event.phaseId);
                 }
             })
@@ -358,16 +373,16 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         return (this.getPhaseGroupSideHeight(phaseGroup, side) - setCountFull * this.setHeight) / (setCountFull * 2);
     }
 
-    changePhase(direction) {
-        let url = this.router.url;
-        if (url.indexOf('/brackets') == -1) url += '/brackets';
-        this.router.navigate([url.slice(0, url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
-    }
-
     getPhaseGroupSideHeight(phaseGroup, side) {
         let multiplier = 91;
         if (side == 0) return Math.max(this.getRoundSets(phaseGroup, 1).length, this.getRoundSets(phaseGroup, 2).length) * multiplier;
         return Math.max(this.getRoundSets(phaseGroup, -1).length, this.getRoundSets(phaseGroup, -2).length) * multiplier;
+    }
+
+    changePhase(direction) {
+        let url = this.router.url;
+        if (url.indexOf('/brackets') == -1) url += '/brackets';
+        this.router.navigate([url.slice(0, url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
     }
 
     isWinner(set, slot, typeOfDisplay) {
@@ -388,5 +403,20 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getColumnWidth(column) {
         return column % 3 == 0 ? '204px' : '22px';
+    }
+
+    _filterEntrants(value) {
+        const filterValue = value.toLowerCase();
+        return this.entrants.filter(entrant => entrant.name.toLowerCase().includes(filterValue));
+    }
+
+    getEntrantImage(entrant) {
+        let user = entrant.participants[0].user;
+        return !!user && user.images.length > 0 ? user.images.find(e => e.type === 'profile').url : '';
+    }
+
+    getEntrantImageOrientation(entrant) {
+        let user = entrant.participants[0].user;
+        return !!user && user.images.length > 0 && user.images[0].height > user.images[0].width ? 'portrait' : '';
     }
 }

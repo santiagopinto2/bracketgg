@@ -1,3 +1,39 @@
+.search-entrant-form {
+    max-width: 350px;
+}
+
+.search-entrant-image {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.search-entrant-image img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    height: 100%;
+    width: auto;
+    -webkit-transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+}
+
+.search-entrant-image img.portrait {
+    width: 100%;
+    height: auto;
+}
+
+.search-entrant-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+}
+
 .round {
     max-width: 204px;
     min-width: 204px;

@@ -1,5 +1,32 @@
 <div class="no-select" [style.cursor]="isGrabbing ? 'grabbing' : 'grab'">
     <div class="container-fluid">
+        <div class="row" style="margin-top: 20px">
+            <div class="col">
+                <form class="search-entrant-form">
+                    <mat-form-field style="width: 100%">
+                        <mat-label> Search Entrant</mat-label>
+                        <input matInput [matAutocomplete]="auto" [formControl]="entrantCtrl">
+                        <mat-autocomplete #auto="matAutocomplete">
+                            @for (entrant of filteredEntrants | async; track entrant) {
+                            <mat-option [value]="entrant.name">
+                                <div class="row">
+                                    <div class="col p-0">
+                                        <div class="search-entrant-image">
+                                            <img [ngClass]="getEntrantImageOrientation(entrant)" [src]="getEntrantImage(entrant)" />
+                                        </div>
+                                    </div>
+                                    <div class="col d-flex flex-column justify-content-center">
+                                        <span class="search-entrant-name">{{entrant.name}}</span>
+                                    </div>
+                                </div>
+                            </mat-option>
+                            }
+                        </mat-autocomplete>
+                    </mat-form-field>
+                </form>
+            </div>
+        </div>
+
         <div class="row" *ngIf="phases.length > 1" style="margin-bottom: 30px">
             <div class="col-auto" *ngIf="currentPhaseIndex > 0">
                 <button mat-icon-button (click)="changePhase(-1)">
