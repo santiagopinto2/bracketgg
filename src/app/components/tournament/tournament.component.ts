@@ -33,7 +33,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
     isGrabbing = false;
-    setHeight = 52;
+    setHeight = 54.67;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
     }

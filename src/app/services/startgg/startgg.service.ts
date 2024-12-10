@@ -53,15 +53,12 @@ export class StartggService {
                             id
                             name
                             participants {
-                                gamerTag
                                 user {
                                     images {
-                                        id
-                                        height
-                                        ratio
-                                        type
                                         url
+                                        type
                                         width
+                                        height
                                     }
                                 }
                             }
@@ -125,7 +122,7 @@ export class StartggService {
     }
 
     getPhaseGroupSets(phaseGroupId, totalSets): Observable<any> {
-        const setsPerPage = 66;
+        const setsPerPage = 58;
         let numberOfPages = Math.ceil(totalSets / setsPerPage);
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
 
@@ -166,6 +163,9 @@ export class StartggService {
                                             value
                                         }
                                     }
+                                }
+                                seed {
+                                    seedNum
                                 }
                             }
                         }
