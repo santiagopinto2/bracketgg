@@ -33,7 +33,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
     isGrabbing = false;
-    setHeight = 42;
+    setHeight = 52;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
     }
@@ -51,8 +51,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.maxRoundsPhase = -1;
 
                 if (!!event.phaseId) {
-                    // Get entrants and start filtering the search entrants form
+                    // Get entrants
                     this.entrants = event.event.entrants.nodes;
+                    this.entrants.forEach(entrant => {
+                        if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
+                    });
+
+                    // Start filtering the search entrants form
                     this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
                         startWith(''),
                         map(entrant => (entrant ? this._filterEntrants(entrant) : this.entrants.slice())),
@@ -132,6 +137,14 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 phaseGroup.sets = data;
                 let phaseGroupSets = phaseGroup.sets.nodes;
 
+                // Add entrant data to each set
+                phaseGroupSets.forEach(set => {
+                    set.slots.forEach(slot => {
+                        let entrant = this.entrants.find(entrant => entrant.id == slot.entrant.id);
+                        slot.entrant.participants = entrant.participants;
+                    });
+                });
+
                 // Corrects the data to account for a grand final reset
                 if (phaseGroupSets[phaseGroupSets.length - 1].fullRoundText === 'Grand Final Reset') {
                     if (phaseGroupSets[phaseGroupSets.length - 1].slots[0].entrant) phaseGroupSets[phaseGroupSets.length - 1].round++;
@@ -165,8 +178,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getRoundSets(phaseGroup, round) {
         if (!phaseGroup) return [];
-        round = Math.trunc(round);
 
+        round = Math.trunc(round);
         if (Math.sign(round) == 1) return phaseGroup.sets.nodes[0][round - 1];
         return phaseGroup.sets.nodes[1][Math.abs(round) - 1];
     }
@@ -289,6 +302,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         let leftRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 1) * this.maxRoundModifier[bracketSide]).length;
         let rightRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]).length;
 
+
         if (leftRoundSetCount / 2 == rightRoundSetCount) {
             if (blockColumnIndex == 1) {
                 if (blockIndex % 4 == 1) return 'first-block-column-first-row';
@@ -374,7 +388,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getPhaseGroupSideHeight(phaseGroup, side) {
-        let multiplier = 91;
+        let multiplier = 110;
         if (side == 0) return Math.max(this.getRoundSets(phaseGroup, 1).length, this.getRoundSets(phaseGroup, 2).length) * multiplier;
         return Math.max(this.getRoundSets(phaseGroup, -1).length, this.getRoundSets(phaseGroup, -2).length) * multiplier;
     }
@@ -411,12 +425,17 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getEntrantImage(entrant) {
-        let user = entrant.participants[0].user;
-        return !!user && user.images.length > 0 ? user.images.find(e => e.type === 'profile').url : '';
+        let profile = this.getEntrantProfile(entrant);
+        return !!profile ? profile.url : '';
     }
 
     getEntrantImageOrientation(entrant) {
-        let user = entrant.participants[0].user;
-        return !!user && user.images.length > 0 && user.images[0].height > user.images[0].width ? 'portrait' : '';
+        let profile = this.getEntrantProfile(entrant);
+        return !!profile && profile.height > profile.width ? 'portrait' : '';
+    }
+
+    getEntrantProfile(entrant) {
+        let images = entrant.participants[0].user.images;
+        return images.length > 0 ? images.find(image => image.type === 'profile') : null;
     }
 }

@@ -2,7 +2,7 @@
     max-width: 350px;
 }
 
-.search-entrant-image {
+.entrant-image {
     position: relative;
     width: 30px;
     height: 30px;
@@ -10,7 +10,7 @@
     overflow: hidden;
 }
 
-.search-entrant-image img {
+.entrant-image img {
     position: absolute;
     left: 50%;
     top: 50%;
@@ -22,7 +22,7 @@
     border-radius: 50%;
 }
 
-.search-entrant-image img.portrait {
+.entrant-image img.portrait {
     width: 100%;
     height: auto;
 }
@@ -66,8 +66,8 @@
 
 .set-name {
     padding: 0 0 0 4px;
-    height: 20px;
-    width: 182px;
+    height: 25px;
+    width: 157px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
