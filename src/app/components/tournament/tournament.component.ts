@@ -33,7 +33,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
     isGrabbing = false;
-    setHeight = 54.67;
+    setHeight = 52.67;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
     }
@@ -413,6 +413,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
         let otherSlot = set.slots.find(s => s.id != slot.id);
         return otherSlot.standing ? 0 : '‎';
+    }
+
+    getSlotHeight(firstSlot) {
+        let normalSlotHeight = (this.setHeight - 0.67) / 2;
+        return (firstSlot ? normalSlotHeight + 0.67 : normalSlotHeight) + 'px';
     }
 
     getColumnWidth(column) {

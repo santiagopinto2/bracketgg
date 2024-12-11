@@ -68,12 +68,13 @@
                         <div class="row flex-nowrap" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) + 'px', 'width': maxRoundsPhase * 248 + 'px'}">
                             <div class="col px-0" [ngStyle]="{'max-width': getColumnWidth(j)}" *ngFor="let _ of [].constructor((maxRounds[i][side]) * 3 - 2); let j = index"
                                 id="set-block-column-container">
+                                
                                 <div *ngIf="j % 3 == 0" class="d-flex flex-column round" id="set-column">
                                     <div class="row set" *ngFor="let set of getRoundSets(phaseGroup, (j / 3 + 1) * maxRoundModifier[side])" id="set"
                                         [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}">
 
                                         <div class="col p-0 set-seeds" id="seeds">
-                                            <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngStyle]="{'height': (firstSlot ? 27.67 : 27) + 'px'}">
+                                            <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngStyle]="{'height': getSlotHeight(firstSlot)}">
                                                 <div class="d-flex justify-content-center p-0" style="margin-top: 4px; font-size: 12px">
                                                     {{slot.seed.seedNum}}
                                                 </div>
@@ -81,16 +82,16 @@
                                         </div>
 
                                         <div class="col p-0 set-middle" id="images">
-                                            <div class="row set-row gx-0" *ngFor="let slot of set.slots; let firstSlot = first" style="width: 29px"
-                                                [ngStyle]="{'height': (firstSlot ? 27.67 : 27) + 'px'}">
-                                                <div class="entrant-image" style="width: 19px; height: 19px; margin: 4px 5px">
+                                            <div class="row set-row gx-0" *ngFor="let slot of set.slots; let firstSlot = first" style="width: 28px"
+                                                [ngStyle]="{'height': getSlotHeight(firstSlot)}">
+                                                <div class="entrant-image" style="width: 18px; height: 18px; margin: 4px 5px">
                                                     <img [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div class="col p-0 set-middle" id="names">
-                                            <div class="row set-row" *ngFor="let slot of set.slots" [ngClass]="isWinner(set, slot, 'name')">
+                                            <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="isWinner(set, slot, 'name')" [ngStyle]="{'height': getSlotHeight(firstSlot)}">
                                                 <div class="set-name" style="padding: 4px 3px 0 0; text-shadow: 1px 1px 2px black">
                                                     {{slot.entrant ? slot.entrant.name : '‎'}}
                                                 </div>
@@ -99,7 +100,7 @@
 
                                         <div class="col p-0 set-scores" id="scores">
                                             <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="isWinner(set, slot, 'score')"
-                                                [ngStyle]="{'height': (firstSlot ? 27.67 : 27) + 'px'}">
+                                                [ngStyle]="{'height': getSlotHeight(firstSlot)}">
                                                 <div class="d-flex justify-content-center p-0" style="margin-top: 4px">
                                                     {{getScore(slot, set)}}
                                                 </div>
@@ -118,6 +119,7 @@
                                         </div>
                                     </div>
                                 </div>
+
                             </div>
                         </div>
                     </div>
