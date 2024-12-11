@@ -23,6 +23,7 @@ import { Observable } from 'rxjs';
 export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     destroy$ = new Subject();
+    eventId = -1;
     entrants = [];
     entrantCtrl = new FormControl('');
     filteredEntrants: Observable<any>;
@@ -36,35 +37,44 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     setHeight = 52.67;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
+        // Start filtering the search entrants form
+        this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
+            startWith(''),
+            map(entrant => (entrant ? this._filterEntrants(entrant) : this.entrants.slice())),
+        );
     }
 
     ngOnInit() {
         this.tournamentDataService.eventSource$
             .pipe(takeUntil(this.destroy$))
             .subscribe(event => {
-                // Clear all data
-                this.entrants = [];
+                // Clear data
                 this.phases = [];
                 this.currentPhaseIndex = -1;
                 this.phaseGroups = [];
                 this.maxRounds = [];
                 this.maxRoundsPhase = -1;
 
-                if (!!event.phaseId) {
-                    // Get entrants
-                    this.entrants = event.event.entrants.nodes;
-                    this.entrants.forEach(entrant => {
-                        if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
+                // Clear this data only if there is no event
+                if (!event.phaseId) {
+                    this.eventId = -1;
+                    this.entrants = [];
+                }
+                else {
+                    // Get entrants only if the event changes
+                    if (event.event.id != this.eventId) {
+                        this.eventId = event.event.id;
 
-                        entrant.seed = entrant.seeds.reduce((earliest, current) => earliest.phase.id < current.phase.id ? earliest : current).seedNum;
-                        delete entrant.seeds;
-                    });
+                        this.entrants = event.event.entrants.nodes;
+                        this.entrants.forEach(entrant => {
+                            if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
 
-                    // Start filtering the search entrants form
-                    this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
-                        startWith(''),
-                        map(entrant => (entrant ? this._filterEntrants(entrant) : this.entrants.slice())),
-                    );
+                            entrant.seed = entrant.seeds.reduce((earliest, current) => earliest.phase.id < current.phase.id ? earliest : current).seedNum;
+                            delete entrant.seeds;
+                        });
+
+                        this.entrantCtrl.setValue('');
+                    }
 
                     // Get all phase and phase group data
                     this.phases = event.event.phases;
@@ -76,7 +86,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     }
                     this.getPhase(event.phaseId);
                 }
-            })
+            });
     }
 
     ngAfterViewInit() {
