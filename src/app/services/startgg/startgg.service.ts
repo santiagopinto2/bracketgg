@@ -52,6 +52,12 @@ export class StartggService {
                         nodes {
                             id
                             name
+                            seeds {
+                                seedNum
+                                phase {
+                                    id
+                                }
+                            }
                             participants {
                                 user {
                                     images {
@@ -163,9 +169,6 @@ export class StartggService {
                                             value
                                         }
                                     }
-                                }
-                                seed {
-                                    seedNum
                                 }
                             }
                         }

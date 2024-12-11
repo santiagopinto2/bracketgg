@@ -55,6 +55,9 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     this.entrants = event.event.entrants.nodes;
                     this.entrants.forEach(entrant => {
                         if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
+
+                        entrant.seed = entrant.seeds.reduce((earliest, current) => earliest.phase.id < current.phase.id ? earliest : current).seedNum;
+                        delete entrant.seeds;
                     });
 
                     // Start filtering the search entrants form
@@ -142,6 +145,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     set.slots.forEach(slot => {
                         let entrant = this.entrants.find(entrant => entrant.id == slot.entrant.id);
                         slot.entrant.participants = entrant.participants;
+                        slot.entrant.seed = entrant.seed;
                     });
                 });
 
@@ -389,8 +393,24 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getPhaseGroupSideHeight(phaseGroup, side) {
         let multiplier = 110;
-        if (side == 0) return Math.max(this.getRoundSets(phaseGroup, 1).length, this.getRoundSets(phaseGroup, 2).length) * multiplier;
-        return Math.max(this.getRoundSets(phaseGroup, -1).length, this.getRoundSets(phaseGroup, -2).length) * multiplier;
+
+        // If it's winner's side
+        if (side == 0) {
+            // If winner's only has one round
+            if (phaseGroup.sets.nodes[0].length == 1) return this.getRoundSets(phaseGroup, 1).length * multiplier;
+
+            // If winner's has more than one round
+            return Math.max(this.getRoundSets(phaseGroup, 1).length, this.getRoundSets(phaseGroup, 2).length) * multiplier;
+        }
+
+        // If it's losers' side
+        else {
+            // If loser's only has one round
+            if (phaseGroup.sets.nodes[1].length == 1) return this.getRoundSets(phaseGroup, -1).length * multiplier;
+
+            // If loser's has more than one round
+            return Math.max(this.getRoundSets(phaseGroup, -1).length, this.getRoundSets(phaseGroup, -2).length) * multiplier;
+        }
     }
 
     changePhase(direction) {
