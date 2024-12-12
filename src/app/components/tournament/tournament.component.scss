@@ -25,6 +25,19 @@
     height: auto;
 }
 
+.entrant-image-default {
+    border-radius: 50%;
+    color: #fff;
+    text-align: center;
+    margin-left: 0.5px;
+}
+
+.entrant-search-image-default {
+    @extend .entrant-image-default;
+    font-size: 18px;
+    line-height: 30px;
+}
+
 .search-entrant-name {
     white-space: nowrap;
     overflow: hidden;
@@ -71,6 +84,12 @@
     border-bottom-left-radius: 4px;
     background-color: #939393;
     color: black;
+}
+
+.entrant-set-image-default {
+    @extend .entrant-image-default;
+    font-size: 12px;
+    line-height: 19px;
 }
 
 .set-name {

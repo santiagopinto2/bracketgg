@@ -12,7 +12,9 @@
                                 <div class="row">
                                     <div class="col p-0">
                                         <div class="entrant-image" style="width: 30px; height: 30px">
-                                            <img [ngClass]="getEntrantImageOrientation(entrant)" [src]="getEntrantImage(entrant)" />
+                                            <img *ngIf="getEntrantImage(entrant) !== ''" [ngClass]="getEntrantImageOrientation(entrant)" [src]="getEntrantImage(entrant)" />
+                                            <div *ngIf="getEntrantImage(entrant) === ''" class="entrant-search-image-default" [ngStyle]="{'background-color': entrant.backgroundColor}">
+                                                {{entrant.participants[0].gamerTag[0].toUpperCase()}}</div>
                                         </div>
                                     </div>
                                     <div class="col d-flex flex-column justify-content-center">
@@ -84,7 +86,9 @@
                                         <div class="col p-0 set-middle" id="images">
                                             <div class="row set-row gx-0" *ngFor="let slot of set.slots; let firstSlot = first" style="width: 28px" [ngStyle]="{'height': getSlotHeight(firstSlot)}">
                                                 <div class="entrant-image" style="width: 18px; height: 18px; margin: 4px 5px">
-                                                    <img [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
+                                                    <img *ngIf="getEntrantImage(slot.entrant) !== ''" [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
+                                                    <div *ngIf="getEntrantImage(slot.entrant) === ''" class="entrant-set-image-default" [ngStyle]="{'background-color': slot.entrant.backgroundColor}">
+                                                        {{slot.entrant.participants[0].gamerTag[0].toUpperCase()}}</div>
                                                 </div>
                                             </div>
                                         </div>

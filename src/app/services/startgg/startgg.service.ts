@@ -59,6 +59,7 @@ export class StartggService {
                                 }
                             }
                             participants {
+                                gamerTag
                                 user {
                                     images {
                                         url
@@ -128,7 +129,7 @@ export class StartggService {
     }
 
     getPhaseGroupSets(phaseGroupId, totalSets): Observable<any> {
-        const setsPerPage = 58;
+        const setsPerPage = 66;
         let numberOfPages = Math.ceil(totalSets / setsPerPage);
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
 

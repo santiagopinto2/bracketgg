@@ -69,6 +69,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                         this.entrants.forEach(entrant => {
                             if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
 
+                            if (entrant.participants[0].user.images.length == 0) {
+                                const hue = Math.floor(Math.random() * 361);
+                                const sat = Math.floor(Math.random() * 101);
+                                const lum = 40;
+                                entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
+                            }
+
                             entrant.seed = entrant.seeds.reduce((earliest, current) => earliest.phase.id < current.phase.id ? earliest : current).seedNum;
                             delete entrant.seeds;
                         });
@@ -156,6 +163,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                         let entrant = this.entrants.find(entrant => entrant.id == slot.entrant.id);
                         slot.entrant.participants = entrant.participants;
                         slot.entrant.seed = entrant.seed;
+                        slot.entrant.backgroundColor = entrant.backgroundColor;
                     });
                 });
 
