@@ -69,7 +69,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                         this.entrants.forEach(entrant => {
                             if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
 
-                            if (entrant.participants[0].user.images.length == 0) {
+                            if (this.getEntrantImage(entrant) === '') {
                                 const hue = Math.floor(Math.random() * 361);
                                 const sat = Math.floor(Math.random() * 101);
                                 const lum = 40;
@@ -469,12 +469,12 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getEntrantImage(entrant) {
         let profile = this.getEntrantProfile(entrant);
-        return !!profile ? profile.url : '';
+        return profile ? profile.url : '';
     }
 
     getEntrantImageOrientation(entrant) {
         let profile = this.getEntrantProfile(entrant);
-        return !!profile && profile.height > profile.width ? 'portrait' : '';
+        return profile && profile.height > profile.width ? 'portrait' : '';
     }
 
     getEntrantProfile(entrant) {

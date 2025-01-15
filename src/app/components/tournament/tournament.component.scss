@@ -29,13 +29,13 @@
     border-radius: 50%;
     color: #fff;
     text-align: center;
-    margin-left: 0.5px;
 }
 
 .entrant-search-image-default {
     @extend .entrant-image-default;
     font-size: 18px;
     line-height: 30px;
+    padding-left: 0.5px;
 }
 
 .search-entrant-name {
@@ -90,6 +90,7 @@
     @extend .entrant-image-default;
     font-size: 12px;
     line-height: 19px;
+    padding-left: 1px;
 }
 
 .set-name {

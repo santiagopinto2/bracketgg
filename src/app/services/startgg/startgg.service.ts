@@ -27,6 +27,7 @@ export class StartggService {
                     events {
                         name
                         slug
+                        numEntrants
                     }
                 }
             }`
@@ -35,7 +36,25 @@ export class StartggService {
         return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
-    getEventBySlug(eventSlug): Observable<any> {
+    getEventBySlug(eventSlug, totalEntrants): Observable<any> {
+        const entrantsPerPage = 100;
+        let numberOfPages = Math.ceil(totalEntrants / entrantsPerPage);
+        let entrantsSplit: Observable<HttpClient>[] = new Array(numberOfPages);
+
+        return new Observable(observer => {
+            for (let i = 0; i < numberOfPages; i++) entrantsSplit[i] = this.getEventBySlugPaginated(eventSlug, i + 1, entrantsPerPage);
+
+            forkJoin(entrantsSplit).subscribe((data: any) => {
+                let entrants = data[0].data.event.entrants;
+                for (let i = 1; i < numberOfPages; i++) entrants.nodes = [...entrants.nodes, ...data[i].data.event.entrants.nodes];
+                let event = data[0].data.event;
+                event.entrants = entrants;
+                observer.next(event);
+            })
+        });
+    }
+
+    getEventBySlugPaginated(eventSlug, page, entrantsPerPage): Observable<any> {
         const body = {
             query: `query {
                 event(slug: "${eventSlug}") {
@@ -46,8 +65,8 @@ export class StartggService {
                         name
                     }
                     entrants(query : {
-                        page: 1
-                        perPage: 100
+                        page: ${page}
+                        perPage: ${entrantsPerPage}
                     }) {
                         nodes {
                             id
