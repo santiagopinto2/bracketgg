@@ -34,6 +34,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
     isGrabbing = false;
+    // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
@@ -160,10 +161,12 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 // Add entrant data to each set
                 phaseGroupSets.forEach(set => {
                     set.slots.forEach(slot => {
-                        let entrant = this.entrants.find(entrant => entrant.id == slot.entrant.id);
-                        slot.entrant.participants = entrant.participants;
-                        slot.entrant.seed = entrant.seed;
-                        slot.entrant.backgroundColor = entrant.backgroundColor;
+                        let entrant = this.entrants.find(entrant => entrant.id == slot?.entrant?.id);
+                        if (entrant) {
+                            slot.entrant.participants = entrant.participants;
+                            slot.entrant.seed = entrant.seed;
+                            slot.entrant.backgroundColor = entrant.backgroundColor;
+                        }
                     });
                 });
 
@@ -379,16 +382,20 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getNumberOfPlayers(phaseGroup) {
-        let players = [];
-        phaseGroup.sets.nodes.forEach(side => {
-            side.forEach(round => {
-                round.forEach(set => {
-                    players.push(set.slots[0].entrant.id);
-                    players.push(set.slots[1].entrant.id);
-                });
-            });
-        });
-        return Array.from(new Set(players)).length;
+        let fullRoundIndex = 0;
+        let sets = phaseGroup.sets.nodes;
+
+        // Looking for the first round in winner's with a number of sets that's a power of 2 that then decreases after that round
+        while ((sets[0][fullRoundIndex].length & (sets[0][fullRoundIndex].length - 1)) != 0 || sets[0][fullRoundIndex].length < sets[0][fullRoundIndex + 1].length) fullRoundIndex++;
+
+        let numberOfPlayers = 0;
+        let fullRoundLength = sets[0][fullRoundIndex].length;
+        numberOfPlayers += fullRoundLength * 2;
+
+        // Adding the total number of sets in loser's in rounds where the number of sets is greater than half of the fullRoundLength
+        for (let i = 0; sets[1][i].length != fullRoundLength / 2 || sets[1][i].length < sets[1][i + 1].length; i++) numberOfPlayers += sets[1][i].length;
+
+        return numberOfPlayers;
     }
 
     getAddedSetIndexes(length, setCount, isForwards) {
@@ -456,6 +463,12 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     getSlotHeight(firstSlot) {
         let normalSlotHeight = (this.setHeight - 0.67) / 2;
         return (firstSlot ? normalSlotHeight + 0.67 : normalSlotHeight) + 'px';
+    }
+
+    getSeedFontSize(slot) {
+        if (slot.entrant.seed < 100) return '12px';
+        if (slot.entrant.seed < 1000) return '10px';
+        return '8px';
     }
 
     getColumnWidth(column) {

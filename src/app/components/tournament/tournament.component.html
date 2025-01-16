@@ -77,7 +77,7 @@
 
                                         <div class="col p-0 set-seeds" id="seeds">
                                             <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngStyle]="{'height': getSlotHeight(firstSlot)}">
-                                                <div class="d-flex justify-content-center p-0" style="margin-top: 4px; font-size: 12px">
+                                                <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getSeedFontSize(slot)}">
                                                     {{slot.entrant.seed}}
                                                 </div>
                                             </div>
