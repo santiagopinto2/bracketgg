@@ -195,7 +195,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         // Calculate the number of players per phase group
         phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
 
-        
+
         this.phaseGroups[phaseGroupIndex] = phaseGroup;
     }
 
@@ -447,8 +447,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getScore(slot, set) {
         if (!slot.standing) return '‎';
-        if (slot.standing.stats.score.value) {
-            //if (slot.standing.stats.score.value == -1) return 'DQ';
+        if (!isNaN(slot.standing.stats.score.value)) {
+            if (slot.standing.stats.score.value == -1) return 'DQ';
             return slot.standing.stats.score.value;
         }
 
@@ -465,6 +465,14 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         if (slot.entrant.seed < 100) return '12px';
         if (slot.entrant.seed < 1000) return '10px';
         return '8px';
+    }
+
+    getScoreFontSize(slot) {
+        return slot.standing.stats.score.value == -1 ? '12px' : '14px';
+    }
+
+    getScoreFontWeight(slot) {
+        return slot.standing.stats.score.value == -1 ? 'bold' : 'normal';
     }
 
     getColumnWidth(column) {
