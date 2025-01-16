@@ -441,7 +441,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     isWinner(set, slot, typeOfDisplay) {
-        if (!slot.entrant) return '';
+        if (!slot.entrant) return `loser-${typeOfDisplay}`;
         return slot.entrant.id == set.winnerId ? `winner-${typeOfDisplay}` : `loser-${typeOfDisplay}`;
     }
 
@@ -462,17 +462,18 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSeedFontSize(slot) {
+        if (!slot.standing) return null;
         if (slot.entrant.seed < 100) return '12px';
         if (slot.entrant.seed < 1000) return '10px';
         return '8px';
     }
 
     getScoreFontSize(slot) {
-        return slot.standing.stats.score.value == -1 ? '12px' : '14px';
+        return slot.standing?.stats.score.value == -1 ? '12px' : '14px';
     }
 
     getScoreFontWeight(slot) {
-        return slot.standing.stats.score.value == -1 ? 'bold' : 'normal';
+        return slot.standing?.stats.score.value == -1 ? 'bold' : 'normal';
     }
 
     getColumnWidth(column) {
@@ -495,6 +496,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getEntrantProfile(entrant) {
+        if (!entrant) return null;
         let images = entrant.participants[0].user.images;
         return images.length > 0 ? images.find(image => image.type === 'profile') : null;
     }

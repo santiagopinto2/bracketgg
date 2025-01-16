@@ -78,7 +78,7 @@
                                         <div class="col p-0 set-seeds" id="seeds">
                                             <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngStyle]="{'height': getSlotHeight(firstSlot)}">
                                                 <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getSeedFontSize(slot)}">
-                                                    {{slot.entrant.seed}}
+                                                    {{slot.entrant?.seed}}
                                                 </div>
                                             </div>
                                         </div>
@@ -87,8 +87,8 @@
                                             <div class="row set-row gx-0" *ngFor="let slot of set.slots; let firstSlot = first" style="width: 28px" [ngStyle]="{'height': getSlotHeight(firstSlot)}">
                                                 <div class="entrant-image" style="width: 18px; height: 18px; margin: 4px 5px">
                                                     <img *ngIf="getEntrantImage(slot.entrant) !== ''" [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
-                                                    <div *ngIf="getEntrantImage(slot.entrant) === ''" class="entrant-set-image-default" [ngStyle]="{'background-color': slot.entrant.backgroundColor}">
-                                                        {{slot.entrant.participants[0].gamerTag[0].toUpperCase()}}</div>
+                                                    <div *ngIf="getEntrantImage(slot.entrant) === ''" class="entrant-set-image-default" [ngStyle]="{'background-color': slot.entrant?.backgroundColor}">
+                                                        {{slot.entrant?.participants[0].gamerTag[0].toUpperCase()}}</div>
                                                 </div>
                                             </div>
                                         </div>
