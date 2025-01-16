@@ -192,6 +192,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         for (let i = 0; i < winnersMaxRound; i++) phaseGroup.sets.nodes[0].push(Array.from(phaseGroupSets.filter(set => set.round == i + 1)));
         for (let i = 0; i < losersMaxRound; i++) phaseGroup.sets.nodes[1].push(Array.from(phaseGroupSets.filter(set => set.round == (i + 1) * -1)));
 
+        // Calculate the number of players per phase group
+        phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
+
+        
         this.phaseGroups[phaseGroupIndex] = phaseGroup;
     }
 
@@ -219,9 +223,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // If it's loser's side
         if (round < 0) {
-            // Get the total number of players in the phase group
-            let numberOfPlayers = this.getNumberOfPlayers(phaseGroup);
-            let powerOfPlayersRemainder = Math.log(numberOfPlayers) / Math.log(2) % 1;
+            // Get the distance between two powers of 2 for the number of players
+            let powerOfPlayersRemainder = Math.log(phaseGroup.numPlayers) / Math.log(2) % 1;
 
             // If winner's round 1 set count is less than 1/4 of the way between powers of 2
             if (powerOfPlayersRemainder < 0.321928094) {
@@ -317,7 +320,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getBlockClass(columnIndex, blockIndex, phaseGroup, bracketSide) {
         let blockColumnIndex = columnIndex % 3;
-        let numberOfPlayers = this.getNumberOfPlayers(phaseGroup);
         let leftRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 1) * this.maxRoundModifier[bracketSide]).length;
         let rightRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]).length;
 
@@ -337,7 +339,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         // If it's loser's side and winner's round 1 set count is greater than 1/2 of the way between powers of 2
-        else if (bracketSide == 1 && Math.log(numberOfPlayers) / Math.log(2) % 1 > 0.584962500) {
+        else if (bracketSide == 1 && Math.log(phaseGroup.numPlayers) / Math.log(2) % 1 > 0.584962500) {
             let setIndex = Math.trunc(blockIndex / 4);
             for (let i = 0; i < leftRoundSetCount; i++) {
                 if (SetOrderConstants[`sets${rightRoundSetCount}`][rightRoundSetCount - 1 - i] == setIndex && blockIndex % 4 == 1) return 'straight-block';
