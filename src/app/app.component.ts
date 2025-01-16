@@ -43,40 +43,38 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.cdr.detectChanges();
     }
 
-    parseUrl(url) {
+    async parseUrl(url) {
         if (url.includes('/tournament')) {
             let tourneySlug = url.slice(12);
 
             if (tourneySlug.length > 0) {
                 tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'))
-                this.startggService.getTournamentEvents(tourneySlug).subscribe(data => {
-                    this.events = data.data.tournament.events;
+                let tourneyEventsRes = await this.startggService.getTournamentEvents(tourneySlug);
+                this.events = tourneyEventsRes.data.tournament.events;
 
-                    if (url.includes('/event/')) {
-                        let eventData: any = {};
+                if (url.includes('/event/')) {
+                    let eventData: any = {};
 
-                        if (url.includes('/brackets?filter=')) eventData.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
-                        else if (url.includes('/brackets/')) {
-                            let bracketEndIndex = url.indexOf('/brackets/') + '/brackets/'.length;
-                            if (url.indexOf('/', bracketEndIndex) == -1) eventData.phaseId = Number(url.slice(bracketEndIndex));
-                            else eventData.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
-                        }
-
-                        let eventSlug = '';
-                        let eventEndIndex = url.indexOf('/event/') + '/event/'.length;
-                        if (url.indexOf('/', eventEndIndex) == -1) eventSlug = url.slice(1);
-                        else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
-
-                        this.startggService.getEventBySlug(eventSlug, this.events.find(event => event.slug == eventSlug).numEntrants).subscribe(data => {
-                            if (data.errors) { console.log('error', data.errors[0].message); return; }
-
-                            if (!eventData.phaseId) eventData.phaseId = data.phases[0].id;
-                            eventData.event = data;
-                            this.tournamentDataService.changeEvent(eventData);
-                        })
+                    if (url.includes('/brackets?filter=')) eventData.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
+                    else if (url.includes('/brackets/')) {
+                        let bracketEndIndex = url.indexOf('/brackets/') + '/brackets/'.length;
+                        if (url.indexOf('/', bracketEndIndex) == -1) eventData.phaseId = Number(url.slice(bracketEndIndex));
+                        else eventData.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
                     }
-                    else this.tournamentDataService.changeEvent({});
-                })
+
+                    let eventSlug = '';
+                    let eventEndIndex = url.indexOf('/event/') + '/event/'.length;
+                    if (url.indexOf('/', eventEndIndex) == -1) eventSlug = url.slice(1);
+                    else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
+
+                    let eventRes = await this.startggService.getEventBySlug(eventSlug, this.events.find(event => event.slug == eventSlug).numEntrants);
+                    if (eventRes.errors) { console.log('error', eventRes.errors[0].message); return; }
+
+                    if (!eventData.phaseId) eventData.phaseId = eventRes.phases[0].id;
+                    eventData.event = eventRes;
+                    this.tournamentDataService.changeEvent(eventData);
+                }
+                else this.tournamentDataService.changeEvent({});
             }
         }
         else {

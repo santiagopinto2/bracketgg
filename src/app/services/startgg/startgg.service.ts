@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { forkJoin, Observable } from 'rxjs';
+import { firstValueFrom, forkJoin, Observable } from 'rxjs';
 
 @Injectable({
     providedIn: 'root'
@@ -18,7 +18,7 @@ export class StartggService {
         });
     }
 
-    getTournamentEvents(tourneySlug): Observable<any> {
+    getTournamentEvents(tourneySlug): Promise<any> {
         const body = {
             query: `query {
                 tournament(slug: "${tourneySlug}") {
@@ -33,25 +33,25 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
+        return firstValueFrom(this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() }));
     }
 
-    getEventBySlug(eventSlug, totalEntrants): Observable<any> {
+    async getEventBySlug(eventSlug, totalEntrants): Promise<any> {
         const entrantsPerPage = 100;
         let numberOfPages = Math.ceil(totalEntrants / entrantsPerPage);
         let entrantsSplit: Observable<HttpClient>[] = new Array(numberOfPages);
+        for (let i = 0; i < numberOfPages; i++) entrantsSplit[i] = this.getEventBySlugPaginated(eventSlug, i + 1, entrantsPerPage);
 
-        return new Observable(observer => {
-            for (let i = 0; i < numberOfPages; i++) entrantsSplit[i] = this.getEventBySlugPaginated(eventSlug, i + 1, entrantsPerPage);
-
+        return firstValueFrom(new Observable(observer => {
             forkJoin(entrantsSplit).subscribe((data: any) => {
                 let entrants = data[0].data.event.entrants;
                 for (let i = 1; i < numberOfPages; i++) entrants.nodes = [...entrants.nodes, ...data[i].data.event.entrants.nodes];
                 let event = data[0].data.event;
                 event.entrants = entrants;
+
                 observer.next(event);
             })
-        });
+        }));
     }
 
     getEventBySlugPaginated(eventSlug, page, entrantsPerPage): Observable<any> {
@@ -94,10 +94,10 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
+        return this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() });
     }
 
-    getEventById(eventId): Observable<any> {
+    getEventById(eventId): Promise<any> {
         const body = {
             query: `query {
                 event(id: "${eventId}") {
@@ -111,10 +111,10 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
+        return firstValueFrom(this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() }));
     }
 
-    getPhase(phaseId): Observable<any> {
+    getPhase(phaseId) {
         const body = {
             query: `query {
                 phase(id: ${phaseId}) {
@@ -144,23 +144,23 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
+        return firstValueFrom(this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() }));
     }
 
-    getPhaseGroupSets(phaseGroupId, totalSets): Observable<any> {
+    getPhaseGroupSets(phaseGroupId, totalSets): Promise<any> {
         const setsPerPage = 66;
         let numberOfPages = Math.ceil(totalSets / setsPerPage);
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
+        for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage);
 
-        return new Observable(observer => {
-            for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage);
-
+        return firstValueFrom(new Observable(observer => {
             forkJoin(phaseGroupSplit).subscribe((data: any) => {
                 let sets = data[0].data.phaseGroup.sets;
                 for (let i = 1; i < numberOfPages; i++) sets.nodes = [...sets.nodes, ...data[i].data.phaseGroup.sets.nodes];
+
                 observer.next(sets);
             })
-        });
+        }));
     }
 
     getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Observable<any> {
@@ -197,6 +197,6 @@ export class StartggService {
             }`
         };
 
-        return this.http.post(this.baseUrl, body, { headers: this.getHeaders() });
+        return this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() });
     }
 }
