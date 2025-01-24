@@ -71,11 +71,6 @@
 
 .set-row:first-child {
     border-bottom: 1px solid #303030;
-    border-top-right-radius: 4px;
-}
-
-.set-row:last-child {
-    border-bottom-right-radius: 4px;
 }
 
 .set-seeds {
@@ -107,7 +102,18 @@
 
 .set-scores {
     max-width: 20px;
+    border-top-right-radius: 4px !important;
+    border-bottom-right-radius: 4px !important;
     color: black;
+}
+
+.set-scores {
+    & .set-row:first-child {
+        border-top-right-radius: 4px !important;
+    }
+    & .set-row:last-child {
+        border-bottom-right-radius: 4px !important;
+    }
 }
 
 .winner-score {
@@ -121,6 +127,10 @@
 
 .set-middle {
     background-color: #525252;
+}
+
+.slot-hover {
+    background-color: #1b1b1b;
 }
 
 .first-block-column-first-row {

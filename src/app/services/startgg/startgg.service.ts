@@ -44,6 +44,9 @@ export class StartggService {
 
         return firstValueFrom(new Observable(observer => {
             forkJoin(entrantsSplit).subscribe((data: any) => {
+                let splitErrors = data.find(split => split.errors);
+                if (splitErrors) { observer.next(splitErrors); return; }
+
                 let entrants = data[0].data.event.entrants;
                 for (let i = 1; i < numberOfPages; i++) entrants.nodes = [...entrants.nodes, ...data[i].data.event.entrants.nodes];
                 let event = data[0].data.event;
@@ -148,13 +151,16 @@ export class StartggService {
     }
 
     getPhaseGroupSets(phaseGroupId, totalSets): Promise<any> {
-        const setsPerPage = 66;
+        const setsPerPage = 29;
         let numberOfPages = Math.ceil(totalSets / setsPerPage);
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
         for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage);
 
         return firstValueFrom(new Observable(observer => {
             forkJoin(phaseGroupSplit).subscribe((data: any) => {
+                let splitErrors = data.find(split => split.errors);
+                if (splitErrors) { observer.next(splitErrors); return; }
+
                 let sets = data[0].data.phaseGroup.sets;
                 for (let i = 1; i < numberOfPages; i++) sets.nodes = [...sets.nodes, ...data[i].data.phaseGroup.sets.nodes];
 
@@ -177,6 +183,26 @@ export class StartggService {
                             round
                             fullRoundText
                             winnerId
+                            games {
+                                winnerId
+                                stage {
+                                    name
+                                }
+                                selections {
+                                    entrant {
+                                        id
+                                    }
+                                    character {
+                                        name
+                                        images {
+                                            url
+                                            type
+                                            width
+                                            height
+                                        }
+                                    }
+                                }
+                            }
                             slots {
                                 id
                                 entrant {

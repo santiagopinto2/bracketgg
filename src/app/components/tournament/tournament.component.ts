@@ -33,6 +33,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRounds = [];
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
+    playerHovered = -1;
     isGrabbing = false;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
@@ -499,5 +500,17 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!entrant) return null;
         let images = entrant.participants[0].user.images;
         return images.length > 0 ? images.find(image => image.type === 'profile') : null;
+    }
+
+    onSlotEnter(slot) {
+        this.playerHovered = slot.entrant.id;
+    }
+
+    onSlotLeave() {
+        this.playerHovered = -1;
+    }
+
+    getSlotHover(slot) {
+        return slot.entrant.id == this.playerHovered ? 'slot-hover' : '';
     }
 }
