@@ -4,21 +4,24 @@ import { StartggService } from 'src/app/services/startgg/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { Subject } from 'rxjs/internal/Subject';
-import { map, startWith, take, takeUntil } from 'rxjs/operators';
+import { map, startWith, takeUntil } from 'rxjs/operators';
 import { NgIf, NgFor, NgStyle, NgClass, AsyncPipe } from '@angular/common';
 import { MatIconButton } from '@angular/material/button';
-import { MatIcon } from '@angular/material/icon';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatAutocompleteModule, MatOption } from '@angular/material/autocomplete';
-import { MatInput } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+
+import { MatInputModule } from '@angular/material/input';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { SetComponent } from '../set/set.component';
 
 @Component({
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss'],
-    imports: [NgIf, MatIconButton, MatIcon, NgFor, NgStyle, NgClass, MatFormField, MatLabel, MatAutocompleteModule, MatInput, FormsModule, ReactiveFormsModule, MatOption, AsyncPipe]
+    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, AsyncPipe]
 })
 export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -38,7 +41,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
-    constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private router: Router) {
+    constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private dialog: MatDialog, private router: Router) {
         // Start filtering the search entrants form
         this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
             startWith(''),
@@ -192,6 +195,19 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         phaseGroup.sets.nodes = [[], []];
         for (let i = 0; i < winnersMaxRound; i++) phaseGroup.sets.nodes[0].push(Array.from(phaseGroupSets.filter(set => set.round == i + 1)));
         for (let i = 0; i < losersMaxRound; i++) phaseGroup.sets.nodes[1].push(Array.from(phaseGroupSets.filter(set => set.round == (i + 1) * -1)));
+
+        // Organize set games data
+        phaseGroupSets.forEach(set => {
+            if (set.games) {
+                set.games.forEach(game => {
+                    if (game.selections[0].entrant.id != set.slots[0].entrant.id) {
+                        let tempSelection = game.selections[0];
+                        game.selections[0] = game.selections[1];
+                        game.selections[1] = tempSelection;
+                    }
+                });
+            }
+        });
 
         // Calculate the number of players per phase group
         phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
@@ -474,7 +490,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getScoreFontWeight(slot) {
-        return slot.standing?.stats.score.value == -1 ? 'bold' : 'normal';
+        return 'normal';
+        // return slot.standing?.stats.score.value == -1 ? 'bold' : 'normal';
     }
 
     getColumnWidth(column) {
@@ -512,5 +529,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getSlotHover(slot) {
         return slot.entrant.id == this.playerHovered ? 'slot-hover' : '';
+    }
+
+    openSet(set) {
+        const dialogRef = this.dialog.open(SetComponent, {
+            data: { set },
+            width: '800px',
+            autoFocus: false
+        });
     }
 }

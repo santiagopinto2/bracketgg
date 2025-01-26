@@ -8,7 +8,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { SettingsComponent } from './components/settings/settings.component';
 import { MatToolbar } from '@angular/material/toolbar';
 import { NgIf, NgFor } from '@angular/common';
-import { MatIconButton, MatAnchor } from '@angular/material/button';
+import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
 import { SearchComponent } from './components/search/search.component';
@@ -101,6 +101,8 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     openSettings() {
-        const dialogRef = this.dialog.open(SettingsComponent, {});
+        const dialogRef = this.dialog.open(SettingsComponent, {
+            autoFocus: false
+        });
     }
 }

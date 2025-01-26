@@ -1,0 +1,66 @@
+mat-card {
+    background-color: rgb(87, 87, 87);
+}
+
+.entrant-name {
+    width: 200px;
+    font-size: 18px;
+    padding-top: 11px;
+}
+
+.entrant-score {
+    width: 50px;
+    font-size: 36px;
+    padding-top: 12px;
+}
+
+.entrant-image {
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.entrant-image img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    height: 100%;
+    width: auto;
+    -webkit-transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+}
+
+.entrant-image img.portrait {
+    width: 100%;
+    height: auto;
+}
+
+.entrant-image-default {
+    border-radius: 50%;
+    color: #fff;
+    text-align: center;
+}
+
+.entrant-set-image-default {
+    @extend .entrant-image-default;
+    font-size: 18px;
+    line-height: 30px;
+    padding-left: 0.5px;
+}
+
+.entrant-set-image {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+}
+
+.game-result-abbr {
+    width: 60px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 34px;
+}
