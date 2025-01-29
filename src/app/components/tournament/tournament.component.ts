@@ -39,6 +39,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     playerHovered = -1;
     isGrabbing = false;
     phaseHasGames = false;
+    isLoading = false;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
@@ -90,6 +91,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     }
 
                     // Get all phase and phase group data
+                    this.isLoading = true;
                     this.phases = event.event.phases;
                     this.currentPhaseIndex = this.phases.findIndex(phase => phase.id == event.phaseId);
                     this.getPhase(event.phaseId);
@@ -140,11 +142,16 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.phaseHasGames = await this.startggService.phaseHasGames(phaseRes.data.phase.phaseGroups.nodes[0].id);
 
         // Get all phase groups within the phase
+        let phaseGroupPromises = [];
         for (let i = 0; i < phaseRes.data.phase.phaseGroups.nodes.length; i++) {
             this.phaseGroups.push();
             this.maxRounds.push([]);
-            this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i);
+            const phaseGroupPromise = this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i);
+            phaseGroupPromises.push(phaseGroupPromise);
         }
+
+        await Promise.all(phaseGroupPromises);
+        this.isLoading = false;
     }
 
     async getPhaseGroup(phaseGroup, phaseGroupIndex) {
@@ -197,7 +204,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         phaseGroupSets.forEach(set => {
             if (set.games) {
                 set.games.forEach(game => {
-                    if (game.selections[0].entrant.id != set.slots[0].entrant.id) {
+                    if (game.selections && game.selections[0].entrant.id != set.slots[0].entrant.id) {
                         let tempSelection = game.selections[0];
                         game.selections[0] = game.selections[1];
                         game.selections[1] = tempSelection;
