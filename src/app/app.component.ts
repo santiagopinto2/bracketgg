@@ -1,9 +1,9 @@
 import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
-import { ColorSchemeService } from './services/color-scheme/color-scheme.service';
-import { StartggService } from './services/startgg/startgg.service';
+import { ColorSchemeService } from './services/color-scheme.service';
+import { StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
-import { TournamentDataService } from './services/tournamentData/tournamentData.service';
+import { TournamentDataService } from './services/tournamentData.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SettingsComponent } from './components/settings/settings.component';
 import { MatToolbar } from '@angular/material/toolbar';

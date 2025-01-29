@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { StartggService } from 'src/app/services/startgg/startgg.service';
-import { TournamentDataService } from 'src/app/services/tournamentData/tournamentData.service';
+import { StartggService } from 'src/app/services/startgg.service';
+import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { Subject } from 'rxjs/internal/Subject';
 import { map, startWith, takeUntil } from 'rxjs/operators';
