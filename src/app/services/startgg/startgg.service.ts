@@ -8,6 +8,9 @@ import { firstValueFrom, forkJoin, Observable } from 'rxjs';
 export class StartggService {
 
     private baseUrl: string = 'https://api.start.gg/gql/alpha';
+    private entrantsPerPage = 100;
+    private setsWithGamesPerPage = 29;
+    private setsWithoutGamesPerPage = 66;
 
     constructor(private http: HttpClient) { }
 
@@ -37,10 +40,9 @@ export class StartggService {
     }
 
     async getEventBySlug(eventSlug, totalEntrants): Promise<any> {
-        const entrantsPerPage = 100;
-        let numberOfPages = Math.ceil(totalEntrants / entrantsPerPage);
+        let numberOfPages = Math.ceil(totalEntrants / this.entrantsPerPage);
         let entrantsSplit: Observable<HttpClient>[] = new Array(numberOfPages);
-        for (let i = 0; i < numberOfPages; i++) entrantsSplit[i] = this.getEventBySlugPaginated(eventSlug, i + 1, entrantsPerPage);
+        for (let i = 0; i < numberOfPages; i++) entrantsSplit[i] = this.getEventBySlugPaginated(eventSlug, i + 1, this.entrantsPerPage);
 
         return firstValueFrom(new Observable(observer => {
             forkJoin(entrantsSplit).subscribe((data: any) => {
@@ -150,11 +152,17 @@ export class StartggService {
         return firstValueFrom(this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() }));
     }
 
-    getPhaseGroupSets(phaseGroupId, totalSets): Promise<any> {
-        const setsPerPage = 29;
+    async phaseHasGames(phaseGroupId): Promise<boolean> {
+        let firstPage = await firstValueFrom(this.getPhaseGroupSetsPaginated(phaseGroupId, 1, 10, true))
+        return firstPage.data.phaseGroup.sets.nodes.some(set => set.games);
+    }
+
+    async getPhaseGroupSets(phaseGroupId, totalSets, phaseHasGames): Promise<any> {
+        let setsPerPage = phaseHasGames ? this.setsWithGamesPerPage : this.setsWithoutGamesPerPage;
         let numberOfPages = Math.ceil(totalSets / setsPerPage);
+
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
-        for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage);
+        for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage, phaseHasGames);
 
         return firstValueFrom(new Observable(observer => {
             forkJoin(phaseGroupSplit).subscribe((data: any) => {
@@ -169,7 +177,9 @@ export class StartggService {
         }));
     }
 
-    getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Observable<any> {
+    getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage, phaseHasGames): Observable<any> {
+        let setGamesQuery = phaseHasGames ? this.getSetGamesQuery() : '';
+
         const body = {
             query: `query {
                 phaseGroup(id: ${phaseGroupId}) {
@@ -183,26 +193,7 @@ export class StartggService {
                             round
                             fullRoundText
                             winnerId
-                            games {
-                                winnerId
-                                stage {
-                                    name
-                                }
-                                selections {
-                                    entrant {
-                                        id
-                                    }
-                                    character {
-                                        name
-                                        images {
-                                            url
-                                            type
-                                            width
-                                            height
-                                        }
-                                    }
-                                }
-                            }
+                            ${setGamesQuery}
                             slots {
                                 id
                                 entrant {
@@ -224,5 +215,28 @@ export class StartggService {
         };
 
         return this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() });
+    }
+
+    getSetGamesQuery() {
+        return `games {
+            winnerId
+                stage {
+                name
+            }
+                selections {
+                    entrant {
+                    id
+                }
+                    character {
+                    name
+                        images {
+                        url
+                        type
+                        width
+                        height
+                    }
+                }
+            }
+        }`
     }
 }

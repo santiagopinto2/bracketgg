@@ -141,17 +141,18 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     async getPhase(phaseId) {
         let phaseRes = await this.startggService.getPhase(phaseId);
         if (phaseRes.errors) { console.log('error', phaseRes.errors[0].message); return; }
+        let phaseHasGame = await this.startggService.phaseHasGames(phaseRes.data.phase.phaseGroups.nodes[0].id);
 
         // Get all phase groups within the phase
         for (let i = 0; i < phaseRes.data.phase.phaseGroups.nodes.length; i++) {
             this.phaseGroups.push();
             this.maxRounds.push([]);
-            this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i);
+            this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i, phaseHasGame);
         }
     }
 
-    async getPhaseGroup(phaseGroup, phaseGroupIndex) {
-        let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total);
+    async getPhaseGroup(phaseGroup, phaseGroupIndex, phaseHasGame) {
+        let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, phaseHasGame);
         if (phaseGroupSetsRes.errors) { console.log('error', phaseGroupSetsRes.errors[0].message); return; }
 
         phaseGroup.sets = phaseGroupSetsRes;
