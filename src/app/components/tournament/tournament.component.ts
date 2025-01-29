@@ -38,6 +38,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRoundsPhase = -1;
     playerHovered = -1;
     isGrabbing = false;
+    phaseHasGames = false;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
@@ -90,12 +91,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
                     // Get all phase and phase group data
                     this.phases = event.event.phases;
-                    for (let i = 0; i < this.phases.length; i++) {
-                        if (this.phases[i].id == event.phaseId) {
-                            this.currentPhaseIndex = i;
-                            break;
-                        }
-                    }
+                    this.currentPhaseIndex = this.phases.findIndex(phase => phase.id == event.phaseId);
                     this.getPhase(event.phaseId);
                 }
             });
@@ -141,18 +137,18 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     async getPhase(phaseId) {
         let phaseRes = await this.startggService.getPhase(phaseId);
         if (phaseRes.errors) { console.log('error', phaseRes.errors[0].message); return; }
-        let phaseHasGame = await this.startggService.phaseHasGames(phaseRes.data.phase.phaseGroups.nodes[0].id);
+        this.phaseHasGames = await this.startggService.phaseHasGames(phaseRes.data.phase.phaseGroups.nodes[0].id);
 
         // Get all phase groups within the phase
         for (let i = 0; i < phaseRes.data.phase.phaseGroups.nodes.length; i++) {
             this.phaseGroups.push();
             this.maxRounds.push([]);
-            this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i, phaseHasGame);
+            this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i);
         }
     }
 
-    async getPhaseGroup(phaseGroup, phaseGroupIndex, phaseHasGame) {
-        let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, phaseHasGame);
+    async getPhaseGroup(phaseGroup, phaseGroupIndex) {
+        let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, this.phaseHasGames);
         if (phaseGroupSetsRes.errors) { console.log('error', phaseGroupSetsRes.errors[0].message); return; }
 
         phaseGroup.sets = phaseGroupSetsRes;
@@ -479,6 +475,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         return (firstSlot ? normalSlotHeight + 0.67 : normalSlotHeight) + 'px';
     }
 
+    getSetNameWidth(set) {
+        return set.games ? '108px' : '136px';
+    }
+
     getSeedFontSize(slot) {
         if (!slot.standing) return null;
         if (slot.entrant.seed < 100) return '12px';
@@ -530,6 +530,14 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getSlotHover(slot) {
         return slot.entrant.id == this.playerHovered ? 'slot-hover' : '';
+    }
+
+    hasGames(set) {
+        return set.games;
+    }
+
+    getCharIcon(set, playerIndex) {
+        return set.games[0].selections[playerIndex].character.images.find(image => image.type === 'stockIcon').url;
     }
 
     openSet(set) {

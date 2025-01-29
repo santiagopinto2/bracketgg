@@ -88,9 +88,14 @@
     padding-left: 0.5px;
 }
 
+.set-image {
+    width: 18px;
+    height: 18px; 
+    margin: 4px 5px;
+}
+
 .set-name {
     padding: 0 0 0 4px;
-    width: 136px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
