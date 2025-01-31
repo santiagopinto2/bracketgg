@@ -10,12 +10,12 @@ import { MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
-
 import { MatInputModule } from '@angular/material/input';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { SetComponent } from '../set/set.component';
+import { LoadingService } from 'src/app/services/loading.service';
 
 @Component({
     selector: 'app-tournament',
@@ -39,11 +39,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     playerHovered = -1;
     isGrabbing = false;
     phaseHasGames = false;
-    isLoading = false;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
-    constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private dialog: MatDialog, private router: Router) {
+    constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private loadingService: LoadingService, private dialog: MatDialog, private router: Router) {
         // Start filtering the search entrants form
         this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
             startWith(''),
@@ -91,7 +90,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     }
 
                     // Get all phase and phase group data
-                    this.isLoading = true;
                     this.phases = event.event.phases;
                     this.currentPhaseIndex = this.phases.findIndex(phase => phase.id == event.phaseId);
                     this.getPhase(event.phaseId);
@@ -151,7 +149,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         await Promise.all(phaseGroupPromises);
-        this.isLoading = false;
+        this.loadingService.updateValue(false);
     }
 
     async getPhaseGroup(phaseGroup, phaseGroupIndex) {

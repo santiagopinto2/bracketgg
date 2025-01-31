@@ -13,6 +13,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
 import { SearchComponent } from './components/search/search.component';
 import { MatNavList, MatListItem } from '@angular/material/list';
+import { LoadingService } from './services/loading.service';
 
 @Component({
     selector: 'app-root',
@@ -26,7 +27,15 @@ export class AppComponent implements OnInit, AfterViewInit {
     windowSize;
     events = [];
 
-    constructor(public colorSchemeService: ColorSchemeService, private startggService: StartggService, private tournamentDataService: TournamentDataService, private dialog: MatDialog, private cdr: ChangeDetectorRef, private router: Router) {
+    constructor(
+        public colorSchemeService: ColorSchemeService,
+        private startggService: StartggService,
+        private tournamentDataService: TournamentDataService,
+        private loadingService: LoadingService,
+        private dialog: MatDialog,
+        private cdr: ChangeDetectorRef,
+        private router: Router
+    ) {
         this.colorSchemeService.load();
     }
 
@@ -48,7 +57,8 @@ export class AppComponent implements OnInit, AfterViewInit {
             let tourneySlug = url.slice(12);
 
             if (tourneySlug.length > 0) {
-                tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'))
+                this.loadingService.updateValue(true);
+                if (tourneySlug.indexOf('/') !== -1 )tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'));
                 let tourneyEventsRes = await this.startggService.getTournamentEvents(tourneySlug);
                 this.events = tourneyEventsRes.data.tournament.events;
 
@@ -74,7 +84,10 @@ export class AppComponent implements OnInit, AfterViewInit {
                     eventData.event = eventRes;
                     this.tournamentDataService.changeEvent(eventData);
                 }
-                else this.tournamentDataService.changeEvent({});
+                else {
+                    this.tournamentDataService.changeEvent({});
+                    this.loadingService.updateValue(false);
+                }
             }
         }
         else {

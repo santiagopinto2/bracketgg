@@ -60,7 +60,7 @@ $dark-theme: mat.m2-define-dark-theme((color: (primary: $dark-primary,
         color: #969696;
     }
 
-    &  {
+    & {
         background-color: #303030;
     }
 }
@@ -83,4 +83,8 @@ $dark-theme: mat.m2-define-dark-theme((color: (primary: $dark-primary,
 .row {
     margin-left: 0;
     margin-right: 0;
+}
+
+:root {
+    @include mat.progress-spinner-overrides((active-indicator-color: #f21a1a));
 }
