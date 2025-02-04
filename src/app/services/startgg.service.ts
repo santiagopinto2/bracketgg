@@ -9,8 +9,9 @@ export class StartggService {
 
     private baseUrl: string = 'https://api.start.gg/gql/alpha';
     private entrantsPerPage = 100;
-    private setsWithGamesPerPage = 29;
-    private setsWithoutGamesPerPage = 66;
+    private setsWithoutGamesBo5PerPage = 66;
+    private setsWithGamesBo3PerPage = 29;
+    private setsWithGamesBo5PerPage = 21;
 
     constructor(private http: HttpClient) { }
 
@@ -152,17 +153,29 @@ export class StartggService {
         return firstValueFrom(this.http.post<any>(this.baseUrl, body, { headers: this.getHeaders() }));
     }
 
-    async phaseHasGames(phaseGroupId): Promise<boolean> {
-        let firstPage = await firstValueFrom(this.getPhaseGroupSetsPaginated(phaseGroupId, 1, 10, true))
-        return firstPage.data.phaseGroup.sets.nodes.some(set => set.games);
+    async getPhaseProperties(phaseGroupId): Promise<any> {
+        let firstPage = await firstValueFrom(this.getPhaseGroupSetsPaginated(phaseGroupId, 1, 10, true));
+        let phaseHasGames = firstPage.data.phaseGroup.sets.nodes.some(set => set.games);
+
+        let maxScore = 0;
+        firstPage.data.phaseGroup.sets.nodes.forEach(set => {
+            maxScore = Math.max(set.slots[0].standing.stats.score.value, set.slots[1].standing.stats.score.value, maxScore);
+        });
+
+        return { phaseHasGames: phaseHasGames, maxScore: maxScore }
     }
 
-    async getPhaseGroupSets(phaseGroupId, totalSets, phaseHasGames): Promise<any> {
-        let setsPerPage = phaseHasGames ? this.setsWithGamesPerPage : this.setsWithoutGamesPerPage;
+    async getPhaseGroupSets(phaseGroupId, totalSets, phaseProperties): Promise<any> {
+        let setsPerPage;
+        if (phaseProperties.phaseHasGames) {
+            if (phaseProperties.maxScore == 2) setsPerPage = this.setsWithGamesBo3PerPage;
+            else if (phaseProperties.maxScore == 3) setsPerPage = this.setsWithGamesBo5PerPage;
+        }
+        else setsPerPage = this.setsWithoutGamesBo5PerPage;
         let numberOfPages = Math.ceil(totalSets / setsPerPage);
 
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);
-        for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage, phaseHasGames);
+        for (let i = 0; i < numberOfPages; i++) phaseGroupSplit[i] = this.getPhaseGroupSetsPaginated(phaseGroupId, i + 1, setsPerPage, phaseProperties.phaseHasGames);
 
         return firstValueFrom(new Observable(observer => {
             forkJoin(phaseGroupSplit).subscribe((data: any) => {

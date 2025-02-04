@@ -38,7 +38,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRoundsPhase = -1;
     playerHovered = -1;
     isGrabbing = false;
-    phaseHasGames = false;
+    phaseProperties;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
@@ -137,7 +137,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     async getPhase(phaseId) {
         let phaseRes = await this.startggService.getPhase(phaseId);
         if (phaseRes.errors) { console.log('error', phaseRes.errors[0].message); return; }
-        this.phaseHasGames = await this.startggService.phaseHasGames(phaseRes.data.phase.phaseGroups.nodes[0].id);
+        this.phaseProperties = await this.startggService.getPhaseProperties(phaseRes.data.phase.phaseGroups.nodes[0].id);
 
         // Get all phase groups within the phase
         let phaseGroupPromises = [];
@@ -153,7 +153,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     async getPhaseGroup(phaseGroup, phaseGroupIndex) {
-        let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, this.phaseHasGames);
+        let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, this.phaseProperties);
         if (phaseGroupSetsRes.errors) { console.log('error', phaseGroupSetsRes.errors[0].message); return; }
 
         phaseGroup.sets = phaseGroupSetsRes;
@@ -401,14 +401,22 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         let sets = phaseGroup.sets.nodes;
 
         // Looking for the first round in winner's with a number of sets that's a power of 2 that then decreases after that round
-        while ((sets[0][fullRoundIndex].length & (sets[0][fullRoundIndex].length - 1)) != 0 || sets[0][fullRoundIndex].length < sets[0][fullRoundIndex + 1].length) fullRoundIndex++;
+        while (
+            sets[0][fullRoundIndex + 1] &&
+            (
+                (sets[0][fullRoundIndex].length & (sets[0][fullRoundIndex].length - 1)) != 0 ||
+                sets[0][fullRoundIndex].length < sets[0][fullRoundIndex + 1].length
+            )
+        ) {
+            fullRoundIndex++;
+        }
 
         let numberOfPlayers = 0;
         let fullRoundLength = sets[0][fullRoundIndex].length;
         numberOfPlayers += fullRoundLength * 2;
 
         // Adding the total number of sets in loser's in rounds where the number of sets is greater than half of the fullRoundLength
-        for (let i = 0; sets[1][i].length != fullRoundLength / 2 || sets[1][i].length < sets[1][i + 1].length; i++) numberOfPlayers += sets[1][i].length;
+        for (let i = 0; sets[1][i] && (sets[1][i].length != fullRoundLength / 2 || sets[1][i].length < sets[1][i + 1].length); i++) numberOfPlayers += sets[1][i].length;
 
         return numberOfPlayers;
     }
