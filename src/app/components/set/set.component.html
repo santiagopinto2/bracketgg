@@ -5,7 +5,7 @@
 
     <div class="mb-4 d-flex justify-content-center">
         <div class="entrant-name" style="text-align: end; padding-right: 16px">
-            {{set.slots[0].entrant.name}}
+            {{set.slots[0].entrant?.name}}
         </div>
         <div class="entrant-image entrant-set-image">
             <img *ngIf="getEntrantImage(set.slots[0].entrant) !== ''" [ngClass]="getEntrantImageOrientation(set.slots[0].entrant)" [src]="getEntrantImage(set.slots[0].entrant)" />
@@ -14,13 +14,13 @@
             </div>
         </div>
         <div class="entrant-score d-flex justify-content-center" style="padding-left: 10px">
-            {{set.slots[0].standing.stats.score.value}}
+            {{set.slots[0].standing?.stats.score.value}}
         </div>
         <div class="d-flex justify-content-center" style="width: 64px">
             <mat-icon style="width: 64px; height: 48px; font-size: 64px; line-height: 48px">{{getWinnerArrow()}}</mat-icon>
         </div>
         <div class="entrant-score d-flex justify-content-center" style="padding-right: 10px">
-            {{set.slots[1].standing.stats.score.value}}
+            {{set.slots[1].standing?.stats.score.value}}
         </div>
         <div class="entrant-image entrant-set-image">
             <img *ngIf="getEntrantImage(set.slots[1].entrant) !== ''" [ngClass]="getEntrantImageOrientation(set.slots[1].entrant)" [src]="getEntrantImage(set.slots[1].entrant)" />
@@ -30,7 +30,7 @@
         </div>
 
         <div class="entrant-name" style="padding-left: 16px">
-            {{set.slots[1].entrant.name}}
+            {{set.slots[1].entrant?.name}}
         </div>
     </div>
 

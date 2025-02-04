@@ -45,8 +45,9 @@ export class SetComponent implements OnInit {
     }
 
     getWinnerArrow(game = null) {
+        if (!this.set.winnerId) return '';
         if (!game) return this.set.slots[0].entrant.id == this.set.winnerId ? 'arrow_left' : 'arrow_right';
-        return this.set.slots[0].entrant.id == game.winnerId ? 'arrow_left' : 'arrow_right'
+        return this.set.slots[0].entrant.id == game.winnerId ? 'arrow_left' : 'arrow_right';
     }
 
     getResultColor(game, playerIndex) {

@@ -534,7 +534,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     onSlotEnter(slot) {
-        this.playerHovered = slot.entrant.id;
+        this.playerHovered = slot.entrant?.id ?? -1;
     }
 
     onSlotLeave() {
@@ -542,7 +542,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSlotHover(slot) {
-        return slot.entrant.id == this.playerHovered ? 'slot-hover' : '';
+        return slot.entrant?.id == this.playerHovered ? 'slot-hover' : '';
     }
 
     hasGames(set) {

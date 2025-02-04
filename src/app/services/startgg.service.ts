@@ -159,7 +159,7 @@ export class StartggService {
 
         let maxScore = 0;
         firstPage.data.phaseGroup.sets.nodes.forEach(set => {
-            maxScore = Math.max(set.slots[0].standing.stats.score.value, set.slots[1].standing.stats.score.value, maxScore);
+            maxScore = Math.max(set.slots[0].standing?.stats.score.value, set.slots[1].standing?.stats.score.value, maxScore);
         });
 
         return { phaseHasGames: phaseHasGames, maxScore: maxScore }
