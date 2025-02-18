@@ -231,7 +231,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         let setCount = sets.length;
         let rightRoundSets = this.getRoundSets(phaseGroup, (round + Math.sign(round)));
         let rightRoundSetCount = rightRoundSets ? rightRoundSets.length : 0;
-        let firstSetId = sets[0].id;
+        let firstSetId = this.getSetId(sets[0]);
+        let setId = this.getSetId(set);
 
 
         // If the round set count is a standard amount
@@ -250,7 +251,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 let setCountFull = rightRoundSetCount;
                 let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
 
-                let setIndex = (set.id - firstSetId) / 2;
+                let setIndex = (setId - firstSetId) / 2;
                 let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
                 let marginTop = this.getStandardMarginHeight(phaseGroup, side, setCountFull);
@@ -262,7 +263,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 let setCountFull = rightRoundSetCount * 2;
                 let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
 
-                let setIndex = set.id - firstSetId;
+                let setIndex = setId - firstSetId;
                 let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
                 if (setIndex + 1 == nextSetIndex) {
@@ -308,7 +309,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             let setCountFull = rightRoundSetCount;
             let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
 
-            let setIndex = (set.id - firstSetId) / 2;
+            let setIndex = (setId - firstSetId) / 2;
             let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
             let marginTop = this.getStandardMarginHeight(phaseGroup, side, setCountFull);
@@ -321,7 +322,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             let setCountFull = rightRoundSetCount * 2;
             let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
 
-            let setIndex = set.id - firstSetId;
+            let setIndex = setId - firstSetId;
+            // console.log('test6', setIndex, setId, firstSetId)
             let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
             if (setIndex + 1 == nextSetIndex) {
@@ -439,6 +441,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         return (this.getPhaseGroupSideHeight(phaseGroup, side) - setCountFull * this.setHeight) / (setCountFull * 2);
     }
 
+    getSetId(set) {
+        if (set.id.includes('preview')) return set.id.slice(set.id.lastIndexOf('_') + 1);
+        return set.id;
+    }
+
     getPhaseGroupSideHeight(phaseGroup, side) {
         let multiplier = 110;
 
@@ -493,7 +500,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSeedFontSize(slot) {
-        if (!slot.standing) return null;
+        if (!slot.entrant) return null;
         if (slot.entrant.seed < 100) return '12px';
         if (slot.entrant.seed < 1000) return '10px';
         return '8px';
