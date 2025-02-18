@@ -442,7 +442,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSetId(set) {
-        if (set.id.includes('preview')) return set.id.slice(set.id.lastIndexOf('_') + 1);
+        if (isNaN(set.id) && set.id.includes('preview')) return set.id.slice(set.id.lastIndexOf('_') + 1);
         return set.id;
     }
 
