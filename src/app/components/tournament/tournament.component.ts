@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChildren } from '@angular/core';
 import { Router } from '@angular/router';
 import { StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
@@ -27,6 +27,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     destroy$ = new Subject();
     eventId = -1;
+    allEntrants = [];
     entrants = [];
     entrantCtrl = new FormControl('');
     filteredEntrants: Observable<any>;
@@ -36,11 +37,14 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRounds = [];
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
+    canHover = true;
     playerHovered = -1;
     isGrabbing = false;
     phaseProperties;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
+
+    @ViewChildren('slot') slotElements: any;
 
     constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private loadingService: LoadingService, private dialog: MatDialog, private router: Router) {
         // Start filtering the search entrants form
@@ -60,19 +64,21 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.phaseGroups = [];
                 this.maxRounds = [];
                 this.maxRoundsPhase = -1;
+                this.entrants = [];
+                this.playerHovered = -1;
 
                 // Clear this data only if there is no event
                 if (!event.phaseId) {
                     this.eventId = -1;
-                    this.entrants = [];
+                    this.allEntrants = [];
                 }
                 else {
                     // Get entrants only if the event changes
                     if (event.event.id != this.eventId) {
                         this.eventId = event.event.id;
 
-                        this.entrants = event.event.entrants.nodes;
-                        this.entrants.forEach(entrant => {
+                        this.allEntrants = event.event.entrants.nodes;
+                        this.allEntrants.forEach(entrant => {
                             if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
 
                             if (this.getEntrantImage(entrant) === '') {
@@ -85,8 +91,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                             entrant.seed = entrant.seeds.reduce((earliest, current) => earliest.phase.id < current.phase.id ? earliest : current).seedNum;
                             delete entrant.seeds;
                         });
-
-                        this.entrantCtrl.setValue('');
                     }
 
                     // Get all phase and phase group data
@@ -159,17 +163,20 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         phaseGroup.sets = phaseGroupSetsRes;
         let phaseGroupSets = phaseGroup.sets.nodes;
 
-        // Add entrant data to each set
+        // Add entrant data to each set and add unique entrants to entrant list
         phaseGroupSets.forEach(set => {
             set.slots.forEach(slot => {
-                let entrant = this.entrants.find(entrant => entrant.id == slot?.entrant?.id);
+                let entrant = this.allEntrants.find(entrant => entrant.id == slot?.entrant?.id);
                 if (entrant) {
+                    slot.entrant.name = entrant.name;
                     slot.entrant.participants = entrant.participants;
                     slot.entrant.seed = entrant.seed;
                     slot.entrant.backgroundColor = entrant.backgroundColor;
+                    if (!this.entrants.some(e => e.id == slot.entrant.id)) this.entrants.push(slot.entrant);
                 }
             });
         });
+        this.entrantCtrl.setValue('');
 
         // Corrects the data to account for a grand final reset
         if (phaseGroupSets[phaseGroupSets.length - 1].fullRoundText === 'Grand Final Reset') {
@@ -519,8 +526,34 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         return column % 3 == 0 ? '204px' : '22px';
     }
 
+    entrantSearched(event) {
+        for (const element of this.slotElements.toArray()) {
+            if (element.nativeElement.getAttribute('entrantId') == event.option.value.id) {
+                this.playerHovered = event.option.value.id;
+
+                document.querySelector('mat-sidenav-content').addEventListener('scroll', () => {
+                    this.canHover = false;
+                }, { once: true });
+
+                setTimeout(() => {
+                    element.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 1);
+
+                document.querySelector('mat-sidenav-content').addEventListener('scrollend', () => {
+                    this.canHover = true;
+                }, { once: true });
+
+                break;
+            }
+        }
+    }
+
+    entrantSearchDisplay(entrant) {
+        return entrant ? entrant.name : '';
+    }
+
     _filterEntrants(value) {
-        const filterValue = value.toLowerCase();
+        const filterValue = value.name ? value.name.toLowerCase() : value.toLowerCase();
         return this.entrants.filter(entrant => entrant.name.toLowerCase().includes(filterValue));
     }
 
@@ -541,11 +574,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     onSlotEnter(slot) {
-        this.playerHovered = slot.entrant?.id ?? -1;
+        if (this.canHover) this.playerHovered = slot.entrant?.id ?? -1;
     }
 
     onSlotLeave() {
-        this.playerHovered = -1;
+        if (this.canHover) this.playerHovered = -1;
     }
 
     getSlotHover(slot) {

@@ -6,9 +6,9 @@
                     <mat-form-field style="width: 100%">
                         <mat-label>Search Entrant</mat-label>
                         <input matInput [matAutocomplete]="auto" [formControl]="entrantCtrl">
-                        <mat-autocomplete #auto="matAutocomplete">
-                            @for (entrant of filteredEntrants | async; track entrant) {
-                            <mat-option [value]="entrant.name">
+                        <mat-autocomplete #auto="matAutocomplete" [displayWith]="entrantSearchDisplay" (optionSelected)="entrantSearched($event)">
+                            @for (entrant of filteredEntrants | async; track entrant.id) {
+                            <mat-option [value]="entrant">
                                 <div class="row">
                                     <div class="col p-0">
                                         <div class="entrant-image" style="width: 30px; height: 30px">
@@ -95,7 +95,7 @@
 
                                         <div class="col p-0 set-middle" id="names">
                                             <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="[isWinner(set, slot, 'name'), getSlotHover(slot)]" [ngStyle]="{'height': getSlotHeight(firstSlot), 'width': getSetNameWidth(set)}"
-                                                (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
+                                                (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()" #slot [attr.entrantId]="slot.entrant.id">
                                                 <div class="set-name" style="padding: 4px 3px 0 0; text-shadow: 1px 1px 2px black">
                                                     {{slot.entrant ? slot.entrant.name : '‎'}}
                                                 </div>

@@ -211,7 +211,6 @@ export class StartggService {
                                 id
                                 entrant {
                                     id
-                                    name
                                 }
                                 standing {
                                     stats {
