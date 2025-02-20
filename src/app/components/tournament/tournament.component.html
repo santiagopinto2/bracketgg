@@ -106,7 +106,7 @@
                                             </div>
                                         </div>
 
-                                        <div *ngIf="phaseProperties?.phaseHasGames && hasGames(set)" class="col p-0 set-middle" id="char-images">
+                                        <div *ngIf="phaseProperties?.phaseHasGames && hasChars(set)" class="col p-0 set-middle" id="char-images">
                                             <div class="row set-row gx-0" *ngFor="let slot of set.slots; let firstSlot = first; let k = index" [ngClass]="getSlotHover(slot)" [ngStyle]="{'height': getSlotHeight(firstSlot)}"
                                                 (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
                                                 <img [src]="getCharIcon(set, k)" class="set-image">

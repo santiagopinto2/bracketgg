@@ -532,7 +532,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSetNameWidth(set) {
-        return set.games ? '108px' : '136px';
+        return set.games && set.games[0].selections ? '108px' : '136px';
     }
 
     getSeedFontSize(slot) {
@@ -614,8 +614,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         return slot.entrant?.id == this.playerHovered ? 'slot-hover' : '';
     }
 
-    hasGames(set) {
-        return set.games;
+    hasChars(set) {
+        return set.games && set.games[0].selections;
     }
 
     getCharIcon(set, playerIndex) {

@@ -46,13 +46,13 @@
                     <div *ngIf="game.selections" class="game-icon d-flex justify-content-center">
                         <img style="width: 30px; height: 30px" [src]="getCharIcon(game, 0)">
                     </div>
-                    <div *ngIf="game.selections" class="game-result-abbr" style="padding-right: 20px" [ngStyle]="{'color': getResultColor(game, 0)}">
+                    <div *ngIf="game.winnerId" class="game-result-abbr" style="padding-right: 20px" [ngStyle]="{'color': getResultColor(game, 0)}">
                         {{getResultAbbr(game, 0)}}
                     </div>
                     <div class="d-flex justify-content-center" style="width: 32px">
                         <mat-icon style="width: 32px; height: 30px; font-size: 32px">{{getWinnerArrow(game)}}</mat-icon>
                     </div>
-                    <div *ngIf="game.selections" class="game-result-abbr" style="padding-left: 20px" [ngStyle]="{'color': getResultColor(game, 1)}">
+                    <div *ngIf="game.winnerId" class="game-result-abbr" style="padding-left: 20px" [ngStyle]="{'color': getResultColor(game, 1)}">
                         {{getResultAbbr(game, 1)}}
                     </div>
                     <div *ngIf="game.selections" class="game-icon d-flex justify-content-center">
