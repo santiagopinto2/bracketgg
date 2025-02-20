@@ -1,5 +1,12 @@
+.scroll-to-top-button {
+    position: fixed;
+    z-index: 1000;
+    border-radius: 14px;
+}
+
 .search-entrant-form {
-    max-width: 350px;
+    width: 350px;
+    max-width: calc(100% - 56px);
 }
 
 .entrant-image {
@@ -91,7 +98,7 @@
 
 .set-image {
     width: 18px;
-    height: 18px; 
+    height: 18px;
     margin: 4px 5px;
 }
 
@@ -117,6 +124,7 @@
     & .set-row:first-child {
         border-top-right-radius: 4px !important;
     }
+
     & .set-row:last-child {
         border-bottom-right-radius: 4px !important;
     }

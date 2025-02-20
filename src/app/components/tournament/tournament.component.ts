@@ -6,7 +6,7 @@ import { SetOrderConstants } from './set-order-constants';
 import { Subject } from 'rxjs/internal/Subject';
 import { map, startWith, takeUntil } from 'rxjs/operators';
 import { NgIf, NgFor, NgStyle, NgClass, AsyncPipe } from '@angular/common';
-import { MatIconButton } from '@angular/material/button';
+import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -16,16 +16,19 @@ import { Observable } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { SetComponent } from '../set/set.component';
 import { LoadingService } from 'src/app/services/loading.service';
+import { DeviceDetectorService } from 'ngx-device-detector';
 
 @Component({
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss'],
-    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, AsyncPipe]
+    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, AsyncPipe, MatButtonModule]
 })
 export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     destroy$ = new Subject();
+    isDesktop = false;
+    scrollToTopOffset = 20;
     eventId = -1;
     allEntrants = [];
     entrants = [];
@@ -46,7 +49,16 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     @ViewChildren('slot') slotElements: any;
 
-    constructor(private startggService: StartggService, private tournamentDataService: TournamentDataService, private loadingService: LoadingService, private dialog: MatDialog, private router: Router) {
+    constructor(
+        private startggService: StartggService,
+        private tournamentDataService: TournamentDataService,
+        private loadingService: LoadingService,
+        private deviceService: DeviceDetectorService,
+        private dialog: MatDialog,
+        private router: Router
+    ) {
+        this.isDesktop = this.deviceService.isDesktop();
+
         // Start filtering the search entrants form
         this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
             startWith(''),
@@ -98,6 +110,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     this.currentPhaseIndex = this.phases.findIndex(phase => phase.id == event.phaseId);
                     this.getPhase(event.phaseId);
                 }
+
+                setTimeout(() => {
+                    this.getScrollToTopOffset();
+                });
             });
     }
 
@@ -106,17 +122,17 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
         let mouseDown = false;
         let startX, scrollLeft, startY, scrollTop;
-        const slider = document.querySelector<HTMLElement>('.mat-sidenav-content');
+        const sidenavContentElement = document.querySelector<HTMLElement>('.mat-sidenav-content');
 
         const startDragging = event => {
             this.isGrabbing = true;
             mouseDown = true;
 
-            startX = event.pageX - slider.offsetLeft;
-            scrollLeft = slider.scrollLeft;
+            startX = event.pageX - sidenavContentElement.offsetLeft;
+            scrollLeft = sidenavContentElement.scrollLeft;
 
-            startY = event.pageY - slider.offsetTop;
-            scrollTop = slider.scrollTop;
+            startY = event.pageY - sidenavContentElement.offsetTop;
+            scrollTop = sidenavContentElement.scrollTop;
         }
 
         const stopDragging = event => {
@@ -128,19 +144,19 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             event.preventDefault();
             if (!mouseDown) return;
 
-            const x = event.pageX - slider.offsetLeft;
+            const x = event.pageX - sidenavContentElement.offsetLeft;
             const horizontalScroll = x - startX;
-            slider.scrollLeft = scrollLeft - horizontalScroll;
-            
-            const y = event.pageY - slider.offsetTop;
+            sidenavContentElement.scrollLeft = scrollLeft - horizontalScroll;
+
+            const y = event.pageY - sidenavContentElement.offsetTop;
             const verticalScroll = y - startY;
-            slider.scrollTop = scrollTop - verticalScroll;
+            sidenavContentElement.scrollTop = scrollTop - verticalScroll;
         }
 
-        slider.addEventListener('mousemove', move, false);
-        slider.addEventListener('mousedown', startDragging, false);
-        slider.addEventListener('mouseup', stopDragging, false);
-        slider.addEventListener('mouseleave', stopDragging, false);
+        sidenavContentElement.addEventListener('mousemove', move, false);
+        sidenavContentElement.addEventListener('mousedown', startDragging, false);
+        sidenavContentElement.addEventListener('mouseup', stopDragging, false);
+        sidenavContentElement.addEventListener('mouseleave', stopDragging, false);
     }
 
     ngOnDestroy() {
@@ -230,8 +246,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         // Calculate the number of players per phase group
         phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
 
-
+        // Finally set the phase group
         this.phaseGroups[phaseGroupIndex] = phaseGroup;
+
+        
+        setTimeout(() => {
+            this.getScrollToTopOffset();
+        });
     }
 
     getRoundSets(phaseGroup, round) {
@@ -339,7 +360,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
 
             let setIndex = setId - firstSetId;
-            // console.log('test6', setIndex, setId, firstSetId)
             let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
 
             if (setIndex + 1 == nextSetIndex) {
@@ -540,15 +560,15 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             if (element.nativeElement.getAttribute('entrantId') == event.option.value.id) {
                 this.playerHovered = event.option.value.id;
 
-                document.querySelector('mat-sidenav-content').addEventListener('scroll', () => {
+                document.querySelector<HTMLElement>('mat-sidenav-content').addEventListener('scroll', () => {
                     this.canHover = false;
                 }, { once: true });
 
                 setTimeout(() => {
                     element.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 1);
+                });
 
-                document.querySelector('mat-sidenav-content').addEventListener('scrollend', () => {
+                document.querySelector<HTMLElement>('mat-sidenav-content').addEventListener('scrollend', () => {
                     this.canHover = true;
                 }, { once: true });
 
@@ -600,6 +620,20 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getCharIcon(set, playerIndex) {
         return set.games[0].selections[playerIndex].character.images.find(image => image.type === 'stockIcon').url;
+    }
+
+    getScrollToTopOffset() {
+        const sidenavContentElement = document.querySelector<HTMLElement>('mat-sidenav-content');
+        this.scrollToTopOffset = !this.isDesktop || sidenavContentElement.scrollHeight == sidenavContentElement.clientHeight ? 20 : 35;
+    }
+
+    scrollToTop() {
+        const sidenavContentElement = document.querySelector<HTMLElement>('.mat-sidenav-content');
+        sidenavContentElement.scroll({
+            top: 0,
+            left: 0,
+            behavior: 'smooth'
+        });
     }
 
     openSet(set) {
