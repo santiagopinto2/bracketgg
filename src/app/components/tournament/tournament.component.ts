@@ -102,17 +102,21 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngAfterViewInit() {
-        // Horizontal drag
+        // Horizontal and vertical drag
 
         let mouseDown = false;
-        let startX, scrollLeft;
+        let startX, scrollLeft, startY, scrollTop;
         const slider = document.querySelector<HTMLElement>('.mat-sidenav-content');
 
         const startDragging = event => {
             this.isGrabbing = true;
             mouseDown = true;
+
             startX = event.pageX - slider.offsetLeft;
             scrollLeft = slider.scrollLeft;
+
+            startY = event.pageY - slider.offsetTop;
+            scrollTop = slider.scrollTop;
         }
 
         const stopDragging = event => {
@@ -123,9 +127,14 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         const move = event => {
             event.preventDefault();
             if (!mouseDown) return;
+
             const x = event.pageX - slider.offsetLeft;
-            const scroll = x - startX;
-            slider.scrollLeft = scrollLeft - scroll;
+            const horizontalScroll = x - startX;
+            slider.scrollLeft = scrollLeft - horizontalScroll;
+            
+            const y = event.pageY - slider.offsetTop;
+            const verticalScroll = y - startY;
+            slider.scrollTop = scrollTop - verticalScroll;
         }
 
         slider.addEventListener('mousemove', move, false);

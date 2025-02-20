@@ -14,6 +14,13 @@
     }
 }
 
+.sidenav-div {
+    height: 100%;
+    overflow: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 .header-name {
     margin-left: 10px;
     font-size: 20px;
