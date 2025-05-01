@@ -253,7 +253,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         // Finally set the phase group
         this.phaseGroups[phaseGroupIndex] = phaseGroup;
 
-        
+
         setTimeout(() => {
             this.getScrollToTopOffset();
         });
@@ -617,7 +617,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     getSlotBackgroundColor(slot, set) {
         if (slot.entrant?.id == this.playerHovered) return 'slot-hover';
         if (!this.showUpsets) return '';
-        if (set.slots[0].standing.stats.score.value == -1 || set.slots[1].standing.stats.score.value == -1) return '';
+        if (!set.slots[0].standing || !set.slots[1].standing || set.slots[0].standing.stats.score.value == -1 || set.slots[1].standing.stats.score.value == -1) return '';
 
         let winner = set.slots.find(s => s.entrant.id == set.winnerId);
         let loser = set.slots.find(s => s.entrant.id != set.winnerId);
