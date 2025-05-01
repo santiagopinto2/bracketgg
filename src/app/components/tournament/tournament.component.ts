@@ -17,12 +17,13 @@ import { MatDialog } from '@angular/material/dialog';
 import { SetComponent } from '../set/set.component';
 import { LoadingService } from 'src/app/services/loading.service';
 import { DeviceDetectorService } from 'ngx-device-detector';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss'],
-    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, AsyncPipe, MatButtonModule]
+    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, AsyncPipe, MatButtonModule, MatCheckboxModule]
 })
 export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -43,6 +44,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     canHover = true;
     playerHovered = -1;
     isGrabbing = false;
+    showUpsets = false;
     phaseProperties;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
@@ -67,6 +69,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngOnInit() {
+        this.showUpsets = localStorage.getItem('showUpsets') === 'true';
+
         this.tournamentDataService.eventSource$
             .pipe(takeUntil(this.destroy$))
             .subscribe(event => {
@@ -610,8 +614,20 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.canHover) this.playerHovered = -1;
     }
 
-    getSlotHover(slot) {
-        return slot.entrant?.id == this.playerHovered ? 'slot-hover' : '';
+    getSlotBackgroundColor(slot, set) {
+        if (slot.entrant?.id == this.playerHovered) return 'slot-hover';
+        if (!this.showUpsets) return '';
+        if (set.slots[0].standing.stats.score.value == -1 || set.slots[1].standing.stats.score.value == -1) return '';
+
+        let winner = set.slots.find(s => s.entrant.id == set.winnerId);
+        let loser = set.slots.find(s => s.entrant.id != set.winnerId);
+        if (winner.entrant.seed < loser.entrant.seed) return '';
+
+        const placements = [4097, 3073, 2049, 1537, 1025, 769, 513, 385, 257, 193, 129, 97, 65, 49, 33, 25, 17, 13, 9, 7, 5, 4, 3, 2, 1];
+        const winnerPower = placements.findIndex(placement => placement <= winner.entrant.seed);
+        const loserPower = placements.findIndex(placement => placement <= loser.entrant.seed);
+        const upsetFactor = Math.min((loserPower - winnerPower), 10);
+        return `upset-factor-${upsetFactor}`;
     }
 
     hasChars(set) {
@@ -620,6 +636,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getCharIcon(set, playerIndex) {
         return set.games[0].selections[playerIndex].character.images.find(image => image.type === 'stockIcon').url;
+    }
+
+    onShowUpsetsChange(event) {
+        localStorage.setItem('showUpsets', event.checked);
     }
 
     getScrollToTopOffset() {
