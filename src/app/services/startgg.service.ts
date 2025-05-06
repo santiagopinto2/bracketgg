@@ -77,12 +77,7 @@ export class StartggService {
                         nodes {
                             id
                             name
-                            seeds {
-                                seedNum
-                                phase {
-                                    id
-                                }
-                            }
+                            initialSeedNum
                             participants {
                                 gamerTag
                                 user {

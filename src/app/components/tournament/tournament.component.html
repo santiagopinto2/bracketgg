@@ -33,6 +33,12 @@
             </div>
         </div>
 
+        <div>
+            <mat-checkbox [(ngModel)]="showUpsets" (change)="onShowUpsetsChange($event)">
+                <p style="margin-top: 14px">Show Upsets</p>
+            </mat-checkbox>
+        </div>
+
         <div class="row" *ngIf="phases.length > 1" style="margin-bottom: 30px">
             <div class="col-auto" *ngIf="currentPhaseIndex > 0">
                 <button mat-icon-button (click)="changePhase(-1)">
@@ -50,12 +56,6 @@
                 <button mat-icon-button (click)="changePhase(1)">
                     <mat-icon fontIcon="arrow_forward"></mat-icon>
                 </button>
-            </div>
-
-            <div class="col-auto">
-                <mat-checkbox [(ngModel)]="showUpsets" (change)="onShowUpsetsChange($event)">
-                    <p style="margin-top: 14px">Show Upsets</p>
-                </mat-checkbox>
             </div>
         </div>
 
@@ -87,7 +87,7 @@
                                         <div class="col p-0 set-seeds" id="seeds">
                                             <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
                                                 <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getSeedFontSize(slot)}">
-                                                    {{slot.entrant?.seed}}
+                                                    {{slot.entrant?.initialSeedNum}}
                                                 </div>
                                             </div>
                                         </div>

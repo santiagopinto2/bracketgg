@@ -103,9 +103,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                                 const lum = 40;
                                 entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
                             }
-
-                            entrant.seed = entrant.seeds.reduce((earliest, current) => earliest.phase.id < current.phase.id ? earliest : current).seedNum;
-                            delete entrant.seeds;
                         });
                     }
 
@@ -199,7 +196,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 if (entrant) {
                     slot.entrant.name = entrant.name;
                     slot.entrant.participants = entrant.participants;
-                    slot.entrant.seed = entrant.seed;
+                    slot.entrant.initialSeedNum = entrant.initialSeedNum;
                     slot.entrant.backgroundColor = entrant.backgroundColor;
                     if (!this.entrants.some(e => e.id == slot.entrant.id)) this.entrants.push(slot.entrant);
                 }
@@ -541,8 +538,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getSeedFontSize(slot) {
         if (!slot.entrant) return null;
-        if (slot.entrant.seed < 100) return '12px';
-        if (slot.entrant.seed < 1000) return '10px';
+        if (slot.entrant.initialSeedNum < 100) return '12px';
+        if (slot.entrant.initialSeedNum < 1000) return '10px';
         return '8px';
     }
 
@@ -616,16 +613,15 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getSlotBackgroundColor(slot, set) {
         if (slot.entrant?.id == this.playerHovered) return 'slot-hover';
-        if (!this.showUpsets) return '';
-        if (!set.slots[0].standing || !set.slots[1].standing || set.slots[0].standing.stats.score.value == -1 || set.slots[1].standing.stats.score.value == -1) return '';
+        if (!this.showUpsets || !set.slots[0].standing || !set.slots[1].standing || set.slots[0].standing.stats.score.value == -1 || set.slots[1].standing.stats.score.value == -1 || !set.winnerId) return '';
 
         let winner = set.slots.find(s => s.entrant.id == set.winnerId);
         let loser = set.slots.find(s => s.entrant.id != set.winnerId);
-        if (winner.entrant.seed < loser.entrant.seed) return '';
+        if (winner.entrant.id == slot.entrant.id || winner.entrant.initialSeedNum < loser.entrant.initialSeedNum) return '';
 
         const placements = [4097, 3073, 2049, 1537, 1025, 769, 513, 385, 257, 193, 129, 97, 65, 49, 33, 25, 17, 13, 9, 7, 5, 4, 3, 2, 1];
-        const winnerPower = placements.findIndex(placement => placement <= winner.entrant.seed);
-        const loserPower = placements.findIndex(placement => placement <= loser.entrant.seed);
+        const winnerPower = placements.findIndex(placement => placement <= winner.entrant.initialSeedNum);
+        const loserPower = placements.findIndex(placement => placement <= loser.entrant.initialSeedNum);
         const upsetFactor = Math.min((loserPower - winnerPower), 10);
         return `upset-factor-${upsetFactor}`;
     }
