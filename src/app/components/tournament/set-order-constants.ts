@@ -1,17 +1,23 @@
 export class SetOrderConstants {
+
+    // To get the next set of numbers: Double the entire last set, then in reverse order add the first half while adding 1 to each number
+
     public static sets1 = [
         0
     ];
+
     public static sets2 = [
         0,
         1
     ];
+
     public static sets4 = [
         0,
         2,
         3,
         1
     ];
+
     public static sets8 = [
         0,
         4,
@@ -22,6 +28,7 @@ export class SetOrderConstants {
         5,
         1
     ];
+
     public static sets16 = [
         0,
         8,
@@ -40,6 +47,7 @@ export class SetOrderConstants {
         9,
         1
     ];
+
     public static sets32 = [
         0,
         16,
@@ -74,6 +82,7 @@ export class SetOrderConstants {
         17,
         1
     ];
+    
     public static sets64 = [
         0,
         32,
@@ -86,7 +95,7 @@ export class SetOrderConstants {
         12,
         44,
         60,
-        27,
+        28,
         20,
         52,
         36,
@@ -117,7 +126,7 @@ export class SetOrderConstants {
         11,
         15,
         47,
-        53,
+        63,
         61,
         23,
         55,
@@ -140,4 +149,135 @@ export class SetOrderConstants {
         33,
         1
     ];
+    
+    public static sets128 = [
+        0,
+        64,
+        96,
+        32,
+        48,
+        112,
+        80,
+        16,
+        24,
+        88,
+        120,
+        56,
+        40,
+        104,
+        72,
+        8,
+        12,
+        76,
+        108,
+        44,
+        60,
+        124,
+        92,
+        28,
+        20,
+        84,
+        116,
+        52,
+        36,
+        100,
+        68,
+        4,
+        6,
+        70,
+        102,
+        38,
+        54,
+        118,
+        86,
+        22,
+        30,
+        94,
+        126,
+        112,
+        46,
+        110,
+        78,
+        14,
+        10,
+        74,
+        106,
+        42,
+        56,
+        122,
+        90,
+        26,
+        18,
+        82,
+        114,
+        50,
+        34,
+        98,
+        66,
+        2,
+        3,
+        67,
+        99,
+        35,
+        51,
+        115,
+        83,
+        19,
+        27,
+        91,
+        123,
+        57,
+        43,
+        107,
+        75,
+        11,
+        15,
+        79,
+        111,
+        47,
+        113,
+        127,
+        95,
+        31,
+        23,
+        87,
+        119,
+        55,
+        39,
+        103,
+        71,
+        7,
+        5,
+        69,
+        101,
+        37,
+        53,
+        117,
+        85,
+        21,
+        29,
+        93,
+        125,
+        61,
+        45,
+        109,
+        77,
+        13,
+        9,
+        73,
+        105,
+        41,
+        57,
+        121,
+        89,
+        25,
+        17,
+        81,
+        113,
+        49,
+        33,
+        97,
+        65,
+        1,
+    ]
 }

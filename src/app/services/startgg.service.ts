@@ -205,7 +205,6 @@ export class StartggService {
                             winnerId
                             ${setGamesQuery}
                             slots {
-                                id
                                 entrant {
                                     id
                                 }

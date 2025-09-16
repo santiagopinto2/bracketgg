@@ -38,6 +38,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     phases = [];
     currentPhaseIndex = -1;
     phaseGroups = [];
+    projected = [];
     maxRounds = [];
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
@@ -45,6 +46,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     playerHovered = -1;
     isGrabbing = false;
     showUpsets = false;
+    showProjected = false;
     phaseProperties;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
@@ -70,6 +72,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnInit() {
         this.showUpsets = localStorage.getItem('showUpsets') === 'true';
+        this.showProjected = localStorage.getItem('showProjected') === 'true';
 
         this.tournamentDataService.eventSource$
             .pipe(takeUntil(this.destroy$))
@@ -78,6 +81,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.phases = [];
                 this.currentPhaseIndex = -1;
                 this.phaseGroups = [];
+                this.projected = [];
                 this.maxRounds = [];
                 this.maxRoundsPhase = -1;
                 this.entrants = [];
@@ -173,6 +177,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         let phaseGroupPromises = [];
         for (let i = 0; i < phaseRes.data.phase.phaseGroups.nodes.length; i++) {
             this.phaseGroups.push();
+            this.projected.push();
             this.maxRounds.push([]);
             const phaseGroupPromise = this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i);
             phaseGroupPromises.push(phaseGroupPromise);
@@ -218,7 +223,15 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         // Sorts the round data
-        phaseGroupSets.sort((a, b) => a.round != b.round ? a.round - b.round : a.id - b.id);
+        phaseGroupSets.sort((a, b) => {
+            if (a.round != b.round) return a.round - b.round;
+            if (isNaN(a.id) && a.id.includes('preview_')) {
+                let aEndId = Number(a.id.slice(a.id.lastIndexOf('_') + 1));
+                let bEndId = Number(b.id.slice(b.id.lastIndexOf('_') + 1));
+                return aEndId - bEndId;
+            }
+            return a.id - b.id;
+        });
 
         // Stores the max round number for each side of bracket and updates the max rounds for the phase
         let winnersMaxRound = phaseGroupSets[phaseGroupSets.length - 1].round;
@@ -247,27 +260,182 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         // Calculate the number of players per phase group
         phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
 
+        // Set all projected sets of the phase group
+        this.projected[phaseGroupIndex] = this.getProjected(phaseGroup);
+
         // Finally set the phase group
         this.phaseGroups[phaseGroupIndex] = phaseGroup;
-
 
         setTimeout(() => {
             this.getScrollToTopOffset();
         });
     }
 
-    getRoundSets(phaseGroup, round) {
-        if (!phaseGroup) return [];
+    getProjected(phaseGroup) {
+        let projectedPhaseGroup = structuredClone(phaseGroup.sets.nodes);
 
-        round = Math.trunc(round);
-        if (Math.sign(round) == 1) return phaseGroup.sets.nodes[0][round - 1];
-        return phaseGroup.sets.nodes[1][Math.abs(round) - 1];
+        // Get all projections in winners and set projections in losers that come from winners
+        this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 2, 0);
+        // Get the rest of projections in losers
+        this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 1, projectedPhaseGroup[1].length - 1, 0)
+
+        // Get grand finals projections
+        let grandsSetOneSlots = projectedPhaseGroup[0][projectedPhaseGroup[0].length - 1][0].slots;
+        if (!grandsSetOneSlots[0].entrant) {
+            let winnersFinalsSlots = structuredClone(projectedPhaseGroup[0][projectedPhaseGroup[0].length - 2][0].slots);
+            grandsSetOneSlots[0] = winnersFinalsSlots[0].entrant.initialSeedNum < winnersFinalsSlots[1].entrant.initialSeedNum ? winnersFinalsSlots[0] : winnersFinalsSlots[1];
+            grandsSetOneSlots[0].isProjected = true;
+        }
+        if (!grandsSetOneSlots[1].entrant) {
+            let losersFinalsSlots = structuredClone(projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1][0].slots);
+            grandsSetOneSlots[1] = losersFinalsSlots[0].entrant.initialSeedNum < losersFinalsSlots[1].entrant.initialSeedNum ? losersFinalsSlots[0] : losersFinalsSlots[1];
+            grandsSetOneSlots[1].isProjected = true;
+        }
+
+        return projectedPhaseGroup;
+    }
+
+    getProjectedSet(projectedPhaseGroup, numPlayers, side, round, setIndex) {
+        // Get relative set index
+        let setIndexRelative = setIndex;
+        if (side == 0 && round == 0) {
+            let setCountFull = projectedPhaseGroup[side][1].length * 2;
+            let addedSetIndexes = this.getAddedSetIndexes(setCountFull, projectedPhaseGroup[side][round].length, false);
+            setIndexRelative = addedSetIndexes.slice(0, setIndex).filter(value => value).length;
+        }
+        else if (side == 1 && round != 0 && projectedPhaseGroup[side][round][0].fullRoundText !== 'Losers Final' && projectedPhaseGroup[side][round].length == projectedPhaseGroup[side][round + 1].length) {
+            setIndexRelative = Math.trunc(setIndex / 2);
+        }
+        else if (side == 1 && round == 0) {
+            let setCountFull = -1;
+            let sliceEnd = -1;
+            if (projectedPhaseGroup[side][round].length > projectedPhaseGroup[side][round + 1].length) {
+                setCountFull = projectedPhaseGroup[side][1].length * 2;
+                sliceEnd = setIndex;
+            }
+            else {
+                setCountFull = projectedPhaseGroup[side][1].length;
+                sliceEnd = Math.trunc(setIndex / 2);
+            }
+            let addedSetIndexes = this.getAddedSetIndexes(setCountFull, projectedPhaseGroup[side][round].length, false);
+            setIndexRelative = addedSetIndexes.slice(0, sliceEnd).filter(value => value).length;
+        }
+
+        // Recursively goes back rounds looking for entrants
+        let slots = projectedPhaseGroup[side][round][setIndexRelative].slots;
+        if (!slots[0].entrant) {
+            slots[0] = structuredClone(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2));
+            slots[0].isProjected = true;
+        }
+        if (!slots[1].entrant) {
+            slots[1] = structuredClone(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2 + 1));
+            slots[1].isProjected = true;
+        }
+
+        // Sets the projected sets in losers that are coming from winners
+        if (side == 0 && !projectedPhaseGroup[side][round][setIndexRelative].winnerId) {
+            // Get the distance between two powers of 2 for the number of players
+            let powerOfPlayersRemainder = this.getPowerOfPlayersRemainder(numPlayers);
+
+            let roundInLosers = powerOfPlayersRemainder > 0.584962501 || powerOfPlayersRemainder == 0 ? round * 2 - 1 : (round - 1) * 2;
+            if (roundInLosers < 0) roundInLosers = 0;
+            let roundInLosersSets = projectedPhaseGroup[1][roundInLosers];
+
+            let lowerSeed = structuredClone(slots.reduce((prev, current) => prev.entrant.initialSeedNum > current.entrant.initialSeedNum ? prev : current));
+            lowerSeed.isProjected = true;
+
+            /* 
+            Sets in losers that are coming from winners follow this pattern
+
+
+            Winners Round 1
+            Losers Round 1 Normal
+
+            Winners Round 2
+            Losers Round 2 Full Reverse
+
+            Winners Round 3
+            Losers Round 4 Same Side, Reverse
+
+            Winners Round 4
+            Losers Round 6 Wrong Side, Normal
+
+            Winners Round 5
+            Losers Round 8 Normal
+
+
+            Winners Semis
+            Losers Quarters Flips Flops every time (3rd and 4th seeds)
+            */
+
+            // If it's winners finals
+            if (projectedPhaseGroup[side][round][0].fullRoundText === 'Winners Final') roundInLosersSets[0].slots[0] = lowerSeed;
+            // If it's winners round 1
+            else if (round == 0) {
+                // If the player count is greater than 1/2 of the way between powers of 2 or a power of 2
+                if (powerOfPlayersRemainder > 0.584962501 || powerOfPlayersRemainder == 0) {
+                    let losersSetCountFull = projectedPhaseGroup[0][round + 1].length;
+                    let losersAddedSetIndexes = this.getAddedSetIndexes(losersSetCountFull, roundInLosersSets.length, false);
+                    let losersSetIndexRelative = losersAddedSetIndexes.slice(0, Math.trunc(setIndex / 2)).filter(value => value).length;
+
+                    if (losersAddedSetIndexes[Math.trunc(setIndex / 2)]) roundInLosersSets[losersSetIndexRelative].slots[setIndex % 2] = lowerSeed;
+                    else projectedPhaseGroup[1][1][Math.trunc(setIndex / 2)].slots[1] = lowerSeed;
+                }
+                // If the player count is less than 1/2 of the way between powers of 2
+                else roundInLosersSets[setIndexRelative].slots[1] = lowerSeed;
+            }
+            // If it's winners round 2
+            else if (round == 1) {
+                // If the player count is greater than 1/2 of the way between powers of 2 or a power of 2
+                if (powerOfPlayersRemainder > 0.584962501 || powerOfPlayersRemainder == 0) roundInLosersSets[roundInLosersSets.length - setIndex - 1].slots[0] = lowerSeed;
+                // If the player count is less than 1/2 of the way between powers of 2
+                else {
+                    let losersSetCountFull = projectedPhaseGroup[0][round].length;
+                    let losersAddedSetIndexes = this.getAddedSetIndexes(losersSetCountFull, roundInLosersSets.length, true);
+                    let losersSetIndexRelative = losersAddedSetIndexes.slice(0, projectedPhaseGroup[0][round].length - setIndex - 1).filter(value => value).length;
+
+                    if (losersAddedSetIndexes.reverse()[setIndex]) roundInLosersSets[losersSetIndexRelative].slots[0] = lowerSeed;
+                    else projectedPhaseGroup[1][1][Math.trunc((projectedPhaseGroup[0][1].length - setIndex - 1) / 2)].slots[(setIndex + 1) % 2] = lowerSeed;
+                }
+            }
+            // If it's winners round 3
+            else if (round == 2) {
+                if (setIndex < roundInLosersSets.length / 2) roundInLosersSets[roundInLosersSets.length / 2 - 1 - setIndex].slots[0] = lowerSeed;
+                else roundInLosersSets[roundInLosersSets.length * 1.5 - 1 - setIndex].slots[0] = lowerSeed;
+            }
+            // If it's winners round 4
+            else if (round == 3) {
+                if (setIndex < roundInLosersSets.length / 2) roundInLosersSets[setIndex + roundInLosersSets.length / 2].slots[0] = lowerSeed;
+                else roundInLosersSets[setIndex - roundInLosersSets.length / 2].slots[0] = lowerSeed;
+            }
+            // If it's winners round 5
+            else if (round == 4) roundInLosersSets[setIndex].slots[0] = lowerSeed;
+            // Start.gg has a max pool size of 128 players
+            // Winners round 6 is guaranteed to be winners semis or beyond
+            else roundInLosersSets[roundInLosersSets.length - setIndex - 1].slots[0] = lowerSeed;
+        }
+
+        return slots.reduce((prev, current) => prev.entrant.initialSeedNum < current.entrant.initialSeedNum ? prev : current);
+    }
+
+    isProjected(slot) {
+        return slot.isProjected ? 'projected' : '';
+    }
+
+    getRoundSets(phaseGroup, side, round, phaseGroupIndex = null) {
+        if (!phaseGroup) return [];
+        round = Math.abs(Math.trunc(round));
+
+        if (this.showProjected && phaseGroupIndex != null) {
+            return this.projected[phaseGroupIndex][side][round - 1];
+        }
+        return phaseGroup.sets.nodes[side][round - 1];
     }
 
     getSetMargin(phaseGroup, round, side, set) {
-        let sets = this.getRoundSets(phaseGroup, round);
+        let sets = this.getRoundSets(phaseGroup, side, round);
         let setCount = sets.length;
-        let rightRoundSets = this.getRoundSets(phaseGroup, (round + Math.sign(round)));
+        let rightRoundSets = this.getRoundSets(phaseGroup, side, (round + Math.sign(round)));
         let rightRoundSetCount = rightRoundSets ? rightRoundSets.length : 0;
         let firstSetId = this.getSetId(sets[0]);
         let setId = this.getSetId(set);
@@ -279,12 +447,12 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             return `${marginHeight}px 0`;
         }
 
-        // If it's loser's side
-        if (round < 0) {
+        // If it's losers side
+        if (side == 1) {
             // Get the distance between two powers of 2 for the number of players
-            let powerOfPlayersRemainder = Math.log(phaseGroup.numPlayers) / Math.log(2) % 1;
+            let powerOfPlayersRemainder = this.getPowerOfPlayersRemainder(phaseGroup.numPlayers);
 
-            // If winner's round 1 set count is less than 1/4 of the way between powers of 2
+            // If winners round 1 set count is less than 1/4 of the way between powers of 2
             if (powerOfPlayersRemainder < 0.321928094) {
                 let setCountFull = rightRoundSetCount;
                 let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
@@ -296,7 +464,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 let marginBottom = marginTop + (this.setHeight + marginTop * 2) * (nextSetIndex - setIndex - 1);
                 return `${marginTop}px 0 ${marginBottom}px`;
             }
-            // If winner's round 1 set count is between 1/4 and 1/2 of the way between powers of 2
+            // If winners round 1 set count is between 1/4 and 1/2 of the way between powers of 2
             else if (powerOfPlayersRemainder < 0.584962500) {
                 let setCountFull = rightRoundSetCount * 2;
                 let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
@@ -313,7 +481,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     return `${marginHeight}px 0`;
                 }
             }
-            // If winner's round 1 set count is greater than 1/2 of the way between powers of 2
+            // If winners round 1 set count is greater than 1/2 of the way between powers of 2
             else {
                 let setCountFull = rightRoundSetCount;
                 let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, false);
@@ -323,11 +491,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 let count = 0;
                 for (let i = 0; i < addedSetIndexes.length; i++) {
                     if (addedSetIndexes[i]) {
-                        count++;
-                        if (count == setIndexRelative + 1) {
+                        if (count == setIndexRelative) {
                             setIndex = i;
                             break;
                         }
+                        count++;
                     }
                 }
                 let nextSetIndex = this.getNextSetIndex(addedSetIndexes, setIndex, setCountFull);
@@ -342,8 +510,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             return '0';
         }
 
-        // If it's winner's side and the round set count is less than or equal to the next round set count
-        if (setCount <= rightRoundSetCount) {
+        // If it's winners side and the round set count is less than the next round set count
+        if (setCount < rightRoundSetCount) {
             let setCountFull = rightRoundSetCount;
             let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
 
@@ -355,7 +523,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             return `${marginTop}px 0 ${marginBottom}px`;
         }
 
-        // If it's winner's side and the round set count is greater than the next round set count
+        // If it's winners side and the round set count is greater than the next round set count
         if (setCount > rightRoundSetCount) {
             let setCountFull = rightRoundSetCount * 2;
             let addedSetIndexes = this.getAddedSetIndexes(setCountFull, setCount, true);
@@ -378,8 +546,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getBlockClass(columnIndex, blockIndex, phaseGroup, bracketSide) {
         let blockColumnIndex = columnIndex % 3;
-        let leftRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 1) * this.maxRoundModifier[bracketSide]).length;
-        let rightRoundSetCount = this.getRoundSets(phaseGroup, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]).length;
+        let leftRoundSetCount = this.getRoundSets(phaseGroup, bracketSide, (columnIndex / 3 + 1) * this.maxRoundModifier[bracketSide]).length;
+        let rightRoundSetCount = this.getRoundSets(phaseGroup, bracketSide, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]).length;
 
 
         if (leftRoundSetCount / 2 == rightRoundSetCount) {
@@ -396,7 +564,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             if (blockIndex % 4 == 1) return 'straight-block';
         }
 
-        // If it's loser's side and winner's round 1 set count is greater than 1/2 of the way between powers of 2
+        // If it's losers side and winners round 1 set count is greater than 1/2 of the way between powers of 2
         else if (bracketSide == 1 && Math.log(phaseGroup.numPlayers) / Math.log(2) % 1 > 0.584962500) {
             let setIndex = Math.trunc(blockIndex / 4);
             for (let i = 0; i < leftRoundSetCount; i++) {
@@ -436,28 +604,12 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getNumberOfPlayers(phaseGroup) {
-        let fullRoundIndex = 0;
         let sets = phaseGroup.sets.nodes;
+        return sets[0][1].length * 2 + sets[0][0].length;
+    }
 
-        // Looking for the first round in winner's with a number of sets that's a power of 2 that then decreases after that round
-        while (
-            sets[0][fullRoundIndex + 1] &&
-            (
-                (sets[0][fullRoundIndex].length & (sets[0][fullRoundIndex].length - 1)) != 0 ||
-                sets[0][fullRoundIndex].length < sets[0][fullRoundIndex + 1].length
-            )
-        ) {
-            fullRoundIndex++;
-        }
-
-        let numberOfPlayers = 0;
-        let fullRoundLength = sets[0][fullRoundIndex].length;
-        numberOfPlayers += fullRoundLength * 2;
-
-        // Adding the total number of sets in loser's in rounds where the number of sets is greater than half of the fullRoundLength
-        for (let i = 0; sets[1][i] && (sets[1][i].length != fullRoundLength / 2 || sets[1][i].length < sets[1][i + 1].length); i++) numberOfPlayers += sets[1][i].length;
-
-        return numberOfPlayers;
+    getPowerOfPlayersRemainder(numPlayers) {
+        return Math.log(numPlayers) / Math.log(2) % 1;
     }
 
     getAddedSetIndexes(length, setCount, isForwards) {
@@ -479,29 +631,29 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSetId(set) {
-        if (isNaN(set.id) && set.id.includes('preview')) return set.id.slice(set.id.lastIndexOf('_') + 1);
+        if (isNaN(set.id) && set.id.includes('preview_')) return set.id.slice(set.id.lastIndexOf('_') + 1);
         return set.id;
     }
 
     getPhaseGroupSideHeight(phaseGroup, side) {
         let multiplier = 110;
 
-        // If it's winner's side
+        // If it's winners side
         if (side == 0) {
-            // If winner's only has one round
-            if (phaseGroup.sets.nodes[0].length == 1) return this.getRoundSets(phaseGroup, 1).length * multiplier;
+            // If winners only has one round
+            if (phaseGroup.sets.nodes[0].length == 1) return this.getRoundSets(phaseGroup, side, 1).length * multiplier;
 
-            // If winner's has more than one round
-            return Math.max(this.getRoundSets(phaseGroup, 1).length, this.getRoundSets(phaseGroup, 2).length) * multiplier;
+            // If winners has more than one round
+            return Math.max(this.getRoundSets(phaseGroup, side, 1).length, this.getRoundSets(phaseGroup, side, 2).length) * multiplier;
         }
 
-        // If it's losers' side
+        // If it's losers side
         else {
-            // If loser's only has one round
-            if (phaseGroup.sets.nodes[1].length == 1) return this.getRoundSets(phaseGroup, -1).length * multiplier;
+            // If losers only has one round
+            if (phaseGroup.sets.nodes[1].length == 1) return this.getRoundSets(phaseGroup, side, -1).length * multiplier;
 
-            // If loser's has more than one round
-            return Math.max(this.getRoundSets(phaseGroup, -1).length, this.getRoundSets(phaseGroup, -2).length) * multiplier;
+            // If losers has more than one round
+            return Math.max(this.getRoundSets(phaseGroup, side, -1).length, this.getRoundSets(phaseGroup, side, -2).length) * multiplier;
         }
     }
 
@@ -636,6 +788,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     onShowUpsetsChange(event) {
         localStorage.setItem('showUpsets', event.checked);
+    }
+
+    onShowProjectedChange(event) {
+        localStorage.setItem('showProjected', event.checked);
     }
 
     getScrollToTopOffset() {
