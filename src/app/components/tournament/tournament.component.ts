@@ -275,20 +275,34 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         let projectedPhaseGroup = structuredClone(phaseGroup.sets.nodes);
 
         // Get all projections in winners and set projections in losers that come from winners
-        this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 2, 0);
+        let lastWinnersRoundSets = projectedPhaseGroup[0][projectedPhaseGroup[0].length - 1];
+        if (lastWinnersRoundSets[0].fullRoundText === 'Grand Final Reset') {
+            return projectedPhaseGroup;
+        }
+        if (lastWinnersRoundSets[0].fullRoundText === 'Grand Final') {
+            this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 2, 0);
+        }
+        else {
+            for(let i = 0; i < lastWinnersRoundSets.length; i++) {
+                this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 1, i);
+            }
+        }
+
         // Get the rest of projections in losers
-        this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 1, projectedPhaseGroup[1].length - 1, 0)
+        for(let i = 0; i < projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1].length; i++) {
+            this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 1, projectedPhaseGroup[1].length - 1, i);
+        }
 
         // Get grand finals projections
-        let grandsSetOneSlots = projectedPhaseGroup[0][projectedPhaseGroup[0].length - 1][0].slots;
+        let grandsSetOneSlots = lastWinnersRoundSets[0].slots;
         if (!grandsSetOneSlots[0].entrant) {
             let winnersFinalsSlots = structuredClone(projectedPhaseGroup[0][projectedPhaseGroup[0].length - 2][0].slots);
-            grandsSetOneSlots[0] = winnersFinalsSlots[0].entrant.initialSeedNum < winnersFinalsSlots[1].entrant.initialSeedNum ? winnersFinalsSlots[0] : winnersFinalsSlots[1];
+            grandsSetOneSlots[0] = this.getLowerHigherSeed(winnersFinalsSlots, false);
             grandsSetOneSlots[0].isProjected = true;
         }
         if (!grandsSetOneSlots[1].entrant) {
             let losersFinalsSlots = structuredClone(projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1][0].slots);
-            grandsSetOneSlots[1] = losersFinalsSlots[0].entrant.initialSeedNum < losersFinalsSlots[1].entrant.initialSeedNum ? losersFinalsSlots[0] : losersFinalsSlots[1];
+            grandsSetOneSlots[1] = this.getLowerHigherSeed(losersFinalsSlots, false);
             grandsSetOneSlots[1].isProjected = true;
         }
 
@@ -303,7 +317,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             let addedSetIndexes = this.getAddedSetIndexes(setCountFull, projectedPhaseGroup[side][round].length, false);
             setIndexRelative = addedSetIndexes.slice(0, setIndex).filter(value => value).length;
         }
-        else if (side == 1 && round != 0 && projectedPhaseGroup[side][round][0].fullRoundText !== 'Losers Final' && projectedPhaseGroup[side][round].length == projectedPhaseGroup[side][round + 1].length) {
+        else if (side == 1 && round != 0 && projectedPhaseGroup[side][round][0].fullRoundText !== 'Losers Final' && projectedPhaseGroup[side][round + 1] && projectedPhaseGroup[side][round].length == projectedPhaseGroup[side][round + 1].length) {
             setIndexRelative = Math.trunc(setIndex / 2);
         }
         else if (side == 1 && round == 0) {
@@ -323,17 +337,17 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // Recursively goes back rounds looking for entrants
         let slots = projectedPhaseGroup[side][round][setIndexRelative].slots;
-        if (!slots[0].entrant) {
+        if (!slots[0].entrant && round != 0) {
             slots[0] = structuredClone(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2));
             slots[0].isProjected = true;
         }
-        if (!slots[1].entrant) {
+        if (!slots[1].entrant && round != 0) {
             slots[1] = structuredClone(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2 + 1));
             slots[1].isProjected = true;
         }
 
         // Sets the projected sets in losers that are coming from winners
-        if (side == 0 && !projectedPhaseGroup[side][round][setIndexRelative].winnerId) {
+        if (side == 0 && !projectedPhaseGroup[side][round][setIndexRelative].winnerId && (slots[0].entrant || slots[1].entrant)) {
             // Get the distance between two powers of 2 for the number of players
             let powerOfPlayersRemainder = this.getPowerOfPlayersRemainder(numPlayers);
 
@@ -341,7 +355,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             if (roundInLosers < 0) roundInLosers = 0;
             let roundInLosersSets = projectedPhaseGroup[1][roundInLosers];
 
-            let lowerSeed = structuredClone(slots.reduce((prev, current) => prev.entrant.initialSeedNum > current.entrant.initialSeedNum ? prev : current));
+            let lowerSeed = this.getLowerHigherSeed(slots, true);
             lowerSeed.isProjected = true;
 
             /* 
@@ -415,7 +429,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             else roundInLosersSets[roundInLosersSets.length - setIndex - 1].slots[0] = lowerSeed;
         }
 
-        return slots.reduce((prev, current) => prev.entrant.initialSeedNum < current.entrant.initialSeedNum ? prev : current);
+        return this.getLowerHigherSeed(slots, false);
+    }
+
+    getLowerHigherSeed(slots, isLower) {
+        if (!slots[0].entrant || !slots[1].entrant) return { entrant: null, standing: null };
+        if (isLower) return structuredClone(slots.reduce((prev, current) => prev.entrant.initialSeedNum > current.entrant.initialSeedNum ? prev : current));
+        return structuredClone(slots.reduce((prev, current) => prev.entrant.initialSeedNum < current.entrant.initialSeedNum ? prev : current));
     }
 
     isProjected(slot) {
