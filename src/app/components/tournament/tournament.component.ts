@@ -705,7 +705,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSetNameWidth(set) {
-        return set.games && set.games[0].selections ? '108px' : '136px';
+        if (set.winnerId && set.games && set.games[0].selections) return '108px';
+        if (set.winnerId) return '136px';
+        return '156px';
+    }
+    
+    getSetNamesWidthStyling(set) {
+        return !set.winnerId ? 'set-names-no-score' : '';
     }
 
     getSeedFontSize(slot) {

@@ -108,7 +108,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col p-0 set-middle" id="names">
+                                        <div class="col p-0 set-middle" [ngClass]="[getSetNamesWidthStyling(set)]" id="names">
                                             <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="[isWinner(set, slot, 'name'), getSlotBackgroundColor(slot, set), isProjected(slot)]"
                                                 [ngStyle]="{'height': getSlotHeight(firstSlot), 'width': getSetNameWidth(set)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()" #slot [attr.entrantId]="slot.entrant?.id">
                                                 <div class="set-name" style="padding: 4px 3px 0 0; text-shadow: 1px 1px 2px black">
@@ -124,7 +124,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col p-0 set-scores" id="scores">
+                                        <div *ngIf="set.winnerId" class="col p-0 set-scores" id="scores">
                                             <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="isWinner(set, slot, 'score')" [ngStyle]="{'height': getSlotHeight(firstSlot)}"
                                                 (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
                                                 <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getScoreFontSize(slot), 'font-weight': getScoreFontWeight(slot)}">
