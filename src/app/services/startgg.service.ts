@@ -11,7 +11,7 @@ export class StartggService {
     private entrantsPerPage = 100;
     private setsWithoutGamesBo5PerPage = 66;
     private setsWithGamesBo3PerPage = 29;
-    private setsWithGamesBo5PerPage = 21;
+    private setsWithGamesBo5PerPage = 20;
 
     constructor(private http: HttpClient) { }
 

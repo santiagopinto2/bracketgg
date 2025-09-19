@@ -107,6 +107,12 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                                 const lum = 40;
                                 entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
                             }
+
+                            let pipeIndex = entrant.name.lastIndexOf('|');
+                            if (pipeIndex != -1) {
+                                entrant.sponsor = entrant.name.slice(0, pipeIndex - 1);
+                                entrant.name = entrant.name.slice(pipeIndex + 2);
+                            }
                         });
                     }
 
@@ -200,6 +206,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                 let entrant = this.allEntrants.find(entrant => entrant.id == slot?.entrant?.id);
                 if (entrant) {
                     slot.entrant.name = entrant.name;
+                    slot.entrant.sponsor = entrant.sponsor;
                     slot.entrant.participants = entrant.participants;
                     slot.entrant.initialSeedNum = entrant.initialSeedNum;
                     slot.entrant.backgroundColor = entrant.backgroundColor;
@@ -265,7 +272,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // Finally set the phase group
         this.phaseGroups[phaseGroupIndex] = phaseGroup;
-
+        
         setTimeout(() => {
             this.getScrollToTopOffset();
         });

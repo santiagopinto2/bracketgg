@@ -109,9 +109,18 @@
 
 .set-name {
     padding: 0 0 0 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+.set-sponsor {
+    color: rgb(197, 197, 197);
+    min-width: 20px;
+    max-width: 44px;
+    padding-right: 4px;
+    @extend .text-overflow;
+}
+
+.set-tag {
+    @extend .text-overflow;
 }
 
 // .winner-name {
@@ -215,6 +224,12 @@
 
 .straight-block {
     border-bottom: 1px solid white;
+}
+
+.text-overflow {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .no-select {
