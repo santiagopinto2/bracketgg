@@ -320,7 +320,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         // Get relative set index
         let setIndexRelative = setIndex;
         if (side == 0 && round == 0) {
-            let setCountFull = projectedPhaseGroup[side][1].length * 2;
+            let setCountFull = projectedPhaseGroup[side][1] ? projectedPhaseGroup[side][1].length * 2 : projectedPhaseGroup[side][0].length;
             let addedSetIndexes = this.getAddedSetIndexes(setCountFull, projectedPhaseGroup[side][round].length, false);
             setIndexRelative = addedSetIndexes.slice(0, setIndex).filter(value => value).length;
         }
@@ -386,7 +386,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
 
             Winners Semis
-            Losers Quarters Flips Flops every time (3rd and 4th seeds)
+            Losers Quarters Flip Flops every time (3rd and 4th seeds)
             */
 
             // If it's winners finals
@@ -632,6 +632,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getNumberOfPlayers(phaseGroup) {
         let sets = phaseGroup.sets.nodes;
+        if (!sets[0][1]) return sets[0][0].length * 2;
         return sets[0][1].length * 2 + sets[0][0].length;
     }
 
