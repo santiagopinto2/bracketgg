@@ -795,10 +795,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.canHover) this.playerHovered = -1;
     }
 
-    getSlotBackgroundColor(slot, set) {
+    getSlotBackgroundColor(slot, set, needsRoundedCorners = false) {
         if (slot.entrant?.id == this.playerHovered) {
-            if (this.hasScore(set)) return 'slot-hover';
-            return 'slot-hover-no-score';
+            if (!needsRoundedCorners || this.hasScore(set)) return 'slot-hover';
+            return 'slot-hover-rounded-corners';
         }
         if (!this.showUpsets || !set.slots[0].standing || !set.slots[1].standing || set.slots[0].standing.stats.score.value == -1 || set.slots[1].standing.stats.score.value == -1 || !set.winnerId) return '';
 
