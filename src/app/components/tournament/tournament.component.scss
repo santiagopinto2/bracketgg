@@ -166,6 +166,16 @@
     background-color: #1b1b1b;
 }
 
+.slot-hover-no-score:first-child {
+    background-color: #1b1b1b;
+    border-top-right-radius: 4px;
+}
+
+.slot-hover-no-score:last-child {
+    background-color: #1b1b1b;
+    border-bottom-right-radius: 4px;
+}
+
 .upset-factor-0 {
     background-color: rgb(117, 194, 219);
 }

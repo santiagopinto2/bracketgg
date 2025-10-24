@@ -304,13 +304,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         let grandsSetOneSlots = lastWinnersRoundSets[0].slots;
         if (!grandsSetOneSlots[0].entrant) {
             let winnersFinalsSlots = structuredClone(projectedPhaseGroup[0][projectedPhaseGroup[0].length - 2][0].slots);
-            grandsSetOneSlots[0] = this.getLowerHigherSeed(winnersFinalsSlots, false);
-            grandsSetOneSlots[0].isProjected = true;
+            grandsSetOneSlots[0] = this.setProjectedSlot(this.getLowerHigherSeed(winnersFinalsSlots, false));
         }
         if (!grandsSetOneSlots[1].entrant) {
             let losersFinalsSlots = structuredClone(projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1][0].slots);
-            grandsSetOneSlots[1] = this.getLowerHigherSeed(losersFinalsSlots, false);
-            grandsSetOneSlots[1].isProjected = true;
+            grandsSetOneSlots[1] = this.setProjectedSlot(this.getLowerHigherSeed(losersFinalsSlots, false));
         }
 
         return projectedPhaseGroup;
@@ -344,14 +342,8 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // Recursively goes back rounds looking for entrants
         let slots = projectedPhaseGroup[side][round][setIndexRelative].slots;
-        if (!slots[0].entrant && round != 0) {
-            slots[0] = structuredClone(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2));
-            slots[0].isProjected = true;
-        }
-        if (!slots[1].entrant && round != 0) {
-            slots[1] = structuredClone(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2 + 1));
-            slots[1].isProjected = true;
-        }
+        if (!slots[0].entrant && round != 0) slots[0] = this.setProjectedSlot(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2))
+        if (!slots[1].entrant && round != 0) slots[1] = this.setProjectedSlot(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2 + 1));
 
         // Sets the projected sets in losers that are coming from winners
         if (side == 0 && !projectedPhaseGroup[side][round][setIndexRelative].winnerId && (slots[0].entrant || slots[1].entrant)) {
@@ -362,8 +354,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
             if (roundInLosers < 0) roundInLosers = 0;
             let roundInLosersSets = projectedPhaseGroup[1][roundInLosers];
 
-            let lowerSeed = this.getLowerHigherSeed(slots, true);
-            lowerSeed.isProjected = true;
+            let lowerSeed = this.setProjectedSlot(this.getLowerHigherSeed(slots, true));
 
             /* 
             Sets in losers that are coming from winners follow this pattern
@@ -437,6 +428,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         return this.getLowerHigherSeed(slots, false);
+    }
+
+    setProjectedSlot(slot) {
+        let newSlot = structuredClone(slot);
+        newSlot.isProjected = true;
+        newSlot.standing.stats.score.value = null;
+        return newSlot;
     }
 
     getLowerHigherSeed(slots, isLower) {
@@ -713,13 +711,13 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSetNameWidth(set) {
-        if (set.winnerId && set.games && set.games[0].selections) return '108px';
-        if (set.winnerId) return '136px';
+        if (this.hasScore(set) && set.games && set.games[0].selections) return '108px';
+        if (this.hasScore(set)) return '136px';
         return '156px';
     }
     
     getSetNamesWidthStyling(set) {
-        return !set.winnerId ? 'set-names-no-score' : '';
+        return !this.hasScore(set) ? 'set-names-no-score' : '';
     }
 
     getSeedFontSize(slot) {
@@ -798,7 +796,10 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSlotBackgroundColor(slot, set) {
-        if (slot.entrant?.id == this.playerHovered) return 'slot-hover';
+        if (slot.entrant?.id == this.playerHovered) {
+            if (this.hasScore(set)) return 'slot-hover';
+            return 'slot-hover-no-score';
+        }
         if (!this.showUpsets || !set.slots[0].standing || !set.slots[1].standing || set.slots[0].standing.stats.score.value == -1 || set.slots[1].standing.stats.score.value == -1 || !set.winnerId) return '';
 
         let winner = set.slots.find(s => s.entrant.id == set.winnerId);
@@ -810,6 +811,11 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         const loserPower = placements.findIndex(placement => placement <= loser.entrant.initialSeedNum);
         const upsetFactor = Math.min((loserPower - winnerPower), 10);
         return `upset-factor-${upsetFactor}`;
+    }
+
+    hasScore(set) {
+        if (!set.slots[0].standing || !set.slots[1].standing) return false;
+        return set.slots[0].standing.stats.score.value || set.slots[1].standing.stats.score.value;
     }
 
     hasChars(set) {
