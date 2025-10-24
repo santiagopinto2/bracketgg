@@ -327,7 +327,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         else if (side == 1 && round != 0 && projectedPhaseGroup[side][round][0].fullRoundText !== 'Losers Final' && projectedPhaseGroup[side][round + 1] && projectedPhaseGroup[side][round].length == projectedPhaseGroup[side][round + 1].length) {
             setIndexRelative = Math.trunc(setIndex / 2);
         }
-        else if (side == 1 && round == 0) {
+        else if (side == 1 && round == 0 && projectedPhaseGroup[side][round + 1]) {
             let setCountFull = -1;
             let sliceEnd = -1;
             if (projectedPhaseGroup[side][round].length > projectedPhaseGroup[side][round + 1].length) {
@@ -416,7 +416,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     let losersSetIndexRelative = losersAddedSetIndexes.slice(0, projectedPhaseGroup[0][round].length - setIndex - 1).filter(value => value).length;
 
                     if (losersAddedSetIndexes.reverse()[setIndex]) roundInLosersSets[losersSetIndexRelative].slots[0] = lowerSeed;
-                    else projectedPhaseGroup[1][1][Math.trunc((projectedPhaseGroup[0][1].length - setIndex - 1) / 2)].slots[(setIndex + 1) % 2] = lowerSeed;
+                    else if (projectedPhaseGroup[1][1]) projectedPhaseGroup[1][1][Math.trunc((projectedPhaseGroup[0][1].length - setIndex - 1) / 2)].slots[(setIndex + 1) % 2] = lowerSeed;
                 }
             }
             // If it's winners round 3
