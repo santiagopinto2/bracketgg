@@ -1,19 +1,18 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
 
 @Injectable({
     providedIn: 'root'
 })
 export class TournamentDataService {
 
-    urlSource$ = new BehaviorSubject<string>('Initial Data');
-    eventSource$ = new BehaviorSubject<any>({});
+    urlSource = signal<string>('Initial Data');
+    eventSource = signal<any>({});
 
     changeUrl(url: string) {
-        this.urlSource$.next(url);
+        this.urlSource.set(url);
     }
 
     changeEvent(event) {
-        this.eventSource$.next(event);
+        this.eventSource.set(event);
     }
 }

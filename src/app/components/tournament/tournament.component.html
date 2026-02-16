@@ -11,7 +11,7 @@
                         <mat-label>Search Entrant</mat-label>
                         <input matInput [matAutocomplete]="auto" [formControl]="entrantCtrl">
                         <mat-autocomplete #auto="matAutocomplete" [displayWith]="entrantSearchDisplay" (optionSelected)="entrantSearched($event)">
-                            @for (entrant of filteredEntrants | async; track entrant.id) {
+                            @for (entrant of filteredEntrants(); track entrant.id) {
                             <mat-option [value]="entrant">
                                 <div class="row">
                                     <div class="col p-0">

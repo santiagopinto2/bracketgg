@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, effect } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme.service';
 import { StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -14,6 +14,7 @@ import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/mat
 import { SearchComponent } from './components/search/search.component';
 import { MatNavList, MatListItem } from '@angular/material/list';
 import { LoadingService } from './services/loading.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
     selector: 'app-root',
@@ -21,11 +22,15 @@ import { LoadingService } from './services/loading.service';
     styleUrls: ['./app.component.scss'],
     imports: [MatToolbar, NgIf, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, NgFor, MatListItem, MatSidenavContent, RouterOutlet]
 })
-export class AppComponent implements OnInit, AfterViewInit {
+export class AppComponent implements AfterViewInit {
 
     title = 'bracketgg';
     windowSize;
     events = [];
+
+    private navigationEnd = toSignal(
+        this.router.events.pipe(filter(event => event instanceof NavigationEnd))
+    );
 
     constructor(
         public colorSchemeService: ColorSchemeService,
@@ -37,14 +42,10 @@ export class AppComponent implements OnInit, AfterViewInit {
         private router: Router
     ) {
         this.colorSchemeService.load();
-    }
 
-    ngOnInit(): void {
-        this.router.events
-            .pipe(filter(event => event instanceof NavigationEnd))
-            .subscribe(() => {
-                this.parseUrl(decodeURIComponent(decodeURIComponent(this.router.url)));
-            });
+        effect(() => {
+            if (this.navigationEnd()) this.parseUrl(decodeURIComponent(decodeURIComponent(this.router.url)));
+        });
     }
 
     ngAfterViewInit() {

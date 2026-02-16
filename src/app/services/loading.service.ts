@@ -1,6 +1,5 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { BehaviorSubject } from 'rxjs';
 import { SnackBarComponent } from '../components/snack-bar/snack-bar.component';
 
 @Injectable({
@@ -8,15 +7,14 @@ import { SnackBarComponent } from '../components/snack-bar/snack-bar.component';
 })
 export class LoadingService {
 
-  private isLoadingSubject = new BehaviorSubject<boolean>(false);
-  currentValue = this.isLoadingSubject.asObservable();
+  currentValue = signal<boolean>(false);
   snackBar = inject(MatSnackBar);
   snackBarRef;
 
   constructor() { }
 
   updateValue(newValue: boolean) {
-    this.isLoadingSubject.next(newValue);
+    this.currentValue.set(newValue);
 
     if (newValue) this.snackBarRef = this.snackBar.openFromComponent(SnackBarComponent, { data: { isLoading: true } });
     else {

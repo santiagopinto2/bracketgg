@@ -1,40 +1,43 @@
-import { AfterViewInit, Component, OnDestroy, OnInit, ViewChildren } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChildren, effect, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
-import { Subject } from 'rxjs/internal/Subject';
-import { map, startWith, takeUntil } from 'rxjs/operators';
-import { NgIf, NgFor, NgStyle, NgClass, AsyncPipe } from '@angular/common';
+import { NgIf, NgFor, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatInputModule } from '@angular/material/input';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { SetComponent } from '../set/set.component';
 import { LoadingService } from 'src/app/services/loading.service';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss'],
-    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, AsyncPipe, MatButtonModule, MatCheckboxModule]
+    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule]
 })
-export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
+export class TournamentComponent implements OnInit, AfterViewInit {
 
-    destroy$ = new Subject();
     isDesktop = false;
     scrollToTopOffset = 20;
     eventId = -1;
     allEntrants = [];
-    entrants = [];
-    entrantCtrl = new FormControl('');
-    filteredEntrants: Observable<any>;
+    entrants = signal<any[]>([]);
+    entrantCtrl = new FormControl<string | { name: string }>('');
+    entrantCtrlValue = toSignal(this.entrantCtrl.valueChanges, { initialValue: '' });
+    filteredEntrants = computed(() => {
+        const value = this.entrantCtrlValue() || '';
+        const filterValue = typeof value === 'string' ? value.toLowerCase() : value.name?.toLowerCase() || '';
+        const currentEntrants = this.entrants();
+        return filterValue ? currentEntrants.filter(entrant => entrant.name.toLowerCase().includes(filterValue)) : currentEntrants.slice();
+    });
     phases = [];
     currentPhaseIndex = -1;
     phaseGroups = [];
@@ -63,69 +66,64 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     ) {
         this.isDesktop = this.deviceService.isDesktop();
 
-        // Start filtering the search entrants form
-        this.filteredEntrants = this.entrantCtrl.valueChanges.pipe(
-            startWith(''),
-            map(entrant => (entrant ? this._filterEntrants(entrant) : this.entrants.slice())),
-        );
+        // Watch for event source changes using effect
+        effect(() => {
+            const event = this.tournamentDataService.eventSource();
+
+            // Clear data
+            this.phases = [];
+            this.currentPhaseIndex = -1;
+            this.phaseGroups = [];
+            this.projected = [];
+            this.maxRounds = [];
+            this.maxRoundsPhase = -1;
+            this.entrants.set([]);
+            this.playerHovered = -1;
+
+            // Clear this data only if there is no event
+            if (!event.phaseId) {
+                this.eventId = -1;
+                this.allEntrants = [];
+            }
+            else {
+                // Get entrants only if the event changes
+                if (event.event.id != this.eventId) {
+                    this.eventId = event.event.id;
+
+                    this.allEntrants = event.event.entrants.nodes;
+                    this.allEntrants.forEach(entrant => {
+                        if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
+
+                        if (this.getEntrantImage(entrant) === '') {
+                            const hue = Math.floor(Math.random() * 361);
+                            const sat = Math.floor(Math.random() * 101);
+                            const lum = 40;
+                            entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
+                        }
+
+                        let pipeIndex = entrant.name.lastIndexOf('|');
+                        if (pipeIndex != -1) {
+                            entrant.sponsor = entrant.name.slice(0, pipeIndex - 1);
+                            entrant.name = entrant.name.slice(pipeIndex + 2);
+                        }
+                    });
+                }
+
+                // Get all phase and phase group data
+                this.phases = event.event.phases;
+                this.currentPhaseIndex = this.phases.findIndex(phase => phase.id == event.phaseId);
+                this.getPhase(event.phaseId);
+            }
+
+            setTimeout(() => {
+                this.getScrollToTopOffset();
+            });
+        });
     }
 
     ngOnInit() {
         this.showUpsets = localStorage.getItem('showUpsets') === 'true';
         this.showProjected = localStorage.getItem('showProjected') === 'true';
-
-        this.tournamentDataService.eventSource$
-            .pipe(takeUntil(this.destroy$))
-            .subscribe(event => {
-                // Clear data
-                this.phases = [];
-                this.currentPhaseIndex = -1;
-                this.phaseGroups = [];
-                this.projected = [];
-                this.maxRounds = [];
-                this.maxRoundsPhase = -1;
-                this.entrants = [];
-                this.playerHovered = -1;
-
-                // Clear this data only if there is no event
-                if (!event.phaseId) {
-                    this.eventId = -1;
-                    this.allEntrants = [];
-                }
-                else {
-                    // Get entrants only if the event changes
-                    if (event.event.id != this.eventId) {
-                        this.eventId = event.event.id;
-
-                        this.allEntrants = event.event.entrants.nodes;
-                        this.allEntrants.forEach(entrant => {
-                            if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
-
-                            if (this.getEntrantImage(entrant) === '') {
-                                const hue = Math.floor(Math.random() * 361);
-                                const sat = Math.floor(Math.random() * 101);
-                                const lum = 40;
-                                entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
-                            }
-
-                            let pipeIndex = entrant.name.lastIndexOf('|');
-                            if (pipeIndex != -1) {
-                                entrant.sponsor = entrant.name.slice(0, pipeIndex - 1);
-                                entrant.name = entrant.name.slice(pipeIndex + 2);
-                            }
-                        });
-                    }
-
-                    // Get all phase and phase group data
-                    this.phases = event.event.phases;
-                    this.currentPhaseIndex = this.phases.findIndex(phase => phase.id == event.phaseId);
-                    this.getPhase(event.phaseId);
-                }
-
-                setTimeout(() => {
-                    this.getScrollToTopOffset();
-                });
-            });
     }
 
     ngAfterViewInit() {
@@ -170,10 +168,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         sidenavContentElement.addEventListener('mouseleave', stopDragging, false);
     }
 
-    ngOnDestroy() {
-        this.destroy$.next(null);
-    }
-
     async getPhase(phaseId) {
         let phaseRes = await this.startggService.getPhase(phaseId);
         if (phaseRes.errors) { console.log('error', phaseRes.errors[0].message); return; }
@@ -210,7 +204,9 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
                     slot.entrant.participants = entrant.participants;
                     slot.entrant.initialSeedNum = entrant.initialSeedNum;
                     slot.entrant.backgroundColor = entrant.backgroundColor;
-                    if (!this.entrants.some(e => e.id == slot.entrant.id)) this.entrants.push(slot.entrant);
+                    if (!this.entrants().some(e => e.id == slot.entrant.id)) {
+                        this.entrants.update(entrants => [...entrants, slot.entrant]);
+                    }
                 }
             });
         });
@@ -433,7 +429,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
     setProjectedSlot(slot) {
         let newSlot = structuredClone(slot);
         newSlot.isProjected = true;
-        newSlot.standing.stats.score.value = null;
+        if (newSlot.standing) newSlot.standing.stats.score.value = null;
         return newSlot;
     }
 
@@ -715,7 +711,7 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.hasScore(set)) return '136px';
         return '156px';
     }
-    
+
     getSetNamesWidthStyling(set) {
         return !this.hasScore(set) ? 'set-names-no-score' : '';
     }
@@ -764,11 +760,6 @@ export class TournamentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     entrantSearchDisplay(entrant) {
         return entrant ? entrant.name : '';
-    }
-
-    _filterEntrants(value) {
-        const filterValue = value.name ? value.name.toLowerCase() : value.toLowerCase();
-        return this.entrants.filter(entrant => entrant.name.toLowerCase().includes(filterValue));
     }
 
     getEntrantImage(entrant) {
