@@ -21,7 +21,7 @@
 </mat-toolbar>
 
 <mat-sidenav-container class="sidenav-container" autosize>
-    <mat-sidenav #sidenav mode="side" opened="true">
+    <mat-sidenav #sidenav mode="side" [opened]="windowSize >= 500">
         <div class="d-flex flex-column justify-content-between sidenav-div">
             <div>
                 <div style="margin-top: 20px"><app-search></app-search></div>

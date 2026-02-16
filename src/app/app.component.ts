@@ -42,6 +42,7 @@ export class AppComponent implements AfterViewInit {
         private router: Router
     ) {
         this.colorSchemeService.load();
+        this.windowSize = window.innerWidth;
 
         effect(() => {
             if (this.navigationEnd()) this.parseUrl(decodeURIComponent(decodeURIComponent(this.router.url)));
@@ -49,7 +50,6 @@ export class AppComponent implements AfterViewInit {
     }
 
     ngAfterViewInit() {
-        this.windowSize = window.screen.width;
         this.cdr.detectChanges();
     }
 
