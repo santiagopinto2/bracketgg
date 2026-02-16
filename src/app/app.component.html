@@ -1,20 +1,23 @@
 <mat-toolbar color="primary" class="mat-elevation-z8">
-    <button mat-icon-button *ngIf="windowSize < 500" (click)="sidenav.toggle()">
+    @if (windowSize < 500) { <button mat-icon-button (click)="sidenav.toggle()">
         <mat-icon>menu</mat-icon>
-    </button>
+        </button>
+        }
 
-    <span class="header-name" (click)="goToAboutPage()">BracketGG</span>
+        <span class="header-name" (click)="goToAboutPage()">BracketGG</span>
 
-    <span class="header-spacer"></span>
+        <span class="header-spacer"></span>
 
-    <button mat-icon-button *ngIf="windowSize >= 500" style="margin-right: 10px" (click)="goToDiscord()">
-        <mat-icon>discord</mat-icon>
-    </button>
+        @if (windowSize >= 500) {
+        <button mat-icon-button style="margin-right: 10px" (click)="goToDiscord()">
+            <mat-icon>discord</mat-icon>
+        </button>
+        }
 
-    <!-- <button mat-icon-button (click)="toggleDarkMode()">
-        <mat-icon *ngIf="colorSchemeService.currentActive() === 'dark'">dark_mode</mat-icon>
-        <mat-icon *ngIf="colorSchemeService.currentActive() === 'light'">light_mode</mat-icon>
-    </button> -->
+        <!-- <button mat-icon-button (click)="toggleDarkMode()">
+            <mat-icon *ngIf="colorSchemeService.currentActive() === 'dark'">dark_mode</mat-icon>
+            <mat-icon *ngIf="colorSchemeService.currentActive() === 'light'">light_mode</mat-icon>
+        </button> -->
 </mat-toolbar>
 
 <mat-sidenav-container class="sidenav-container" autosize>
@@ -23,7 +26,9 @@
             <div>
                 <div style="margin-top: 20px"><app-search></app-search></div>
                 <mat-nav-list style="width: 250px; padding: 0">
-                    <a mat-list-item *ngFor="let event of events" [routerLink]="'/' + event.slug">{{event.name}}</a>
+                    @for (event of events; track event.slug) {
+                    <a mat-list-item [routerLink]="'/' + event.slug">{{event.name}}</a>
+                    }
                 </mat-nav-list>
             </div>
 

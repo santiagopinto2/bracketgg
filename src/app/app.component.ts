@@ -7,7 +7,7 @@ import { TournamentDataService } from './services/tournamentData.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SettingsComponent } from './components/settings/settings.component';
 import { MatToolbar } from '@angular/material/toolbar';
-import { NgIf, NgFor } from '@angular/common';
+
 import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
@@ -20,7 +20,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
-    imports: [MatToolbar, NgIf, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, NgFor, MatListItem, MatSidenavContent, RouterOutlet]
+    imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet]
 })
 export class AppComponent implements AfterViewInit {
 
@@ -59,7 +59,7 @@ export class AppComponent implements AfterViewInit {
 
             if (tourneySlug.length > 0) {
                 this.loadingService.updateValue(true);
-                if (tourneySlug.indexOf('/') !== -1 )tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'));
+                if (tourneySlug.indexOf('/') !== -1) tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'));
                 let tourneyEventsRes = await this.startggService.getTournamentEvents(tourneySlug);
                 this.events = tourneyEventsRes.data.tournament.events;
 

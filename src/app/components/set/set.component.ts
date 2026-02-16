@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { NgFor, NgIf, NgStyle, NgClass } from '@angular/common';
+import { NgStyle, NgClass } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
     selector: 'app-set',
     templateUrl: './set.component.html',
     styleUrl: './set.component.scss',
-    imports: [CdkScrollable, FormsModule, ReactiveFormsModule, NgFor, NgIf, NgStyle, NgClass, MatButtonModule, MatCardModule, MatDialogModule, MatIconModule]
+    imports: [CdkScrollable, FormsModule, ReactiveFormsModule, NgStyle, NgClass, MatButtonModule, MatCardModule, MatDialogModule, MatIconModule]
 })
 export class SetComponent implements OnInit {
 

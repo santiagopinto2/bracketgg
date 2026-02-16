@@ -1,6 +1,10 @@
 <div class="d-flex justify-content-between">
     <span class="fw-bold">Gathering bracket data...</span>
 
-    <span *ngIf="data.isLoading"><mat-spinner diameter="20" color="primary" class="test"></mat-spinner></span>
-    <mat-icon *ngIf="!data.isLoading" fontIcon="check" class="check"></mat-icon>
+    @if (data.isLoading) {
+    <span><mat-spinner diameter="20" color="primary"></mat-spinner></span>
+    }
+    @if (!data.isLoading) {
+    <mat-icon fontIcon="check" class="check"></mat-icon>
+    }
 </div>

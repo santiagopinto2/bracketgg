@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
-import { NgIf, NgFor, NgStyle, NgClass } from '@angular/common';
+import { NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -21,7 +21,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
     selector: 'app-tournament',
     templateUrl: './tournament.component.html',
     styleUrls: ['./tournament.component.scss'],
-    imports: [NgIf, MatIconButton, MatIconModule, NgFor, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule]
+    imports: [MatIconButton, MatIconModule, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule]
 })
 export class TournamentComponent implements OnInit, AfterViewInit {
 
@@ -286,13 +286,13 @@ export class TournamentComponent implements OnInit, AfterViewInit {
             this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 2, 0);
         }
         else {
-            for(let i = 0; i < lastWinnersRoundSets.length; i++) {
+            for (let i = 0; i < lastWinnersRoundSets.length; i++) {
                 this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 1, i);
             }
         }
 
         // Get the rest of projections in losers
-        for(let i = 0; i < projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1].length; i++) {
+        for (let i = 0; i < projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1].length; i++) {
             this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 1, projectedPhaseGroup[1].length - 1, i);
         }
 

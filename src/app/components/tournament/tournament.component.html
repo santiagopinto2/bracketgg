@@ -16,9 +16,13 @@
                                 <div class="row">
                                     <div class="col p-0">
                                         <div class="entrant-image" style="width: 30px; height: 30px">
-                                            <img *ngIf="getEntrantImage(entrant) !== ''" [ngClass]="getEntrantImageOrientation(entrant)" [src]="getEntrantImage(entrant)" />
-                                            <div *ngIf="getEntrantImage(entrant) === ''" class="entrant-search-image-default" [ngStyle]="{'background-color': entrant.backgroundColor}">
+                                            @if (getEntrantImage(entrant) !== '') {
+                                            <img [ngClass]="getEntrantImageOrientation(entrant)" [src]="getEntrantImage(entrant)" />
+                                            }
+                                            @if (getEntrantImage(entrant) === '') {
+                                            <div class="entrant-search-image-default" [ngStyle]="{'background-color': entrant.backgroundColor}">
                                                 {{entrant.participants[0].gamerTag[0].toUpperCase()}}</div>
+                                            }
                                         </div>
                                     </div>
                                     <div class="col d-flex flex-column justify-content-center">
@@ -37,120 +41,147 @@
             <mat-checkbox [(ngModel)]="showProjected" (change)="onShowProjectedChange($event)">
                 <p style="margin-top: 14px">Show Projected</p>
             </mat-checkbox>
-            
+
             <mat-checkbox [(ngModel)]="showUpsets" (change)="onShowUpsetsChange($event)">
                 <p style="margin-top: 14px">Show Upsets</p>
             </mat-checkbox>
         </div>
 
-        <div class="row" *ngIf="phases.length > 1" style="margin-bottom: 30px">
-            <div class="col-auto" *ngIf="currentPhaseIndex > 0">
+        @if (phases.length > 1) {
+        <div class="row" style="margin-bottom: 30px">
+            @if (currentPhaseIndex > 0) {
+            <div class="col-auto">
                 <button mat-icon-button (click)="changePhase(-1)">
                     <mat-icon fontIcon="arrow_back"></mat-icon>
                 </button>
             </div>
-
+            }
             <div class="col-auto">
                 <p style="font-size: large; font-weight: bold; margin-top: 14px">
                     {{phases[currentPhaseIndex].name}}
                 </p>
             </div>
-
-            <div class="col-auto" *ngIf="currentPhaseIndex < phases.length - 1">
+            @if (currentPhaseIndex < phases.length - 1) { <div class="col-auto">
                 <button mat-icon-button (click)="changePhase(1)">
                     <mat-icon fontIcon="arrow_forward"></mat-icon>
                 </button>
-            </div>
         </div>
+        }
+    </div>
+    }
 
-        <div class="row" *ngFor="let phaseGroup of phaseGroups; let i = index; let lastPhaseGroup = last">
-            <div class="col-12">
-                <p *ngIf="phaseGroups.length > 1" style="font-size: 18px; margin-bottom: 0">
-                    Pool {{phaseGroup ? phaseGroup.displayIdentifier : ''}}
-                </p>
-            </div>
-
-            <div class="col-12">
-                <div class="row" *ngFor="let maxR of maxRounds[i]; let side = index" [ngStyle]="{'margin-top': (side == 0 ? 20 : 80) + 'px'}">
-                    <div class="row flex-nowrap" id="full-round-text-row">
-                        <div class="col p-0 d-flex justify-content-center round" *ngFor="let _ of [].constructor(maxRounds[i][side]); let j = index" style="width: 204px; margin-right: 44px" id="full-round-text-column">
-                            <p class="full-round-text">{{phaseGroup ?
-                                getRoundSets(phaseGroup, side, (j
-                                + 1) * maxRoundModifier[side])[0].fullRoundText : ''}}</p>
-                        </div>
+    @for (phaseGroup of phaseGroups; track i; let i = $index; let lastPhaseGroup = $last) {
+    <div class="row">
+        <div class="col-12">
+            @if (phaseGroups.length > 1) {
+            <p style="font-size: 18px; margin-bottom: 0">
+                Pool {{phaseGroup ? phaseGroup.displayIdentifier : ''}}
+            </p>
+            }
+        </div>
+        <div class="col-12">
+            @for (maxR of maxRounds[i]; track side; let side = $index) {
+            <div class="row" [ngStyle]="{'margin-top': (side == 0 ? 20 : 80) + 'px'}">
+                <div class="row flex-nowrap" id="full-round-text-row">
+                    @for (_ of [].constructor(maxRounds[i][side]); track j; let j = $index) {
+                    <div class="col p-0 d-flex justify-content-center round" style="width: 204px; margin-right: 44px" id="full-round-text-column">
+                        <p class="full-round-text">{{phaseGroup ?
+                            getRoundSets(phaseGroup, side, (j
+                            + 1) * maxRoundModifier[side])[0].fullRoundText : ''}}</p>
                     </div>
-
-                    <div class="col-12" [ngStyle]="{'width': maxRoundsPhase * 248 + 24 + 'px'}">
-                        <div class="row flex-nowrap" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) + 'px', 'width': maxRoundsPhase * 248 + 'px'}">
-                            <div class="col px-0" [ngStyle]="{'max-width': getColumnWidth(j)}" *ngFor="let _ of [].constructor((maxRounds[i][side]) * 3 - 2); let j = index" id="set-block-column-container">
-
-                                <div *ngIf="j % 3 == 0" class="d-flex flex-column round" id="set-column">
-                                    <div class="row set" *ngFor="let set of getRoundSets(phaseGroup, side, (j / 3 + 1) * maxRoundModifier[side], i)" id="set"
-                                        [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set)">
-
-                                        <div class="col p-0 set-seeds" id="seeds">
-                                            <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
-                                                <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getSeedFontSize(slot)}">
-                                                    {{slot.entrant?.initialSeedNum}}
-                                                </div>
+                    }
+                </div>
+                <div class="col-12" [ngStyle]="{'width': maxRoundsPhase * 248 + 24 + 'px'}">
+                    <div class="row flex-nowrap" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) + 'px', 'width': maxRoundsPhase * 248 + 'px'}">
+                        @for (_ of [].constructor((maxRounds[i][side]) * 3 - 2); track j; let j = $index) {
+                        <div class="col px-0" [ngStyle]="{'max-width': getColumnWidth(j)}" id="set-block-column-container">
+                            @if (j % 3 == 0) {
+                            <div class="d-flex flex-column round" id="set-column">
+                                @for (set of getRoundSets(phaseGroup, side, (j / 3 + 1) * maxRoundModifier[side], i); track set.id) {
+                                <div class="row set" id="set" [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set)">
+                                    <div class="col p-0 set-seeds" id="seeds">
+                                        @for (slot of set.slots; track slot; let firstSlot = $first) {
+                                        <div class="row set-row" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
+                                            <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getSeedFontSize(slot)}">
+                                                {{slot.entrant?.initialSeedNum}}
                                             </div>
                                         </div>
-
-                                        <div class="col p-0 set-middle" id="entrant-images">
-                                            <div class="row set-row gx-0" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="getSlotBackgroundColor(slot, set)" [ngStyle]="{'height': getSlotHeight(firstSlot)}"
-                                                (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
-                                                <div class="entrant-image set-image">
-                                                    <img *ngIf="getEntrantImage(slot.entrant) !== ''" [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
-                                                    <div *ngIf="getEntrantImage(slot.entrant) === ''" class="entrant-set-image-default" [ngStyle]="{'background-color': slot.entrant?.backgroundColor}">
-                                                        {{slot.entrant?.participants[0].gamerTag[0].toUpperCase()}}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col p-0 set-middle" [ngClass]="[getSetNamesWidthStyling(set)]" id="names">
-                                            <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="[isWinner(set, slot, 'name'), getSlotBackgroundColor(slot, set, true), isProjected(slot)]"
-                                                [ngStyle]="{'height': getSlotHeight(firstSlot), 'width': getSetNameWidth(set)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()" #slot [attr.entrantId]="slot.entrant?.id">
-                                                <div class="d-flex set-name" style="padding: 4px 3px 0 0; text-shadow: 1px 1px 2px black">
-                                                    <span class="set-sponsor" *ngIf="slot.entrant?.sponsor">{{slot.entrant.sponsor}}</span>
-                                                    <span class="set-tag">{{slot.entrant ? slot.entrant.name : '‎'}}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div *ngIf="phaseProperties?.phaseHasGames && hasChars(set)" class="col p-0 set-middle" id="char-images">
-                                            <div class="row set-row gx-0" *ngFor="let slot of set.slots; let firstSlot = first; let k = index" [ngClass]="getSlotBackgroundColor(slot, set)" [ngStyle]="{'height': getSlotHeight(firstSlot)}"
-                                                (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
-                                                <img [src]="getCharIcon(set, k)" class="set-image">
-                                            </div>
-                                        </div>
-
-                                        <div *ngIf="hasScore(set)" class="col p-0 set-scores" id="scores">
-                                            <div class="row set-row" *ngFor="let slot of set.slots; let firstSlot = first" [ngClass]="isWinner(set, slot, 'score')" [ngStyle]="{'height': getSlotHeight(firstSlot)}"
-                                                (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
-                                                <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getScoreFontSize(slot), 'font-weight': getScoreFontWeight(slot)}">
-                                                    {{getScore(slot, set)}}
-                                                </div>
-                                            </div>
-                                        </div>
-
+                                        }
                                     </div>
-                                </div>
-
-                                <div *ngIf="j % 3 != 0" class="d-flex flex-column justify-content-around" style="height: 100%; width: 22px" id="block-column">
-                                    <div class="row" *ngFor="let _ of [].constructor(getRoundSets(phaseGroup, side, (j / 3 + 2) * maxRoundModifier[side]).length * 4); let blockIndex = index; let blockCount = count" id="block-container">
-                                        <div style="padding: 0 11px" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) / blockCount + 'px'}" [ngClass]="getBlockClass(j, blockIndex, phaseGroup, side)" id="block">
+                                    <div class="col p-0 set-middle" id="entrant-images">
+                                        @for (slot of set.slots; track slot; let firstSlot = $first) {
+                                        <div class="row set-row gx-0" [ngClass]="getSlotBackgroundColor(slot, set)" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
+                                            <div class="entrant-image set-image">
+                                                @if (getEntrantImage(slot.entrant) !== '') {
+                                                <img [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
+                                                }
+                                                @if (getEntrantImage(slot.entrant) === '') {
+                                                <div class="entrant-set-image-default" [ngStyle]="{'background-color': slot.entrant?.backgroundColor}">
+                                                    {{slot.entrant?.participants[0].gamerTag[0].toUpperCase()}}
+                                                </div>
+                                                }
+                                            </div>
                                         </div>
+                                        }
                                     </div>
+                                    <div class="col p-0 set-middle" [ngClass]="[getSetNamesWidthStyling(set)]" id="names">
+                                        @for (slot of set.slots; track slot; let firstSlot = $first) {
+                                        <div class="row set-row" [ngClass]="[isWinner(set, slot, 'name'), getSlotBackgroundColor(slot, set, true), isProjected(slot)]"
+                                            [ngStyle]="{'height': getSlotHeight(firstSlot), 'width': getSetNameWidth(set)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()" #slot [attr.entrantId]="slot.entrant?.id">
+                                            <div class="d-flex set-name" style="padding: 4px 3px 0 0; text-shadow: 1px 1px 2px black">
+                                                @if (slot.entrant?.sponsor) {
+                                                <span class="set-sponsor">{{slot.entrant.sponsor}}</span>
+                                                }
+                                                <span class="set-tag">{{slot.entrant ? slot.entrant.name : '‎'}}</span>
+                                            </div>
+                                        </div>
+                                        }
+                                    </div>
+                                    @if (phaseProperties?.phaseHasGames && hasChars(set)) {
+                                    <div class="col p-0 set-middle" id="char-images">
+                                        @for (slot of set.slots; track slot; let firstSlot = $first; let k = $index) {
+                                        <div class="row set-row gx-0" [ngClass]="getSlotBackgroundColor(slot, set)" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
+                                            <img [src]="getCharIcon(set, k)" class="set-image">
+                                        </div>
+                                        }
+                                    </div>
+                                    }
+                                    @if (hasScore(set)) {
+                                    <div class="col p-0 set-scores" id="scores">
+                                        @for (slot of set.slots; track slot; let firstSlot = $first) {
+                                        <div class="row set-row" [ngClass]="isWinner(set, slot, 'score')" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
+                                            <div class="d-flex justify-content-center p-0" style="margin-top: 4px" [ngStyle]="{'font-size': getScoreFontSize(slot), 'font-weight': getScoreFontWeight(slot)}">
+                                                {{getScore(slot, set)}}
+                                            </div>
+                                        </div>
+                                        }
+                                    </div>
+                                    }
                                 </div>
-
+                                }
                             </div>
+                            }
+                            @if (j % 3 != 0) {
+                            <div class="d-flex flex-column justify-content-around" style="height: 100%; width: 22px" id="block-column">
+                                @for (_ of [].constructor(getRoundSets(phaseGroup, side, (j / 3 + 2) * maxRoundModifier[side]).length * 4); track blockIndex; let blockIndex = $index; let blockCount = $count) {
+                                <div class="row" id="block-container">
+                                    <div style="padding: 0 11px" [ngStyle]="{'height': getPhaseGroupSideHeight(phaseGroup, side) / blockCount + 'px'}" [ngClass]="getBlockClass(j, blockIndex, phaseGroup, side)" id="block">
+                                    </div>
+                                </div>
+                                }
+                            </div>
+                            }
                         </div>
+                        }
                     </div>
                 </div>
             </div>
-
-            <hr *ngIf="!lastPhaseGroup" style="margin: 50px 0" [ngStyle]="{'min-width': maxRoundsPhase * 248 + 12 + 'px', 'width': maxRoundsPhase * 248 + 12 + 'px'}">
+            }
         </div>
+        @if (!lastPhaseGroup) {
+        <hr style="margin: 50px 0" [ngStyle]="{'min-width': maxRoundsPhase * 248 + 12 + 'px', 'width': maxRoundsPhase * 248 + 12 + 'px'}">
+        }
     </div>
+    }
+</div>
 </div>
