@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, effect } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, ViewChild, effect } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme.service';
 import { StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -7,7 +7,6 @@ import { TournamentDataService } from './services/tournamentData.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SettingsComponent } from './components/settings/settings.component';
 import { MatToolbar } from '@angular/material/toolbar';
-
 import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
@@ -27,6 +26,8 @@ export class AppComponent implements AfterViewInit {
     title = 'bracketgg';
     windowSize;
     events = [];
+
+    @ViewChild('sidenav') sidenav: MatSidenav;
 
     private navigationEnd = toSignal(
         this.router.events.pipe(filter(event => event instanceof NavigationEnd))
@@ -95,6 +96,8 @@ export class AppComponent implements AfterViewInit {
             this.tournamentDataService.changeEvent({});
             this.events = [];
         }
+
+        if (this.windowSize < 500) this.sidenav.close();
     }
 
     @HostListener('window:resize', ['$event'])

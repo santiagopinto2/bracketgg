@@ -113,13 +113,15 @@
 
 .set-sponsor {
     color: rgb(197, 197, 197);
-    min-width: 20px;
-    max-width: 44px;
+    min-width: 22px;
+    flex: 0 10000 auto;
     padding-right: 4px;
     @extend .text-overflow;
 }
 
 .set-tag {
+    padding-right: 2px;
+    flex: 1 1 auto;
     @extend .text-overflow;
 }
 
@@ -147,6 +149,7 @@
 .projected {
     color: goldenrod;
     font-style: italic;
+    padding-right: 3px;
 }
 
 .winner-score {
