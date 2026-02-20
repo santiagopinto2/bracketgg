@@ -65,13 +65,14 @@ export class AppComponent implements AfterViewInit {
                 this.events = tourneyEventsRes.data.tournament.events;
 
                 if (url.includes('/event/')) {
-                    let eventData: any = {};
+                    let tournamentData: any = tourneyEventsRes.data.tournament;
+                    tournamentData.event = {};
 
-                    if (url.includes('/brackets?filter=')) eventData.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
+                    if (url.includes('/brackets?filter=')) tournamentData.event.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
                     else if (url.includes('/brackets/')) {
                         let bracketEndIndex = url.indexOf('/brackets/') + '/brackets/'.length;
-                        if (url.indexOf('/', bracketEndIndex) == -1) eventData.phaseId = Number(url.slice(bracketEndIndex));
-                        else eventData.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
+                        if (url.indexOf('/', bracketEndIndex) == -1) tournamentData.event.phaseId = Number(url.slice(bracketEndIndex));
+                        else tournamentData.event.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
                     }
 
                     let eventSlug = '';
@@ -82,18 +83,18 @@ export class AppComponent implements AfterViewInit {
                     let eventRes = await this.startggService.getEventBySlug(eventSlug, this.events.find(event => event.slug == eventSlug).numEntrants);
                     if (eventRes.errors) { console.log('error', eventRes.errors[0].message); return; }
 
-                    if (!eventData.phaseId) eventData.phaseId = eventRes.phases[0].id;
-                    eventData.event = eventRes;
-                    this.tournamentDataService.changeEvent(eventData);
+                    if (!tournamentData.event.phaseId) tournamentData.event.phaseId = eventRes.phases[0].id;
+                    tournamentData.event.event = eventRes;
+                    this.tournamentDataService.changeTournament(tournamentData);
                 }
                 else {
-                    this.tournamentDataService.changeEvent({});
+                    this.tournamentDataService.changeTournament({});
                     this.loadingService.updateValue(false);
                 }
             }
         }
         else {
-            this.tournamentDataService.changeEvent({});
+            this.tournamentDataService.changeTournament({});
             this.events = [];
         }
 

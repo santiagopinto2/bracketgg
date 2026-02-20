@@ -9,18 +9,18 @@
         <span class="header-spacer"></span>
 
         @if (windowSize >= 500) {
-        <button mat-icon-button style="margin-right: 10px" (click)="goToDiscord()" matTooltip="Discord server">
+        <button mat-icon-button style="margin-right: 10px" (click)="goToDiscord()" matTooltip="Discord Server">
             <mat-icon>discord</mat-icon>
         </button>
 
         @if (authService.isAuthenticated()) {
-            <button mat-icon-button style="margin-right: 10px" (click)="logout()" matTooltip="Logout">
-                <mat-icon>logout</mat-icon>
-            </button>
+        <button mat-icon-button style="margin-right: 10px" (click)="logout()" matTooltip="Logout">
+            <mat-icon>logout</mat-icon>
+        </button>
         } @else {
-            <button mat-icon-button style="margin-right: 10px" (click)="login()" matTooltip="Login with start.gg">
-                <mat-icon>login</mat-icon>
-            </button>
+        <button mat-icon-button style="margin-right: 10px" (click)="login()" matTooltip="Login With Start.gg">
+            <mat-icon>login</mat-icon>
+        </button>
         }
         }
 

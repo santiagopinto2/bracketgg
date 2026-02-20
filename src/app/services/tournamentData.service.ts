@@ -6,13 +6,13 @@ import { Injectable, signal } from '@angular/core';
 export class TournamentDataService {
 
     urlSource = signal<string>('Initial Data');
-    eventSource = signal<any>({});
+    tournamentSource = signal<any>({});
 
     changeUrl(url: string) {
         this.urlSource.set(url);
     }
 
-    changeEvent(event) {
-        this.eventSource.set(event);
+    changeTournament(tournament) {
+        this.tournamentSource.set(tournament);
     }
 }
