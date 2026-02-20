@@ -2,9 +2,11 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { TournamentComponent } from './components/tournament/tournament.component';
 import { AboutComponent } from './components/about/about.component';
+import { CallbackComponent } from './components/callback/callback.component';
 
 const routes: Routes = [
     { path: '', component: AboutComponent },
+    { path: 'callback', component: CallbackComponent },
     {
         path: 'tournament', component: TournamentComponent,
         children: [

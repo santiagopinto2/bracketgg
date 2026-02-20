@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, forkJoin, Observable } from 'rxjs';
+import { AuthService } from './auth.service';
 
 @Injectable({
     providedIn: 'root'
@@ -9,15 +10,25 @@ export class StartggService {
 
     private baseUrl: string = 'https://api.start.gg/gql/alpha';
     private entrantsPerPage = 100;
-    private setsWithoutGamesBo5PerPage = 66;
+    private setsWithoutGamesPerPage = 66;
     private setsWithGamesBo3PerPage = 29;
     private setsWithGamesBo5PerPage = 19;
 
-    constructor(private http: HttpClient) { }
+    constructor(
+        private http: HttpClient,
+        private authService: AuthService
+    ) { }
 
     getHeaders() {
+        const token = this.authService.getAccessToken();
+
+        if (!token) {
+            this.authService.redirectToOAuthWithReturn();
+            return new HttpHeaders({ 'Content-Type': 'application/json' });
+        }
+
         return new HttpHeaders({
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         });
     }
@@ -168,7 +179,7 @@ export class StartggService {
             if (phaseProperties.maxScore == 2) setsPerPage = this.setsWithGamesBo3PerPage;
             else if (phaseProperties.maxScore == 3) setsPerPage = this.setsWithGamesBo5PerPage;
         }
-        else setsPerPage = this.setsWithoutGamesBo5PerPage;
+        else setsPerPage = this.setsWithoutGamesPerPage;
         let numberOfPages = Math.ceil(totalSets / setsPerPage);
 
         let phaseGroupSplit: Observable<HttpClient>[] = new Array(numberOfPages);

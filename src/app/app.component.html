@@ -9,9 +9,19 @@
         <span class="header-spacer"></span>
 
         @if (windowSize >= 500) {
-        <button mat-icon-button style="margin-right: 10px" (click)="goToDiscord()">
+        <button mat-icon-button style="margin-right: 10px" (click)="goToDiscord()" matTooltip="Discord server">
             <mat-icon>discord</mat-icon>
         </button>
+
+        @if (authService.isAuthenticated()) {
+            <button mat-icon-button style="margin-right: 10px" (click)="logout()" matTooltip="Logout">
+                <mat-icon>logout</mat-icon>
+            </button>
+        } @else {
+            <button mat-icon-button style="margin-right: 10px" (click)="login()" matTooltip="Login with start.gg">
+                <mat-icon>login</mat-icon>
+            </button>
+        }
         }
 
         <!-- <button mat-icon-button (click)="toggleDarkMode()">
@@ -30,18 +40,6 @@
                     <a mat-list-item [routerLink]="'/' + event.slug">{{event.name}}</a>
                     }
                 </mat-nav-list>
-            </div>
-
-            <div>
-                <hr style="margin: 0 8px 2px">
-                <div class="row settings" (click)="openSettings()">
-                    <div class="col d-flex flex-column justify-content-center" style="padding: 0 10px; max-width: 40px; font-size: 20px">
-                        <mat-icon inline="true">settings</mat-icon>
-                    </div>
-                    <div class="col p-0 d-flex flex-column justify-content-center" style="font-size: 14px">
-                        Settings
-                    </div>
-                </div>
             </div>
         </div>
     </mat-sidenav>

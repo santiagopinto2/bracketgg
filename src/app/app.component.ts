@@ -4,8 +4,6 @@ import { StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData.service';
-import { MatDialog } from '@angular/material/dialog';
-import { SettingsComponent } from './components/settings/settings.component';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -14,12 +12,14 @@ import { SearchComponent } from './components/search/search.component';
 import { MatNavList, MatListItem } from '@angular/material/list';
 import { LoadingService } from './services/loading.service';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { AuthService } from './services/auth.service';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
-    imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet]
+    imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet, MatTooltip]
 })
 export class AppComponent implements AfterViewInit {
 
@@ -38,9 +38,9 @@ export class AppComponent implements AfterViewInit {
         private startggService: StartggService,
         private tournamentDataService: TournamentDataService,
         private loadingService: LoadingService,
-        private dialog: MatDialog,
         private cdr: ChangeDetectorRef,
-        private router: Router
+        private router: Router,
+        public authService: AuthService
     ) {
         this.colorSchemeService.load();
         this.windowSize = window.innerWidth;
@@ -117,9 +117,11 @@ export class AppComponent implements AfterViewInit {
         this.colorSchemeService.update(this.colorSchemeService.currentActive() === 'dark' ? 'light' : 'dark');
     }
 
-    openSettings() {
-        const dialogRef = this.dialog.open(SettingsComponent, {
-            autoFocus: false
-        });
+    login() {
+        this.authService.initiateOAuthFlow();
+    }
+
+    logout() {
+        this.authService.logout();
     }
 }
