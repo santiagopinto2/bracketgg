@@ -25,7 +25,7 @@ export class AppComponent implements AfterViewInit {
 
     title = 'bracketgg';
     windowSize;
-    events = [];
+    tournament: any = {};
 
     @ViewChild('sidenav') sidenav: MatSidenav;
 
@@ -58,14 +58,14 @@ export class AppComponent implements AfterViewInit {
         if (url.includes('/tournament')) {
             let tourneySlug = url.slice(12);
 
-            if (tourneySlug.length > 0) {
+            if (tourneySlug.length > 0 && (this.tournament.event || tourneySlug.includes('/event/') || !`tournament/${tourneySlug}`.includes(this.tournament.slug))) {
                 this.loadingService.updateValue(true);
                 if (tourneySlug.indexOf('/') !== -1) tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'));
                 let tourneyEventsRes = await this.startggService.getTournamentEvents(tourneySlug);
-                this.events = tourneyEventsRes.data.tournament.events;
+                this.tournament = tourneyEventsRes.data.tournament;
+                let tournamentData: any = this.tournament;
 
                 if (url.includes('/event/')) {
-                    let tournamentData: any = tourneyEventsRes.data.tournament;
                     tournamentData.event = {};
 
                     if (url.includes('/brackets?filter=')) tournamentData.event.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
@@ -80,22 +80,22 @@ export class AppComponent implements AfterViewInit {
                     if (url.indexOf('/', eventEndIndex) == -1) eventSlug = url.slice(1);
                     else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
 
-                    let eventRes = await this.startggService.getEventBySlug(eventSlug, this.events.find(event => event.slug == eventSlug).numEntrants);
+                    let eventRes = await this.startggService.getEventBySlug(eventSlug, this.tournament.events.find(event => event.slug == eventSlug).numEntrants);
                     if (eventRes.errors) { console.log('error', eventRes.errors[0].message); return; }
 
                     if (!tournamentData.event.phaseId) tournamentData.event.phaseId = eventRes.phases[0].id;
                     tournamentData.event.event = eventRes;
-                    this.tournamentDataService.changeTournament(tournamentData);
                 }
                 else {
-                    this.tournamentDataService.changeTournament({});
                     this.loadingService.updateValue(false);
                 }
+
+                this.tournamentDataService.changeTournament(tournamentData);
             }
         }
         else {
             this.tournamentDataService.changeTournament({});
-            this.events = [];
+            this.tournament = {};
         }
 
         if (this.windowSize < 500) this.sidenav.close();
@@ -104,6 +104,12 @@ export class AppComponent implements AfterViewInit {
     @HostListener('window:resize', ['$event'])
     onResize(event) {
         this.windowSize = event.target.innerWidth;
+    }
+
+    getTournamentImage(): string {
+        const images = this.tournament.images;
+        if (!images?.length) return '';
+        return (images.find((i: any) => i.type === 'profile') ?? images[0]).url ?? '';
     }
 
     goToAboutPage() {

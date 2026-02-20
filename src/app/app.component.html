@@ -35,8 +35,24 @@
         <div class="d-flex flex-column justify-content-between sidenav-div">
             <div>
                 <div style="margin-top: 20px"><app-search></app-search></div>
-                <mat-nav-list style="width: 250px; padding: 0">
-                    @for (event of events; track event.slug) {
+
+                <mat-nav-list style="padding: 0">
+                    @if (tournament.name) {
+                    <a mat-list-item [routerLink]="'/' + tournament.slug + '/details'" class="home-section">
+                        <div style="display: flex; align-items: center; gap: 4px">
+                            @if (getTournamentImage()) {
+                            <img [src]="getTournamentImage()" class="home-image" />
+                            }
+                            <span class="home-text">Home</span>
+                        </div>
+                    </a>
+                    }
+
+                    @if (tournament.events?.length > 0) {
+                        <span style="padding: 0 16px; color: darkgray">Events</span>
+                    }
+
+                    @for (event of tournament.events; track event.slug) {
                     <a mat-list-item [routerLink]="'/' + event.slug">{{event.name}}</a>
                     }
                 </mat-nav-list>

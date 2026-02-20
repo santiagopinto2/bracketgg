@@ -48,6 +48,7 @@ export class StartggService {
                     rules
                     id
                     name
+                    slug
                     events {
                         name
                         slug
