@@ -25,9 +25,8 @@ export class AppComponent implements AfterViewInit {
 
     title = 'bracketgg';
     windowSize;
+    sidenavOpen: boolean;
     tournament: any = {};
-
-    @ViewChild('sidenav') sidenav: MatSidenav;
 
     private navigationEnd = toSignal(
         this.router.events.pipe(filter(event => event instanceof NavigationEnd))
@@ -44,6 +43,7 @@ export class AppComponent implements AfterViewInit {
     ) {
         this.colorSchemeService.load();
         this.windowSize = window.innerWidth;
+        this.sidenavOpen = this.windowSize >= 500;
 
         effect(() => {
             if (this.navigationEnd()) this.parseUrl(decodeURIComponent(decodeURIComponent(this.router.url)));
@@ -98,12 +98,13 @@ export class AppComponent implements AfterViewInit {
             this.tournament = {};
         }
 
-        if (this.windowSize < 500) this.sidenav.close();
+        if (this.windowSize < 500) this.sidenavOpen = false;
     }
 
     @HostListener('window:resize', ['$event'])
     onResize(event) {
         this.windowSize = event.target.innerWidth;
+        this.sidenavOpen = this.windowSize >= 500;
     }
 
     getTournamentImage(): string {
