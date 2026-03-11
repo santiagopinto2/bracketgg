@@ -82,7 +82,7 @@ export class SetOrderConstants {
         17,
         1
     ];
-    
+
     public static sets64 = [
         0,
         32,
@@ -149,7 +149,7 @@ export class SetOrderConstants {
         33,
         1
     ];
-    
+
     public static sets128 = [
         0,
         64,

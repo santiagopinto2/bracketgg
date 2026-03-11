@@ -23,8 +23,11 @@ import { MatTooltip } from '@angular/material/tooltip';
 })
 export class AppComponent implements AfterViewInit {
 
+    @ViewChild(MatSidenavContent) sidenavContent: MatSidenavContent;
+
     title = 'bracketgg';
     windowSize;
+    largeWindowSize = 769;
     sidenavOpen: boolean;
     tournament: any = {};
 
@@ -43,10 +46,13 @@ export class AppComponent implements AfterViewInit {
     ) {
         this.colorSchemeService.load();
         this.windowSize = window.innerWidth;
-        this.sidenavOpen = this.windowSize >= 500;
+        this.sidenavOpen = this.windowSize >= this.largeWindowSize;
 
         effect(() => {
-            if (this.navigationEnd()) this.parseUrl(decodeURIComponent(decodeURIComponent(this.router.url)));
+            if (this.navigationEnd()) {
+                this.parseUrl(decodeURIComponent(decodeURIComponent(this.router.url)));
+                this.sidenavContent?.scrollTo({ top: 0 });
+            }
         });
     }
 
@@ -98,13 +104,13 @@ export class AppComponent implements AfterViewInit {
             this.tournament = {};
         }
 
-        if (this.windowSize < 500) this.sidenavOpen = false;
+        if (this.windowSize < this.largeWindowSize) this.sidenavOpen = false;
     }
 
     @HostListener('window:resize', ['$event'])
     onResize(event) {
         this.windowSize = event.target.innerWidth;
-        this.sidenavOpen = this.windowSize >= 500;
+        this.sidenavOpen = this.windowSize >= this.largeWindowSize;
     }
 
     getTournamentImage(): string {

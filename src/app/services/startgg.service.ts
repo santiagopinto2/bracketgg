@@ -37,22 +37,35 @@ export class StartggService {
         const body = {
             query: `query {
                 tournament(slug: "${tourneySlug}") {
-                    hashtag
                     images {
                         url
                         type
                         width
                         height
                     }
-                    publishing
                     rules
                     id
                     name
                     slug
+                    venueAddress
+                    startAt
+                    primaryContact
+                    primaryContactType
                     events {
                         name
                         slug
                         numEntrants
+                        startAt
+                        type
+                        videogame {
+                            name
+                            images {
+                                url
+                                type
+                                width
+                                height
+                            }
+                        }
                     }
                 }
             }`

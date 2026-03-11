@@ -815,7 +815,7 @@ export class EventComponent implements OnInit, AfterViewInit {
     }
 
     getCharIcon(set, playerIndex) {
-        return set.games[0].selections[playerIndex].character.images.find(image => image.type === 'stockIcon').url;
+        return set.games[0].selections[playerIndex]?.character.images.find(image => image.type === 'stockIcon').url;
     }
 
     onShowUpsetsChange(event) {

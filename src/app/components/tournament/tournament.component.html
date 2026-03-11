@@ -1,1 +1,86 @@
-<p>tournament works!</p>
+@if (tournament()) {
+<div class="banner-container">
+    @if (bannerImage()) {
+    <img class="banner-img" [src]="bannerImage()" [alt]="tournament().name" />
+    }
+</div>
+
+<div class="page-content">
+    <div class="info-section">
+        <div class="info-header">
+            @if (profileImage()) {
+            <img class="profile-img" [src]="profileImage()" [alt]="tournament().name" />
+            }
+            <div>
+                <h1 class="tournament-name">{{ tournament().name }}</h1>
+                <div class="meta-row">
+                    @if (tournament().startAt) {
+                    <span class="meta-item">
+                        <mat-icon>calendar_today</mat-icon>
+                        {{ formattedDate() }}
+                    </span>
+                    }
+                    @if (tournament().venueAddress) {
+                    <span class="meta-item">
+                        <mat-icon>location_on</mat-icon>
+                        <a [href]="googleMapsUrl()" target="_blank" rel="noopener">{{ tournament().venueAddress }}</a>
+                    </span>
+                    }
+                    @if (tournament().primaryContact) {
+                    <span class="meta-item">
+                        <mat-icon>email</mat-icon>
+                        <a [href]="'mailto:' + tournament().primaryContact">{{ tournament().primaryContact }}</a>
+                    </span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (tournament().events?.length) {
+    <div class="events-section">
+        <h2 class="events-heading">Events</h2>
+        <div class="events-grid">
+            @for (event of tournament().events; track event.slug) {
+            <div class="event-card">
+                <a class="event-game-img-wrap" [routerLink]="'/' + event.slug">
+                    @if (getGameImage(event.videogame?.images)) {
+                    <img class="event-game-img" [src]="getGameImage(event.videogame?.images)" [alt]="event.videogame?.name" />
+                    } @else {
+                    <div class="event-game-img-placeholder"><mat-icon>videogame_asset</mat-icon></div>
+                    }
+                </a>
+                <div class="event-info">
+                    <a class="event-name" [routerLink]="'/' + event.slug">{{ event.name }}</a>
+                    <div class="event-row">
+                        @if (event.videogame?.name) {
+                        <span class="event-meta-item">
+                            <mat-icon>sports_esports</mat-icon>
+                            {{ event.videogame.name }}
+                        </span>
+                        }
+                        <span class="event-meta-item">
+                            <mat-icon>person</mat-icon>
+                            {{ event.type === 1 ? 'Singles' : 'Teams' }}
+                        </span>
+                    </div>
+                    <div class="event-row">
+                        @if (event.startAt) {
+                        <span class="event-meta-item">
+                            <mat-icon>calendar_today</mat-icon>
+                            {{ getEventDate(event.startAt) }}
+                        </span>
+                        }
+                        <span class="event-meta-item">
+                            <mat-icon>group</mat-icon>
+                            {{ event.numEntrants }} entrants
+                        </span>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+    }
+</div>
+}
