@@ -66,6 +66,28 @@ export class StartggService {
                                 height
                             }
                         }
+                        standings(query: {
+                            page: 1
+                            perPage: 3
+                        }) {
+                            nodes {
+                                placement
+                                entrant {
+                                    name
+                                    participants {
+                                        id
+                                        user {
+                                            images {
+                                                url
+                                                type
+                                                width
+                                                height
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }`

@@ -52,6 +52,23 @@
                 </a>
                 <div class="event-info">
                     <a class="event-name" [routerLink]="'/' + event.slug">{{ event.name }}</a>
+                    @if (hasTopThree(event)) {
+                    <div class="event-row event-standings-row">
+                        @for (standing of event.standings.nodes; track standing.placement) {
+                        <span class="event-meta-item">
+                            <span class="standing-placement placement-{{ standing.placement }}">{{ standing.placement }}<sup>{{ getOrdinalSuffix(standing.placement) }}</sup></span>
+                            <div class="standing-profile-image">
+                                @if (getStandingProfileImage(standing) !== '') {
+                                <img [ngClass]="getStandingProfileImageOrientation(standing)" [src]="getStandingProfileImage(standing)" />
+                                } @else {
+                                <div class="standing-profile-image-default" [ngStyle]="{'background-color': standing.backgroundColor}">{{ getStandingInitial(standing) }}</div>
+                                }
+                            </div>
+                            {{ getStandingName(standing) }}
+                        </span>
+                        }
+                    </div>
+                    }
                     <div class="event-row">
                         @if (event.videogame?.name) {
                         <span class="event-meta-item">
