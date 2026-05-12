@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
@@ -12,6 +12,8 @@ import { MatInput } from '@angular/material/input';
 })
 export class SearchComponent {
 
+    @Output() submitted = new EventEmitter<void>();
+
     eventFormControl = new FormGroup({
         url: new FormControl('')
     });
@@ -21,5 +23,6 @@ export class SearchComponent {
 
     submit() {
         this.router.navigate(['/tournament' + this.url.value.slice(this.url.value.indexOf('tournament') + 10)]);
+        this.submitted.emit();
     }
 }

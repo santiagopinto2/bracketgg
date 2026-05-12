@@ -104,7 +104,6 @@ export class AppComponent implements AfterViewInit {
             this.tournament = {};
         }
 
-        if (this.windowSize < this.largeWindowSize) this.sidenavOpen = false;
     }
 
     @HostListener('window:resize', ['$event'])
@@ -129,6 +128,10 @@ export class AppComponent implements AfterViewInit {
 
     toggleDarkMode() {
         this.colorSchemeService.update(this.colorSchemeService.currentActive() === 'dark' ? 'light' : 'dark');
+    }
+
+    closeSidenav() {
+        if (this.windowSize < this.largeWindowSize) this.sidenavOpen = false;
     }
 
     login() {

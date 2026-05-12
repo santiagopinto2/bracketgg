@@ -34,11 +34,11 @@
     <mat-sidenav #sidenav mode="side" [(opened)]="sidenavOpen">
         <div class="d-flex flex-column justify-content-between sidenav-div">
             <div style="width: 250px">
-                <div style="margin-top: 20px"><app-search></app-search></div>
+                <div style="margin-top: 20px"><app-search (submitted)="closeSidenav()"></app-search></div>
 
                 <mat-nav-list style="padding: 0">
                     @if (tournament.name) {
-                    <a mat-list-item [routerLink]="'/' + tournament.slug + '/details'" class="home-section">
+                    <a mat-list-item [routerLink]="'/' + tournament.slug + '/details'" class="home-section" (click)="closeSidenav()">
                         <div style="display: flex; align-items: center; gap: 4px">
                             @if (getTournamentImage()) {
                             <img [src]="getTournamentImage()" class="home-image" />
@@ -53,7 +53,7 @@
                     }
 
                     @for (event of tournament.events; track event.slug) {
-                    <a mat-list-item [routerLink]="'/' + event.slug">{{event.name}}</a>
+                    <a mat-list-item [routerLink]="'/' + event.slug" (click)="closeSidenav()">{{event.name}}</a>
                     }
                 </mat-nav-list>
             </div>
