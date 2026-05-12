@@ -1,0 +1,3 @@
+[build]
+  command = "node scripts/generate-env.js && ng build"
+  publish = "dist/bracketgg/browser"
