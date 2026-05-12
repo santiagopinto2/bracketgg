@@ -59,9 +59,15 @@
                         },
                         "development": {
                           "optimization": false,
-                            "extractLicenses": false,
-                            "sourceMap": true,
-                            "namedChunks": true
+                          "extractLicenses": false,
+                          "sourceMap": true,
+                          "namedChunks": true,
+                          "fileReplacements": [
+                            {
+                              "replace": "src/environments/environment.ts",
+                              "with": "src/environments/environment.development.ts"
+                            }
+                          ]
                         }
                     },
                     "defaultConfiguration": "production"
@@ -73,7 +79,8 @@
                           "buildTarget": "bracketgg:build:production"
                         },
                         "development": {
-                          "buildTarget": "bracketgg:build:development"
+                          "buildTarget": "bracketgg:build:development",
+                          "proxyConfig": "proxy.conf.json"
                         }
                     },
                     "defaultConfiguration": "development"

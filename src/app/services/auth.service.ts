@@ -63,7 +63,7 @@ export class AuthService {
       // Call our local proxy server instead of start.gg directly (avoids CORS issues)
       const response = await firstValueFrom(
         this.http.post<TokenResponse>(
-          'http://localhost:3000/api/auth/token',
+          '/api/auth/token',
           { code },
           { headers: { 'Content-Type': 'application/json' } }
         )
@@ -88,7 +88,7 @@ export class AuthService {
       // Call our local proxy server instead of start.gg directly (avoids CORS issues)
       const response = await firstValueFrom(
         this.http.post<TokenResponse>(
-          'http://localhost:3000/api/auth/refresh',
+          '/api/auth/refresh',
           { refresh_token: refreshToken },
           { headers: { 'Content-Type': 'application/json' } }
         )

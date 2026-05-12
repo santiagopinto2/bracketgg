@@ -1,3 +1,18 @@
 [build]
   command = "node scripts/generate-env.js && ng build"
   publish = "dist/bracketgg/browser"
+
+[[redirects]]
+  from = "/api/auth/token"
+  to = "/.netlify/functions/auth-token"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/refresh"
+  to = "/.netlify/functions/auth-refresh"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
