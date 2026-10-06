@@ -63,6 +63,18 @@ app.post('/api/auth/refresh', async (req, res) => {
   }
 });
 
+// Optionally serve the built Angular app too (self-hosting without Netlify):
+// STATIC_DIR=dist/bracketgg/browser node proxy-server.js
+if (process.env.STATIC_DIR) {
+  const path = require('path');
+  const staticDir = path.resolve(process.env.STATIC_DIR);
+  app.use(express.static(staticDir));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api/')) return next();
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`OAuth proxy server running on http://localhost:${PORT}`);
 });
