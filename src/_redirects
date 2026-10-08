@@ -1,3 +1,0 @@
-/api/auth/token  /.netlify/functions/auth-token  200
-/api/auth/refresh  /.netlify/functions/auth-refresh  200
-/*  /index.html  200
