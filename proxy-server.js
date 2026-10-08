@@ -63,7 +63,7 @@ app.post('/api/auth/refresh', async (req, res) => {
   }
 });
 
-// Optionally serve the built Angular app too (self-hosting without Netlify):
+// Optionally serve the built Angular app too:
 // STATIC_DIR=dist/bracketgg/browser node proxy-server.js
 if (process.env.STATIC_DIR) {
   const path = require('path');
