@@ -7,6 +7,7 @@
 // playwright package and Chromium (npm install --no-save playwright && npx playwright install chromium).
 // Prints a JSON report. Without --report-only it exits 1 if a check fails.
 import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
 
 const appUrl = process.argv[2] ?? 'http://localhost:4300';
 const reportOnly = process.argv.includes('--report-only');
@@ -32,8 +33,17 @@ function poolSets(idBase) {
     ];
 }
 
-const phaseGroupOf = { 1001: 2001, 1002: 2002 };
-const setsOf = { 2001: poolSets(100), 2002: poolSets(200) };
+// A real pool that hasn't started (empty slots), where only the top 8 progress, with three guesses
+// at what start.gg's GraphQL returns for it: every preview set, no bye sets, or no byes and no
+// sets past the progression cut.
+const unstarted = JSON.parse(readFileSync(new URL('./fixtures/unstarted-progressing-pool.json', import.meta.url))).sets;
+const unstartedVariants = {
+    all: unstarted,
+    noByes: unstarted.filter(s => !s.bye),
+    noByesNoUnreachable: unstarted.filter(s => !s.bye && !s.unreachable),
+};
+const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003 };
+const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes };
 
 function kindOf(query) {
     if (query.includes('tournament(slug')) return 'tournament';
@@ -53,7 +63,7 @@ function answer(query) {
                     startAt: 1794000000, type: 1, videogame: { name: 'Test Game', images: [] }, standings: { nodes: [] } }]
             } } };
         case 'entrants':
-            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }],
+            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }, { id: 1003, name: 'Unstarted Pool' }],
                 entrants: { nodes: structuredClone(entrants) } } } };
         case 'phase': {
             const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
@@ -65,7 +75,8 @@ function answer(query) {
             const groupId = Number(query.match(/phaseGroup\(id: (\d+)\)/)[1]);
             const page = Number(query.match(/page: (\d+)/)[1]);
             const perPage = Number(query.match(/perPage: (\d+)/)[1]);
-            const nodes = structuredClone(setsOf[groupId]).slice((page - 1) * perPage, page * perPage);
+            const nodes = structuredClone(setsOf[groupId]).slice((page - 1) * perPage, page * perPage)
+                .map(({ bye, unreachable, ...set }) => set);
             return { data: { phaseGroup: { sets: { nodes } } } };
         }
         default:
@@ -222,6 +233,26 @@ try {
         const openAfter = await page.locator('mat-sidenav.mat-drawer-opened').count() > 0;
         report.mobileKeyboard = { openBefore, openAfter };
         check('phone: opening the keyboard keeps the sidebar open', openBefore && openAfter, report.mobileKeyboard);
+        await context.close();
+    }
+
+    // 7. A pool that hasn't started yet, for each guess at the data
+    report.unstartedPool = {};
+    for (const [variant, sets] of Object.entries(unstartedVariants)) {
+        setsOf[2003] = sets;
+        const { context, page, quiet } = await openPage(browser);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        // Font requests are blocked on purpose, so their load errors don't count
+        page.on('console', m => { if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) errors.push(m.text().slice(0, 200)); });
+        await page.goto(appUrl + eventPath + '/1003');
+        await quiet();
+        await page.waitForTimeout(1000);
+        const drawn = await page.locator('.set').count();
+        await page.screenshot({ path: `e2e-out/unstarted-${variant}.png`, fullPage: true }).catch(() => { });
+        const text = await snackText(page);
+        report.unstartedPool[variant] = { sets: sets.length, drawn, snackbar: text, errors: errors.slice(0, 5) };
+        check(`unstarted pool (${variant}) draws`, drawn > 0 && !errors.length && !(await spinnerShown(page)), report.unstartedPool[variant]);
         await context.close();
     }
 } finally {
