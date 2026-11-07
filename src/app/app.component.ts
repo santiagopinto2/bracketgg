@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectorRef, Component, HostListener, ViewChild, effect } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme.service';
-import { StartggService } from './services/startgg.service';
+import { StartggError, StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData.service';
@@ -30,6 +30,7 @@ export class AppComponent implements AfterViewInit {
     largeWindowSize = 769;
     sidenavOpen: boolean;
     tournament: any = {};
+    private loadId = 0;
 
     private navigationEnd = toSignal(
         this.router.events.pipe(filter(event => event instanceof NavigationEnd))
@@ -61,42 +62,58 @@ export class AppComponent implements AfterViewInit {
     }
 
     async parseUrl(url) {
+        // A newer navigation makes this load stale; a stale load must not overwrite the newer page
+        const loadId = ++this.loadId;
+
         if (url.includes('/tournament')) {
             let tourneySlug = url.slice(12);
 
             if (tourneySlug.length > 0 && (this.tournament.event || tourneySlug.includes('/event/') || !`tournament/${tourneySlug}`.includes(this.tournament.slug))) {
                 this.loadingService.updateValue(true);
-                if (tourneySlug.indexOf('/') !== -1) tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'));
-                let tourneyEventsRes = await this.startggService.getTournamentEvents(tourneySlug);
-                this.tournament = tourneyEventsRes.data.tournament;
-                let tournamentData: any = this.tournament;
+                try {
+                    if (tourneySlug.indexOf('/') !== -1) tourneySlug = tourneySlug.slice(0, tourneySlug.indexOf('/'));
+                    // Cached for a few minutes, so a phase switch doesn't download the tournament again
+                    let tournament = await this.startggService.getTournamentEvents(tourneySlug);
+                    if (loadId !== this.loadId) return;
+                    this.tournament = tournament;
+                    let tournamentData: any = this.tournament;
 
-                if (url.includes('/event/')) {
-                    tournamentData.event = {};
+                    if (url.includes('/event/')) {
+                        tournamentData.event = {};
 
-                    if (url.includes('/brackets?filter=')) tournamentData.event.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
-                    else if (url.includes('/brackets/')) {
-                        let bracketEndIndex = url.indexOf('/brackets/') + '/brackets/'.length;
-                        if (url.indexOf('/', bracketEndIndex) == -1) tournamentData.event.phaseId = Number(url.slice(bracketEndIndex));
-                        else tournamentData.event.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
+                        if (url.includes('/brackets?filter=')) tournamentData.event.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
+                        else if (url.includes('/brackets/')) {
+                            let bracketEndIndex = url.indexOf('/brackets/') + '/brackets/'.length;
+                            if (url.indexOf('/', bracketEndIndex) == -1) tournamentData.event.phaseId = Number(url.slice(bracketEndIndex));
+                            else tournamentData.event.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
+                        }
+
+                        let eventSlug = '';
+                        let eventEndIndex = url.indexOf('/event/') + '/event/'.length;
+                        if (url.indexOf('/', eventEndIndex) == -1) eventSlug = url.slice(1);
+                        else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
+
+                        let eventInfo = this.tournament.events?.find(event => event.slug == eventSlug);
+                        if (!eventInfo) throw new StartggError('Event not found in this tournament.');
+
+                        // Also cached, and fetched again when the tournament shows a new entrant count
+                        let eventRes = await this.startggService.getEventBySlug(eventSlug, eventInfo.numEntrants);
+                        if (loadId !== this.loadId) return;
+
+                        if (!tournamentData.event.phaseId) tournamentData.event.phaseId = eventRes.phases[0]?.id;
+                        if (!tournamentData.event.phaseId) throw new StartggError('This event has no brackets yet.');
+                        tournamentData.event.event = eventRes;
+                    }
+                    else {
+                        this.loadingService.updateValue(false);
                     }
 
-                    let eventSlug = '';
-                    let eventEndIndex = url.indexOf('/event/') + '/event/'.length;
-                    if (url.indexOf('/', eventEndIndex) == -1) eventSlug = url.slice(1);
-                    else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
-
-                    let eventRes = await this.startggService.getEventBySlug(eventSlug, this.tournament.events.find(event => event.slug == eventSlug).numEntrants);
-                    if (eventRes.errors) { console.log('error', eventRes.errors[0].message); return; }
-
-                    if (!tournamentData.event.phaseId) tournamentData.event.phaseId = eventRes.phases[0].id;
-                    tournamentData.event.event = eventRes;
+                    this.tournamentDataService.changeTournament(tournamentData);
+                } catch (error) {
+                    if (loadId !== this.loadId) return;
+                    console.error(error);
+                    this.loadingService.error(error instanceof StartggError ? error.message : 'Something went wrong loading this page. Try reloading.');
                 }
-                else {
-                    this.loadingService.updateValue(false);
-                }
-
-                this.tournamentDataService.changeTournament(tournamentData);
             }
         }
         else {

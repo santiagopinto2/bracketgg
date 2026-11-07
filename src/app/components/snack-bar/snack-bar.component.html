@@ -1,10 +1,13 @@
-<div class="d-flex justify-content-between">
-    <span class="fw-bold">Gathering bracket data...</span>
+<div class="d-flex justify-content-between align-items-center">
+    <span class="fw-bold">{{data.error ?? data.message ?? 'Gathering bracket data...'}}</span>
 
     @if (data.isLoading) {
     <span><mat-spinner diameter="20" color="primary"></mat-spinner></span>
     }
-    @if (!data.isLoading) {
+    @else if (data.error) {
+    <button mat-icon-button class="close" aria-label="Close" (click)="close()"><mat-icon fontIcon="close"></mat-icon></button>
+    }
+    @else {
     <mat-icon fontIcon="check" class="check"></mat-icon>
     }
 </div>
