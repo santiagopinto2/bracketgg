@@ -243,7 +243,8 @@ try {
         const { context, page, quiet } = await openPage(browser);
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
-        page.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 200)); });
+        // Font requests are blocked on purpose, so their load errors don't count
+        page.on('console', m => { if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) errors.push(m.text().slice(0, 200)); });
         await page.goto(appUrl + eventPath + '/1003');
         await quiet();
         await page.waitForTimeout(1000);

@@ -289,8 +289,14 @@ export class EventComponent implements OnInit, AfterViewInit {
         // Calculate the number of players per phase group
         phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
 
-        // Set all projected sets of the phase group
-        this.projected[phaseGroupIndex] = this.getProjected(phaseGroup);
+        // Set all projected sets of the phase group. If projecting fails on a bracket shape it doesn't
+        // know, "Show Projected" shows the real sets instead of the page failing to draw.
+        try {
+            this.projected[phaseGroupIndex] = this.getProjected(phaseGroup);
+        } catch (error) {
+            console.warn('Could not project this pool', error);
+            this.projected[phaseGroupIndex] = phaseGroup.sets.nodes;
+        }
 
         // Finally set the phase group
         this.phaseGroups[phaseGroupIndex] = phaseGroup;
@@ -362,13 +368,16 @@ export class EventComponent implements OnInit, AfterViewInit {
             setIndexRelative = addedSetIndexes.slice(0, sliceEnd).filter(value => value).length;
         }
 
-        // Recursively goes back rounds looking for entrants
-        let slots = projectedPhaseGroup[side][round][setIndexRelative].slots;
+        // Recursively goes back rounds looking for entrants. A set can be missing, like a first round
+        // set for a player with a bye in a bracket nobody has been placed in yet.
+        let projectedSet = projectedPhaseGroup[side][round]?.[setIndexRelative];
+        if (!projectedSet) return { entrant: null, standing: null };
+        let slots = projectedSet.slots;
         if (!slots[0].entrant && round != 0) slots[0] = this.setProjectedSlot(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2))
         if (!slots[1].entrant && round != 0) slots[1] = this.setProjectedSlot(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2 + 1));
 
         // Sets the projected sets in losers that are coming from winners
-        if (side == 0 && !projectedPhaseGroup[side][round][setIndexRelative].winnerId && (slots[0].entrant || slots[1].entrant)) {
+        if (side == 0 && !projectedSet.winnerId && (slots[0].entrant || slots[1].entrant)) {
             // Get the distance between two powers of 2 for the number of players
             let powerOfPlayersRemainder = this.getPowerOfPlayersRemainder(numPlayers);
 
