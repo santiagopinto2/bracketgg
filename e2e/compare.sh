@@ -7,16 +7,16 @@ export STARTGG_CLIENT_ID=test STARTGG_CLIENT_SECRET=unused-in-browser STARTGG_RE
 out=e2e-out
 mkdir -p $out
 
-if npm ci --no-audit --no-fund > $out/npm-ci.log 2>&1; then echo "npm ci: ok" | tee $out/npm-ci-result.txt
-else
-  echo "npm ci: FAILED" | tee $out/npm-ci-result.txt
-  git checkout -q -- package-lock.json
-  npm install --no-audit --no-fund --loglevel=error || exit 1
-fi
+npm ci --no-audit --no-fund > $out/npm-ci.log 2>&1 || { tail -30 $out/npm-ci.log; echo "npm ci failed"; exit 1; }
+echo "npm ci: ok"
 
 node scripts/generate-env.js || exit 1
 npx ng build > $out/build-branch.log 2>&1 || { tail -50 $out/build-branch.log; exit 1; }
 echo "branch build: ok"
+node scripts/check-bundle.js dist/bracketgg/browser unused-in-browser || exit 1
+mkdir -p /tmp/leak && echo "const e={clientSecret:'not-the-placeholder'};" > /tmp/leak/main.js
+if node scripts/check-bundle.js /tmp/leak unused-in-browser 2> /dev/null; then echo "check-bundle.js missed a leaked secret"; exit 1; fi
+echo "check-bundle.js: ok"
 cp -r dist/bracketgg/browser /tmp/app-branch
 
 git checkout -q "${BASE_REF:-main}" -- src
