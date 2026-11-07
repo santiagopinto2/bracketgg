@@ -206,6 +206,24 @@ try {
         report.tournamentPage = count(log);
         await context.close();
     }
+
+    // 6. Phone: tapping the Event Link box opens the keyboard, which shrinks the page height.
+    //    The sidebar must stay open.
+    {
+        const { context, page } = await openPage(browser);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto(appUrl + '/');
+        await page.locator('mat-toolbar button:has(mat-icon:text("menu"))').click();
+        await page.waitForTimeout(500);
+        const openBefore = await page.locator('mat-sidenav.mat-drawer-opened').count() > 0;
+        await page.locator('mat-sidenav input').click();
+        await page.setViewportSize({ width: 390, height: 500 });
+        await page.waitForTimeout(800);
+        const openAfter = await page.locator('mat-sidenav.mat-drawer-opened').count() > 0;
+        report.mobileKeyboard = { openBefore, openAfter };
+        check('phone: opening the keyboard keeps the sidebar open', openBefore && openAfter, report.mobileKeyboard);
+        await context.close();
+    }
 } finally {
     await browser.close();
 }

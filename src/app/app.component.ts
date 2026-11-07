@@ -125,8 +125,12 @@ export class AppComponent implements AfterViewInit {
 
     @HostListener('window:resize', ['$event'])
     onResize(event) {
+        // Only open or close the sidenav when the width crosses the breakpoint. A phone keyboard
+        // opening (tapping the search box) also fires resize, and must not close it.
+        const wasLarge = this.windowSize >= this.largeWindowSize;
         this.windowSize = event.target.innerWidth;
-        this.sidenavOpen = this.windowSize >= this.largeWindowSize;
+        const isLarge = this.windowSize >= this.largeWindowSize;
+        if (isLarge !== wasLarge) this.sidenavOpen = isLarge;
     }
 
     getTournamentImage(): string {
