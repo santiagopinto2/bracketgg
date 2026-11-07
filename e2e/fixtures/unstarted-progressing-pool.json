@@ -1,6 +1,1122 @@
 {
-"source": "https://api.smash.gg/phase_group/3512080?expand[]=sets (2026-11-07), a 32-slot double elimination pool, not started, top 8 progress",
+"source": "https://api.smash.gg/phase_group/3512080?expand[]=sets (2026-11-07), a 32-slot double elimination pool, not started, top 8 progress; sorted by round, as sortType ROUND returns sets",
 "sets": [
+{
+"id": "preview_3512080_-10_0",
+"round": -7,
+"fullRoundText": "Losers Final",
+"winnerId": null,
+"bye": false,
+"unreachable": true,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-9_0",
+"round": -6,
+"fullRoundText": "Losers Semi-Final",
+"winnerId": null,
+"bye": false,
+"unreachable": true,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-8_0",
+"round": -5,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": null,
+"bye": false,
+"unreachable": true,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-8_1",
+"round": -5,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": null,
+"bye": false,
+"unreachable": true,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-7_0",
+"round": -4,
+"fullRoundText": "Losers Round 4",
+"winnerId": null,
+"bye": false,
+"unreachable": true,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-7_1",
+"round": -4,
+"fullRoundText": "Losers Round 4",
+"winnerId": null,
+"bye": false,
+"unreachable": true,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-6_0",
+"round": -3,
+"fullRoundText": "Losers Round 3",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-6_1",
+"round": -3,
+"fullRoundText": "Losers Round 3",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-6_2",
+"round": -3,
+"fullRoundText": "Losers Round 3",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-6_3",
+"round": -3,
+"fullRoundText": "Losers Round 3",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-5_0",
+"round": -2,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-5_1",
+"round": -2,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-5_2",
+"round": -2,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-5_3",
+"round": -2,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_0",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_0",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_0",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_0",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_1",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_1",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_1",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_1",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_2",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_2",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_2",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_2",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_3",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_3",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_3",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_3",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_4",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_4",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_4",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_4",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_5",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_5",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_5",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_5",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_6",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_6",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_6",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_6",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": false,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_7",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_7",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-3_7",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-4_7",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_8",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_8",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_9",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_9",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_10",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_10",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_11",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_11",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_12",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_12",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_13",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_13",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_14",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_14",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-1_15",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512080_-2_15",
+"round": -1,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"bye": true,
+"unreachable": false,
+"slots": [
+{
+"entrant": null,
+"standing": null
+},
+{
+"entrant": null,
+"standing": null
+}
+]
+},
 {
 "id": "preview_3512080_1_0",
 "round": 1,
@@ -581,1122 +1697,6 @@
 "id": "preview_3512080_6_1",
 "round": 6,
 "fullRoundText": "Grand Final Reset",
-"winnerId": null,
-"bye": false,
-"unreachable": true,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_0",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_1",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_2",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_3",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_4",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_5",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_6",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_7",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_8",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_9",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_10",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_11",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_12",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_13",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_14",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-1_15",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_0",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_1",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_2",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_3",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_4",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_5",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_6",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_7",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_8",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_9",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_10",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_11",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_12",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_13",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_14",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-2_15",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_0",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_1",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_2",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_3",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_4",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_5",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_6",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-3_7",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_0",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_1",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_2",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_3",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_4",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_5",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_6",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-4_7",
-"round": -1,
-"fullRoundText": "Losers Round 1",
-"winnerId": null,
-"bye": true,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-5_0",
-"round": -2,
-"fullRoundText": "Losers Round 2",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-5_1",
-"round": -2,
-"fullRoundText": "Losers Round 2",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-5_2",
-"round": -2,
-"fullRoundText": "Losers Round 2",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-5_3",
-"round": -2,
-"fullRoundText": "Losers Round 2",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-6_0",
-"round": -3,
-"fullRoundText": "Losers Round 3",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-6_1",
-"round": -3,
-"fullRoundText": "Losers Round 3",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-6_2",
-"round": -3,
-"fullRoundText": "Losers Round 3",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-6_3",
-"round": -3,
-"fullRoundText": "Losers Round 3",
-"winnerId": null,
-"bye": false,
-"unreachable": false,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-7_0",
-"round": -4,
-"fullRoundText": "Losers Round 4",
-"winnerId": null,
-"bye": false,
-"unreachable": true,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-7_1",
-"round": -4,
-"fullRoundText": "Losers Round 4",
-"winnerId": null,
-"bye": false,
-"unreachable": true,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-8_0",
-"round": -5,
-"fullRoundText": "Losers Quarter-Final",
-"winnerId": null,
-"bye": false,
-"unreachable": true,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-8_1",
-"round": -5,
-"fullRoundText": "Losers Quarter-Final",
-"winnerId": null,
-"bye": false,
-"unreachable": true,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-9_0",
-"round": -6,
-"fullRoundText": "Losers Semi-Final",
-"winnerId": null,
-"bye": false,
-"unreachable": true,
-"slots": [
-{
-"entrant": null,
-"standing": null
-},
-{
-"entrant": null,
-"standing": null
-}
-]
-},
-{
-"id": "preview_3512080_-10_0",
-"round": -7,
-"fullRoundText": "Losers Final",
 "winnerId": null,
 "bye": false,
 "unreachable": true,
