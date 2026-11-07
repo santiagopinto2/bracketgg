@@ -45,3 +45,4 @@ Thumbs.db
 /src/environments/environment*.ts
 !/src/environments/environment.template.ts
 .env
+/e2e-out

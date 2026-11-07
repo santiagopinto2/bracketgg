@@ -4,19 +4,14 @@ import { inject } from '@angular/core';
 import { AuthService } from './auth.service';
 
 export const InterceptorService: HttpInterceptorFn = (req, next) => {
-  const maxRetries = 100;
-  const delay = 1000;
+  // Rate limits (429) are retried in StartggService, which pauses every request at once
+  const maxRetries = 1;
   const authService = inject(AuthService);
 
   return next(req).pipe(
     retry({
       count: maxRetries,
       delay: (error, retryCount) => {
-        // Handle rate limiting (429)
-        if (error.status === 429) {
-          return timer(delay);
-        }
-
         // Handle unauthorized (401) - try to refresh token once
         if (error.status === 401 && retryCount === 1) {
           return from(authService.refreshAccessToken()).pipe(

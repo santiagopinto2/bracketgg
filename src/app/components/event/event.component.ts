@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, OnInit, ViewChildren, effect, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { StartggService } from 'src/app/services/startgg.service';
+import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { NgStyle, NgClass } from '@angular/common';
@@ -29,6 +29,9 @@ export class EventComponent implements OnInit, AfterViewInit {
     scrollToTopOffset = 20;
     eventId = -1;
     allEntrants = [];
+    entrantsById = new Map<any, any>();
+    // A newer phase load makes older ones stale, so they stop instead of mixing two phases' data
+    loadId = 0;
     entrants = signal<any[]>([]);
     entrantCtrl = new FormControl<string | { name: string }>('');
     entrantCtrlValue = toSignal(this.entrantCtrl.valueChanges, { initialValue: '' });
@@ -85,6 +88,8 @@ export class EventComponent implements OnInit, AfterViewInit {
             if (!event || !event.phaseId) {
                 this.eventId = -1;
                 this.allEntrants = [];
+                this.entrantsById = new Map();
+                this.loadId++;
             }
             else {
                 // Get entrants only if the event changes
@@ -92,22 +97,8 @@ export class EventComponent implements OnInit, AfterViewInit {
                     this.eventId = event.event.id;
 
                     this.allEntrants = event.event.entrants.nodes;
-                    this.allEntrants.forEach(entrant => {
-                        if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
-
-                        if (this.getEntrantImage(entrant) === '') {
-                            const hue = Math.floor(Math.random() * 361);
-                            const sat = Math.floor(Math.random() * 101);
-                            const lum = 40;
-                            entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
-                        }
-
-                        let pipeIndex = entrant.name.lastIndexOf('|');
-                        if (pipeIndex != -1) {
-                            entrant.sponsor = entrant.name.slice(0, pipeIndex - 1);
-                            entrant.name = entrant.name.slice(pipeIndex + 2);
-                        }
-                    });
+                    this.allEntrants.forEach(entrant => this.prepareEntrant(entrant));
+                    this.entrantsById = new Map(this.allEntrants.map(entrant => [entrant.id, entrant]));
                 }
 
                 // Get all phase and phase group data
@@ -169,48 +160,82 @@ export class EventComponent implements OnInit, AfterViewInit {
         sidenavContentElement.addEventListener('mouseleave', stopDragging, false);
     }
 
-    async getPhase(phaseId) {
-        let phaseRes = await this.startggService.getPhase(phaseId);
-        if (phaseRes.errors) { console.log('error', phaseRes.errors[0].message); return; }
-        this.phaseProperties = await this.startggService.getPhaseProperties(phaseRes.data.phase.phaseGroups.nodes[0].id);
+    // Fixes up an entrant from start.gg for display: sponsor split off the name, and a color when there's no avatar
+    prepareEntrant(entrant) {
+        if (!entrant.participants?.length) entrant.participants = [{ gamerTag: entrant.name || '?', user: null }];
+        if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
 
-        // Get all phase groups within the phase
-        let phaseGroupPromises = [];
-        for (let i = 0; i < phaseRes.data.phase.phaseGroups.nodes.length; i++) {
-            this.phaseGroups.push();
-            this.projected.push();
-            this.maxRounds.push([]);
-            const phaseGroupPromise = this.getPhaseGroup(phaseRes.data.phase.phaseGroups.nodes[i], i);
-            phaseGroupPromises.push(phaseGroupPromise);
+        if (!entrant.backgroundColor && this.getEntrantImage(entrant) === '') {
+            const hue = Math.floor(Math.random() * 361);
+            const sat = Math.floor(Math.random() * 101);
+            const lum = 40;
+            entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
         }
 
-        await Promise.all(phaseGroupPromises);
-        this.loadingService.updateValue(false);
+        entrant.name = entrant.name ?? '';
+        let pipeIndex = entrant.name.lastIndexOf('|');
+        if (pipeIndex != -1) {
+            entrant.sponsor = entrant.name.slice(0, pipeIndex - 1);
+            entrant.name = entrant.name.slice(pipeIndex + 2);
+        }
+        return entrant;
     }
 
-    async getPhaseGroup(phaseGroup, phaseGroupIndex) {
+    async getPhase(phaseId) {
+        const loadId = ++this.loadId;
+        try {
+            let phase = await this.startggService.getPhase(phaseId);
+            if (loadId !== this.loadId) return;
+            this.phaseProperties = await this.startggService.getPhaseProperties(phase.phaseGroups.nodes[0]?.id);
+            if (loadId !== this.loadId) return;
+
+            // Get all phase groups within the phase
+            let phaseGroupPromises = [];
+            for (let i = 0; i < phase.phaseGroups.nodes.length; i++) {
+                this.maxRounds.push([]);
+                const phaseGroupPromise = this.getPhaseGroup(phase.phaseGroups.nodes[i], i, loadId);
+                phaseGroupPromises.push(phaseGroupPromise);
+            }
+
+            await Promise.all(phaseGroupPromises);
+            if (loadId !== this.loadId) return;
+            this.loadingService.updateValue(false);
+        } catch (error) {
+            if (loadId !== this.loadId) return;
+            console.error(error);
+            this.loadingService.error(error instanceof StartggError ? error.message : 'Could not draw this bracket.');
+        }
+    }
+
+    async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId) {
         let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, this.phaseProperties);
-        if (phaseGroupSetsRes.errors) { console.log('error', phaseGroupSetsRes.errors[0].message); return; }
+        if (loadId !== this.loadId || phaseGroupSetsRes.nodes.length == 0) return;
 
         phaseGroup.sets = phaseGroupSetsRes;
         let phaseGroupSets = phaseGroup.sets.nodes;
 
-        // Add entrant data to each set and add unique entrants to entrant list
+        // Add entrant data to each set and add unique entrants to entrant list. The set itself carries
+        // each entrant's current name and seed, so an entrant missing from the cached list still shows.
+        const newEntrants = [];
+        const seen = new Set(this.entrants().map(e => e.id));
         phaseGroupSets.forEach(set => {
             set.slots.forEach(slot => {
-                let entrant = this.allEntrants.find(entrant => entrant.id == slot?.entrant?.id);
-                if (entrant) {
-                    slot.entrant.name = entrant.name;
-                    slot.entrant.sponsor = entrant.sponsor;
-                    slot.entrant.participants = entrant.participants;
-                    slot.entrant.initialSeedNum = entrant.initialSeedNum;
-                    slot.entrant.backgroundColor = entrant.backgroundColor;
-                    if (!this.entrants().some(e => e.id == slot.entrant.id)) {
-                        this.entrants.update(entrants => [...entrants, slot.entrant]);
-                    }
+                if (!slot?.entrant) return;
+                // Name and seed come from the set (always fresh), the avatar and color from the cached entrant list
+                const listed = this.entrantsById.get(slot.entrant.id);
+                const entrant = this.prepareEntrant({ ...slot.entrant, participants: listed?.participants, backgroundColor: listed?.backgroundColor });
+                slot.entrant.name = entrant.name;
+                slot.entrant.sponsor = entrant.sponsor;
+                slot.entrant.participants = entrant.participants;
+                slot.entrant.initialSeedNum = entrant.initialSeedNum;
+                slot.entrant.backgroundColor = entrant.backgroundColor;
+                if (!seen.has(slot.entrant.id)) {
+                    seen.add(slot.entrant.id);
+                    newEntrants.push(slot.entrant);
                 }
             });
         });
+        if (newEntrants.length) this.entrants.update(entrants => [...entrants, ...newEntrants]);
         this.entrantCtrl.setValue('');
 
         // Corrects the data to account for a grand final reset
