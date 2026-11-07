@@ -303,6 +303,9 @@ export class StartggService {
                             winnerId
                             ${setGamesQuery}
                             slots {
+                                prereqId
+                                prereqType
+                                prereqPlacement
                                 entrant {
                                     id
                                     name

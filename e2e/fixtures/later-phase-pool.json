@@ -1,0 +1,665 @@
+{
+"source": "Set links from https://api.smash.gg/phase_group/3512079?expand[]=sets (2026-11-07): a later-phase double elimination pool whose losers bracket starts with players from phase 1. Bye sets removed, 16 made-up players placed, no sets played.",
+"expectedProjectedPairs": [
+[
+"P1",
+"P8"
+],
+[
+"P4",
+"P5"
+],
+[
+"P2",
+"P7"
+],
+[
+"P3",
+"P6"
+],
+[
+"P9",
+"P16"
+],
+[
+"P12",
+"P13"
+],
+[
+"P10",
+"P15"
+],
+[
+"P11",
+"P14"
+],
+[
+"P1",
+"P4"
+],
+[
+"P2",
+"P3"
+],
+[
+"P1",
+"P2"
+],
+[
+"P6",
+"P9"
+],
+[
+"P7",
+"P12"
+],
+[
+"P5",
+"P10"
+],
+[
+"P8",
+"P11"
+],
+[
+"P6",
+"P7"
+],
+[
+"P5",
+"P8"
+],
+[
+"P4",
+"P6"
+],
+[
+"P3",
+"P5"
+],
+[
+"P3",
+"P4"
+],
+[
+"P2",
+"P3"
+],
+[
+"P1",
+"P2"
+]
+],
+"sets": [
+{
+"id": "preview_3512079_-8_0",
+"round": -7,
+"fullRoundText": "Losers Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_4_0",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-7_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-7_0",
+"round": -6,
+"fullRoundText": "Losers Semi-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_-6_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-6_1",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-6_0",
+"round": -5,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_3_0",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-5_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-6_1",
+"round": -5,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_3_1",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-5_1",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-5_0",
+"round": -4,
+"fullRoundText": "Losers Round 3",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_-4_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-4_1",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-5_1",
+"round": -4,
+"fullRoundText": "Losers Round 3",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_-4_2",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-4_3",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-4_0",
+"round": -3,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_2_3",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-3_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-4_1",
+"round": -3,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_2_2",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-3_1",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-4_2",
+"round": -3,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_2_1",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-3_2",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-4_3",
+"round": -3,
+"fullRoundText": "Losers Round 2",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_2_0",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-3_3",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-3_0",
+"round": -2,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_-2_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1009,
+"name": "P9",
+"initialSeedNum": 9
+},
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-2_1",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1016,
+"name": "P16",
+"initialSeedNum": 16
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-3_1",
+"round": -2,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_-2_2",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1012,
+"name": "P12",
+"initialSeedNum": 12
+},
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-2_3",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1013,
+"name": "P13",
+"initialSeedNum": 13
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-3_2",
+"round": -2,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_-2_4",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1010,
+"name": "P10",
+"initialSeedNum": 10
+},
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-2_5",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1015,
+"name": "P15",
+"initialSeedNum": 15
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_-3_3",
+"round": -2,
+"fullRoundText": "Losers Round 1",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_-2_6",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1011,
+"name": "P11",
+"initialSeedNum": 11
+},
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-2_7",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": {
+"id": 1014,
+"name": "P14",
+"initialSeedNum": 14
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_2_0",
+"round": 1,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "42515671",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1001,
+"name": "P1",
+"initialSeedNum": 1
+},
+"standing": null
+},
+{
+"prereqId": "42516584",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1008,
+"name": "P8",
+"initialSeedNum": 8
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_2_1",
+"round": 1,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "42515680",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1004,
+"name": "P4",
+"initialSeedNum": 4
+},
+"standing": null
+},
+{
+"prereqId": "42516575",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1005,
+"name": "P5",
+"initialSeedNum": 5
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_2_2",
+"round": 1,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "42515672",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1002,
+"name": "P2",
+"initialSeedNum": 2
+},
+"standing": null
+},
+{
+"prereqId": "42516583",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1007,
+"name": "P7",
+"initialSeedNum": 7
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_2_3",
+"round": 1,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "42515679",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1003,
+"name": "P3",
+"initialSeedNum": 3
+},
+"standing": null
+},
+{
+"prereqId": "42516576",
+"prereqType": "seed",
+"prereqPlacement": null,
+"entrant": {
+"id": 1006,
+"name": "P6",
+"initialSeedNum": 6
+},
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_3_0",
+"round": 2,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_2_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_2_1",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_3_1",
+"round": 2,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_2_2",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_2_3",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_4_0",
+"round": 3,
+"fullRoundText": "Winners Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_3_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_3_1",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_5_0",
+"round": 4,
+"fullRoundText": "Grand Final",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_4_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_-8_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+}
+]
+},
+{
+"id": "preview_3512079_5_1",
+"round": 4,
+"fullRoundText": "Grand Final Reset",
+"winnerId": null,
+"slots": [
+{
+"prereqId": "preview_3512079_5_0",
+"prereqType": "set",
+"prereqPlacement": 1,
+"entrant": null,
+"standing": null
+},
+{
+"prereqId": "preview_3512079_5_0",
+"prereqType": "set",
+"prereqPlacement": 2,
+"entrant": null,
+"standing": null
+}
+]
+}
+]
+}

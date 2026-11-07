@@ -306,159 +306,44 @@ export class EventComponent implements OnInit, AfterViewInit {
         });
     }
 
+    // Fills every empty slot with who would get there if the higher seed won each set from here on.
+    // Each slot says where its player comes from (prereqType "set", prereqId, prereqPlacement 1 for
+    // the winner or 2 for the loser), so this follows start.gg's own links and works for any bracket
+    // shape, including later phases whose losers bracket starts with players from an earlier phase.
     getProjected(phaseGroup) {
         let projectedPhaseGroup = structuredClone(phaseGroup.sets.nodes);
+        let setsById = new Map<string, any>(projectedPhaseGroup.flat(2).map(set => [String(set.id), set]));
+        let done = new Set<string>();
 
-        // Get all projections in winners and set projections in losers that come from winners
-        let lastWinnersRoundSets = projectedPhaseGroup[0][projectedPhaseGroup[0].length - 1];
-        if (lastWinnersRoundSets[0].fullRoundText === 'Grand Final Reset') {
-            return projectedPhaseGroup;
-        }
-        if (lastWinnersRoundSets[0].fullRoundText === 'Grand Final') {
-            this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 2, 0);
-        }
-        else {
-            for (let i = 0; i < lastWinnersRoundSets.length; i++) {
-                this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 0, projectedPhaseGroup[0].length - 1, i);
-            }
-        }
-
-        // Get the rest of projections in losers
-        for (let i = 0; i < projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1].length; i++) {
-            this.getProjectedSet(projectedPhaseGroup, phaseGroup.numPlayers, 1, projectedPhaseGroup[1].length - 1, i);
-        }
-
-        // Get grand finals projections
-        let grandsSetOneSlots = lastWinnersRoundSets[0].slots;
-        if (!grandsSetOneSlots[0].entrant) {
-            let winnersFinalsSlots = structuredClone(projectedPhaseGroup[0][projectedPhaseGroup[0].length - 2][0].slots);
-            grandsSetOneSlots[0] = this.setProjectedSlot(this.getLowerHigherSeed(winnersFinalsSlots, false));
-        }
-        if (!grandsSetOneSlots[1].entrant) {
-            let losersFinalsSlots = structuredClone(projectedPhaseGroup[1][projectedPhaseGroup[1].length - 1][0].slots);
-            grandsSetOneSlots[1] = this.setProjectedSlot(this.getLowerHigherSeed(losersFinalsSlots, false));
-        }
+        const fill = (set, depth) => {
+            if (done.has(String(set.id)) || depth > 64) return;
+            done.add(String(set.id));
+            // The reset is only played if the losers side wins the grand final, so it isn't projected
+            if (set.fullRoundText === 'Grand Final Reset') return;
+            set.slots.forEach((slot, slotIndex) => {
+                if (slot.entrant || slot.prereqType !== 'set') return;
+                let source = setsById.get(String(slot.prereqId));
+                if (!source) return;
+                fill(source, depth + 1);
+                let advancing = this.getSetPlacement(source, slot.prereqPlacement);
+                if (advancing.entrant) set.slots[slotIndex] = this.setProjectedSlot(advancing);
+            });
+        };
+        setsById.forEach(set => fill(set, 0));
 
         return projectedPhaseGroup;
     }
 
-    getProjectedSet(projectedPhaseGroup, numPlayers, side, round, setIndex) {
-        // Get relative set index
-        let setIndexRelative = setIndex;
-        if (side == 0 && round == 0) {
-            let setCountFull = projectedPhaseGroup[side][1] ? projectedPhaseGroup[side][1].length * 2 : projectedPhaseGroup[side][0].length;
-            let addedSetIndexes = this.getAddedSetIndexes(setCountFull, projectedPhaseGroup[side][round].length, false);
-            setIndexRelative = addedSetIndexes.slice(0, setIndex).filter(value => value).length;
+    // The slot that finishes a set in `placement` (1 winner, 2 loser): the real result if the set is
+    // done, else the higher seed wins
+    getSetPlacement(set, placement) {
+        let slots = set.slots;
+        if (set.winnerId && slots[0].entrant && slots[1].entrant) {
+            let winner = slots.find(slot => slot.entrant.id == set.winnerId);
+            let loser = slots.find(slot => slot.entrant.id != set.winnerId);
+            if (winner && loser) return structuredClone(placement == 1 ? winner : loser);
         }
-        else if (side == 1 && round != 0 && projectedPhaseGroup[side][round][0].fullRoundText !== 'Losers Final' && projectedPhaseGroup[side][round + 1] && projectedPhaseGroup[side][round].length == projectedPhaseGroup[side][round + 1].length) {
-            setIndexRelative = Math.trunc(setIndex / 2);
-        }
-        else if (side == 1 && round == 0 && projectedPhaseGroup[side][round + 1]) {
-            let setCountFull = -1;
-            let sliceEnd = -1;
-            if (projectedPhaseGroup[side][round].length > projectedPhaseGroup[side][round + 1].length) {
-                setCountFull = projectedPhaseGroup[side][1].length * 2;
-                sliceEnd = setIndex;
-            }
-            else {
-                setCountFull = projectedPhaseGroup[side][1].length;
-                sliceEnd = Math.trunc(setIndex / 2);
-            }
-            let addedSetIndexes = this.getAddedSetIndexes(setCountFull, projectedPhaseGroup[side][round].length, false);
-            setIndexRelative = addedSetIndexes.slice(0, sliceEnd).filter(value => value).length;
-        }
-
-        // Recursively goes back rounds looking for entrants. A set can be missing, like a first round
-        // set for a player with a bye in a bracket nobody has been placed in yet.
-        let projectedSet = projectedPhaseGroup[side][round]?.[setIndexRelative];
-        if (!projectedSet) return { entrant: null, standing: null };
-        let slots = projectedSet.slots;
-        if (!slots[0].entrant && round != 0) slots[0] = this.setProjectedSlot(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2))
-        if (!slots[1].entrant && round != 0) slots[1] = this.setProjectedSlot(this.getProjectedSet(projectedPhaseGroup, numPlayers, side, round - 1, setIndexRelative * 2 + 1));
-
-        // Sets the projected sets in losers that are coming from winners
-        if (side == 0 && !projectedSet.winnerId && (slots[0].entrant || slots[1].entrant)) {
-            // Get the distance between two powers of 2 for the number of players
-            let powerOfPlayersRemainder = this.getPowerOfPlayersRemainder(numPlayers);
-
-            let roundInLosers = powerOfPlayersRemainder > 0.584962501 || powerOfPlayersRemainder == 0 ? round * 2 - 1 : (round - 1) * 2;
-            if (roundInLosers < 0) roundInLosers = 0;
-            let roundInLosersSets = projectedPhaseGroup[1][roundInLosers];
-
-            let lowerSeed = this.setProjectedSlot(this.getLowerHigherSeed(slots, true));
-
-            /* 
-            Sets in losers that are coming from winners follow this pattern
-
-
-            Winners Round 1
-            Losers Round 1 Normal
-
-            Winners Round 2
-            Losers Round 2 Full Reverse
-
-            Winners Round 3
-            Losers Round 4 Same Side, Reverse
-
-            Winners Round 4
-            Losers Round 6 Wrong Side, Normal
-
-            Winners Round 5
-            Losers Round 8 Normal
-
-
-            Winners Semis
-            Losers Quarters Flip Flops every time (3rd and 4th seeds)
-            */
-
-            // If it's winners finals
-            if (projectedPhaseGroup[side][round][0].fullRoundText === 'Winners Final') roundInLosersSets[0].slots[0] = lowerSeed;
-            // If it's winners round 1
-            else if (round == 0) {
-                // If the player count is greater than 1/2 of the way between powers of 2 or a power of 2
-                if (powerOfPlayersRemainder > 0.584962501 || powerOfPlayersRemainder == 0) {
-                    let losersSetCountFull = projectedPhaseGroup[0][round + 1].length;
-                    let losersAddedSetIndexes = this.getAddedSetIndexes(losersSetCountFull, roundInLosersSets.length, false);
-                    let losersSetIndexRelative = losersAddedSetIndexes.slice(0, Math.trunc(setIndex / 2)).filter(value => value).length;
-
-                    if (losersAddedSetIndexes[Math.trunc(setIndex / 2)]) roundInLosersSets[losersSetIndexRelative].slots[setIndex % 2] = lowerSeed;
-                    else projectedPhaseGroup[1][1][Math.trunc(setIndex / 2)].slots[1] = lowerSeed;
-                }
-                // If the player count is less than 1/2 of the way between powers of 2
-                else roundInLosersSets[setIndexRelative].slots[1] = lowerSeed;
-            }
-            // If it's winners round 2
-            else if (round == 1) {
-                // If the player count is greater than 1/2 of the way between powers of 2 or a power of 2
-                if (powerOfPlayersRemainder > 0.584962501 || powerOfPlayersRemainder == 0) roundInLosersSets[roundInLosersSets.length - setIndex - 1].slots[0] = lowerSeed;
-                // If the player count is less than 1/2 of the way between powers of 2
-                else {
-                    let losersSetCountFull = projectedPhaseGroup[0][round].length;
-                    let losersAddedSetIndexes = this.getAddedSetIndexes(losersSetCountFull, roundInLosersSets.length, true);
-                    let losersSetIndexRelative = losersAddedSetIndexes.slice(0, projectedPhaseGroup[0][round].length - setIndex - 1).filter(value => value).length;
-
-                    if (losersAddedSetIndexes.reverse()[setIndex]) roundInLosersSets[losersSetIndexRelative].slots[0] = lowerSeed;
-                    else if (projectedPhaseGroup[1][1]) projectedPhaseGroup[1][1][Math.trunc((projectedPhaseGroup[0][1].length - setIndex - 1) / 2)].slots[(setIndex + 1) % 2] = lowerSeed;
-                }
-            }
-            // If it's winners round 3
-            else if (round == 2) {
-                if (setIndex < roundInLosersSets.length / 2) roundInLosersSets[roundInLosersSets.length / 2 - 1 - setIndex].slots[0] = lowerSeed;
-                else roundInLosersSets[roundInLosersSets.length * 1.5 - 1 - setIndex].slots[0] = lowerSeed;
-            }
-            // If it's winners round 4
-            else if (round == 3) {
-                if (setIndex < roundInLosersSets.length / 2) roundInLosersSets[setIndex + roundInLosersSets.length / 2].slots[0] = lowerSeed;
-                else roundInLosersSets[setIndex - roundInLosersSets.length / 2].slots[0] = lowerSeed;
-            }
-            // If it's winners round 5
-            else if (round == 4) roundInLosersSets[setIndex].slots[0] = lowerSeed;
-            // Start.gg has a max pool size of 128 players
-            // Winners round 6 is guaranteed to be winners semis or beyond
-            else roundInLosersSets[roundInLosersSets.length - setIndex - 1].slots[0] = lowerSeed;
-        }
-
-        return this.getLowerHigherSeed(slots, false);
+        return this.getLowerHigherSeed(slots, placement != 1);
     }
 
     setProjectedSlot(slot) {
