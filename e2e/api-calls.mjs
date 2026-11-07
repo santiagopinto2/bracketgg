@@ -249,6 +249,7 @@ try {
         await quiet();
         await page.waitForTimeout(1000);
         const drawn = await page.locator('.set').count();
+        await page.screenshot({ path: `e2e-out/unstarted-${variant}.png`, fullPage: true }).catch(() => { });
         const text = await snackText(page);
         report.unstartedPool[variant] = { sets: sets.length, drawn, snackbar: text, errors: errors.slice(0, 5) };
         check(`unstarted pool (${variant}) draws`, drawn > 0 && !errors.length && !(await spinnerShown(page)), report.unstartedPool[variant]);
