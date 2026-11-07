@@ -25,3 +25,39 @@ jobs:
         with:
           name: e2e-out
           path: e2e-out
+
+  # The build the live site deploys: ~/ops/bin/bracketgg-build downloads this artifact for main's head commit
+  dist:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SECRET_PLACEHOLDER: unused-in-browser
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - name: Generate the environment (public client ID only)
+        run: |
+          test -n "$STARTGG_CLIENT_ID" || { echo "repo variable STARTGG_CLIENT_ID is not set"; exit 1; }
+          test -n "$STARTGG_REDIRECT_URI" || { echo "repo variable STARTGG_REDIRECT_URI is not set"; exit 1; }
+          node scripts/generate-env.js
+        env:
+          STARTGG_CLIENT_ID: ${{ vars.STARTGG_CLIENT_ID }}
+          STARTGG_REDIRECT_URI: ${{ vars.STARTGG_REDIRECT_URI }}
+          STARTGG_CLIENT_SECRET: ${{ env.SECRET_PLACEHOLDER }}
+      - run: npx ng build
+      - name: Check the bundle for the client secret
+        run: node scripts/check-bundle.js dist/bracketgg/browser "$SECRET_PLACEHOLDER"
+      - name: Check the client ID made it in
+        run: grep -rqF -- "$STARTGG_CLIENT_ID" dist/bracketgg/browser || { echo "client ID not found in the bundle"; exit 1; }
+        env:
+          STARTGG_CLIENT_ID: ${{ vars.STARTGG_CLIENT_ID }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bracketgg-dist
+          path: dist/bracketgg/browser
+          if-no-files-found: error
