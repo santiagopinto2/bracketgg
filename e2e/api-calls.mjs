@@ -42,8 +42,10 @@ const unstartedVariants = {
     noByes: unstarted.filter(s => !s.bye),
     noByesNoUnreachable: unstarted.filter(s => !s.bye && !s.unreachable),
 };
-const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003 };
-const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes };
+// A later-phase pool whose losers bracket starts with players from phase 1, seeded but not played
+const laterPhase = JSON.parse(readFileSync(new URL('./fixtures/later-phase-pool.json', import.meta.url)));
+const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004 };
+const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets };
 
 function kindOf(query) {
     if (query.includes('tournament(slug')) return 'tournament';
@@ -63,7 +65,7 @@ function answer(query) {
                     startAt: 1794000000, type: 1, videogame: { name: 'Test Game', images: [] }, standings: { nodes: [] } }]
             } } };
         case 'entrants':
-            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }, { id: 1003, name: 'Unstarted Pool' }],
+            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }, { id: 1003, name: 'Unstarted Pool' }, { id: 1004, name: 'Later Phase' }],
                 entrants: { nodes: structuredClone(entrants) } } } };
         case 'phase': {
             const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
@@ -272,6 +274,27 @@ try {
         }
     } finally {
         await safari.close();
+    }
+
+    // 9. Show Projected on a later phase: every projected set matches the hand-worked answer
+    {
+        const { context, page, quiet } = await openPage(browser);
+        await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1004');
+        await quiet();
+        await page.waitForTimeout(1000);
+        const pairs = await page.locator('.set').evaluateAll(sets => sets.map(set =>
+            [...set.querySelectorAll('.set-tag')].map(tag => tag.textContent.replace(/\u200e/g, '').trim()).filter(Boolean)));
+        const key = pair => [...pair].sort().join(' vs ');
+        const got = pairs.filter(p => p.length == 2).map(key).sort();
+        const want = laterPhase.expectedProjectedPairs.map(key).sort();
+        const missing = want.filter(w => { const i = got.indexOf(w); if (i == -1) return true; got.splice(i, 1); return false; });
+        report.laterPhaseProjected = { sets: pairs.length, missing, extra: got, errors };
+        check('later phase: projected sets match', !missing.length && !errors.length, report.laterPhaseProjected);
+        await page.screenshot({ path: 'e2e-out/later-phase-projected.png' }).catch(() => { });
+        await context.close();
     }
 } finally {
     await browser.close();
