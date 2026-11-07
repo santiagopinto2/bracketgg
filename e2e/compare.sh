@@ -2,6 +2,7 @@
 # Builds this branch and main, serves both, and runs e2e/api-calls.mjs on each.
 # Reports go to e2e-out/. Exits with the branch run's result. Meant for a fleet job or CI, not the VM.
 set -u
+export NODE_OPTIONS=--max-old-space-size=1536 NG_BUILD_MAX_WORKERS=2
 export STARTGG_CLIENT_ID=test STARTGG_CLIENT_SECRET=unused-in-browser STARTGG_REDIRECT_URI=http://localhost/callback
 out=e2e-out
 mkdir -p $out
