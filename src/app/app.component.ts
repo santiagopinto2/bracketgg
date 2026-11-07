@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, ViewChild, effect } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ViewChild, effect } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme.service';
 import { StartggError, StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -26,9 +26,13 @@ export class AppComponent implements AfterViewInit {
     @ViewChild(MatSidenavContent) sidenavContent: MatSidenavContent;
 
     title = 'bracketgg';
-    windowSize;
     largeWindowSize = 769;
-    sidenavOpen: boolean;
+    // Phone or desktop layout, from a media query: it tells us whenever the answer changes, even when
+    // a phone reports a desktop width while the page is still loading and sends no resize afterwards.
+    // It only changes when the width crosses the breakpoint, so the phone keyboard opening doesn't count.
+    private largeQuery = window.matchMedia(`(min-width: ${this.largeWindowSize}px)`);
+    isLarge = this.largeQuery.matches;
+    sidenavOpen = this.isLarge;
     tournament: any = {};
     private loadId = 0;
 
@@ -46,8 +50,8 @@ export class AppComponent implements AfterViewInit {
         public authService: AuthService
     ) {
         this.colorSchemeService.load();
-        this.windowSize = window.innerWidth;
-        this.sidenavOpen = this.windowSize >= this.largeWindowSize;
+        this.largeQuery.addEventListener('change', () => this.syncLayout());
+        window.addEventListener('pageshow', () => this.syncLayout());
 
         effect(() => {
             if (this.navigationEnd()) {
@@ -58,6 +62,7 @@ export class AppComponent implements AfterViewInit {
     }
 
     ngAfterViewInit() {
+        this.syncLayout();
         this.cdr.detectChanges();
     }
 
@@ -123,14 +128,11 @@ export class AppComponent implements AfterViewInit {
 
     }
 
-    @HostListener('window:resize', ['$event'])
-    onResize(event) {
-        // Only open or close the sidenav when the width crosses the breakpoint. A phone keyboard
-        // opening (tapping the search box) also fires resize, and must not close it.
-        const wasLarge = this.windowSize >= this.largeWindowSize;
-        this.windowSize = event.target.innerWidth;
-        const isLarge = this.windowSize >= this.largeWindowSize;
-        if (isLarge !== wasLarge) this.sidenavOpen = isLarge;
+    // Opens the sidenav on desktop and closes it on phones, if the layout changed since the last check
+    syncLayout() {
+        if (this.largeQuery.matches === this.isLarge) return;
+        this.isLarge = this.largeQuery.matches;
+        this.sidenavOpen = this.isLarge;
     }
 
     getTournamentImage(): string {
@@ -152,7 +154,7 @@ export class AppComponent implements AfterViewInit {
     }
 
     closeSidenav() {
-        if (this.windowSize < this.largeWindowSize) this.sidenavOpen = false;
+        if (!this.isLarge) this.sidenavOpen = false;
     }
 
     login() {

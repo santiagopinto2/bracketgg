@@ -26,7 +26,7 @@ cp -r dist/bracketgg/browser /tmp/app-main
 git checkout -q HEAD -- src
 
 npm install --no-save --no-audit --no-fund --loglevel=error playwright > /dev/null || exit 1
-npx playwright install --with-deps chromium > $out/playwright-install.log 2>&1 || { tail -30 $out/playwright-install.log; exit 1; }
+npx playwright install --with-deps chromium webkit > $out/playwright-install.log 2>&1 || { tail -30 $out/playwright-install.log; exit 1; }
 
 PORT=4301 STATIC_DIR=/tmp/app-main node proxy-server.js > $out/server-main.log 2>&1 &
 PORT=4302 STATIC_DIR=/tmp/app-branch node proxy-server.js > $out/server-branch.log 2>&1 &
