@@ -6,7 +6,7 @@
 // The app must be served (STATIC_DIR=dist/bracketgg/browser node proxy-server.js). Needs the
 // playwright package and Chromium (npm install --no-save playwright && npx playwright install chromium).
 // Prints a JSON report. Without --report-only it exits 1 if a check fails.
-import { chromium } from 'playwright';
+import { chromium, webkit, devices } from 'playwright';
 import { readFileSync } from 'node:fs';
 
 const appUrl = process.argv[2] ?? 'http://localhost:4300';
@@ -86,8 +86,8 @@ function answer(query) {
 
 // Opens a page against the fake start.gg. `respond(query, n)` may return { status, body } to override
 // the n-th request (counting from 1); otherwise the normal answer goes back.
-async function openPage(browser, respond = () => null) {
-    const context = await browser.newContext();
+async function openPage(browser, respond = () => null, contextOptions = {}) {
+    const context = await browser.newContext(contextOptions);
     await context.addInitScript(() => {
         localStorage.setItem('oauth_access_token', 'test-token');
         localStorage.setItem('oauth_refresh_token', 'test-refresh');
@@ -254,6 +254,24 @@ try {
         report.unstartedPool[variant] = { sets: sets.length, drawn, snackbar: text, errors: errors.slice(0, 5) };
         check(`unstarted pool (${variant}) draws`, drawn > 0 && !errors.length && !(await spinnerShown(page)), report.unstartedPool[variant]);
         await context.close();
+    }
+
+    // 8. Phones open in the phone layout: menu button shown, sidebar closed
+    report.phoneStart = {};
+    const safari = await webkit.launch();
+    try {
+        for (const [name, engine, device] of [['Pixel 7', browser, devices['Pixel 7']], ['iPhone 13', safari, devices['iPhone 13']]]) {
+            const { context, page } = await openPage(engine, () => null, device);
+            await page.goto(appUrl + eventPath + '/1001');
+            await page.waitForTimeout(1500);
+            const menuShown = await page.locator('mat-toolbar button:has(mat-icon:text("menu"))').isVisible();
+            const sidebarOpen = await page.locator('mat-sidenav.mat-drawer-opened').count() > 0;
+            report.phoneStart[name] = { menuShown, sidebarOpen };
+            check(`${name}: opens in the phone layout`, menuShown && !sidebarOpen, report.phoneStart[name]);
+            await context.close();
+        }
+    } finally {
+        await safari.close();
     }
 } finally {
     await browser.close();
