@@ -1,0 +1,20 @@
+name: Regenerate lock (temporary)
+
+on:
+  push:
+    branches: [ci-dist]
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --package-lock-only --no-audit --no-fund
+      - run: npm --version && git diff --stat
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
