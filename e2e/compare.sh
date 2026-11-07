@@ -19,7 +19,7 @@ npx ng build > $out/build-branch.log 2>&1 || { tail -50 $out/build-branch.log; e
 echo "branch build: ok"
 cp -r dist/bracketgg/browser /tmp/app-branch
 
-git checkout -q main -- src
+git checkout -q "${BASE_REF:-main}" -- src
 npx ng build > $out/build-main.log 2>&1 || { tail -50 $out/build-main.log; exit 1; }
 echo "main build: ok"
 cp -r dist/bracketgg/browser /tmp/app-main
