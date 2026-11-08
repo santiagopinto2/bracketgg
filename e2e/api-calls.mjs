@@ -296,6 +296,56 @@ try {
         await page.screenshot({ path: 'e2e-out/later-phase-projected.png' }).catch(() => { });
         await context.close();
     }
+
+    // 10. Phone: searching an entrant scrolls the bracket to them, even as the keyboard closes
+    report.phoneSearch = {};
+    const safari2 = await webkit.launch();
+    try {
+        for (const [name, engine, device] of [['Pixel 7', browser, devices['Pixel 7']], ['iPhone 13', safari2, devices['iPhone 13']]]) {
+            const { context, page, quiet } = await openPage(engine, () => null, device);
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            await page.goto(appUrl + eventPath + '/1004');
+            await quiet();
+            await page.waitForTimeout(1000);
+            // The entrant whose first slot is farthest from the starting view
+            const target = await page.evaluate(() => {
+                const seen = new Set();
+                let best = null;
+                for (const slot of document.querySelectorAll('[entrantid]')) {
+                    const id = slot.getAttribute('entrantid');
+                    if (!id || seen.has(id)) continue;
+                    seen.add(id);
+                    const r = slot.getBoundingClientRect();
+                    const tag = slot.querySelector('.set-tag')?.textContent.replace(/\u200e/g, '').trim();
+                    if (tag && (!best || r.top + r.left > best.far)) best = { id, tag, far: r.top + r.left };
+                }
+                return best;
+            });
+            const inView = () => page.evaluate(id => {
+                const box = document.querySelector('mat-sidenav-content').getBoundingClientRect();
+                const r = document.querySelector(`[entrantid="${id}"]`).getBoundingClientRect();
+                return r.top >= box.top && r.bottom <= box.bottom && r.left >= box.left && r.right <= box.right;
+            }, target.id);
+            const before = await inView();
+            const size = page.viewportSize();
+            await page.locator('input[matinput]').first().tap();
+            await page.setViewportSize({ width: size.width, height: Math.round(size.height * 0.55) }); // keyboard opens
+            await page.locator('input[matinput]').first().fill(target.tag);
+            await page.waitForTimeout(400);
+            await page.locator('mat-option', { hasText: target.tag }).first().tap();
+            await page.waitForTimeout(100);
+            await page.setViewportSize(size); // keyboard closes
+            await page.waitForTimeout(2000);
+            const after = await inView();
+            report.phoneSearch[name] = { target: target.tag, before, after, errors };
+            check(`${name}: searching an entrant scrolls to them`, !before && after && !errors.length, report.phoneSearch[name]);
+            await page.screenshot({ path: `e2e-out/phone-search-${name.replace(/ /g, '-')}.png` }).catch(() => { });
+            await context.close();
+        }
+    } finally {
+        await safari2.close();
+    }
 } finally {
     await browser.close();
 }
