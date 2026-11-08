@@ -351,6 +351,32 @@ try {
     } finally {
         await safari2.close();
     }
+
+    // 11. Doubles: start.gg refuses pages that pass the 1000-object cap (here, more than 20 sets or
+    //     50 entrants), so the pages get smaller
+    {
+        const normal = await openPage(browser);
+        await normal.page.goto(appUrl + eventPath + '/1001');
+        await normal.quiet();
+        await normal.page.waitForTimeout(1000);
+        const want = (await tags(normal.page)).length;
+        await normal.context.close();
+
+        const tooBig = { status: 200, body: { success: false, errors: [{ message: 'Your query complexity is too high. A maximum of 1000 objects may be returned by each request.' }] } };
+        const perPage = q => Number(q.match(/perPage: (\d+)/)?.[1] ?? 0);
+        const { context, page, log, quiet } = await openPage(browser, q =>
+            (kindOf(q) === 'sets' && perPage(q) > 20) || (kindOf(q) === 'entrants' && perPage(q) > 50) ? tooBig : null);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1001');
+        await quiet();
+        await page.waitForTimeout(1000);
+        const got = (await tags(page)).length;
+        const text = await snackText(page);
+        report.doublesComplexity = { want, got, snackbar: text, requests: count(log), errors };
+        check('doubles: oversized pages are retried smaller and the bracket draws', want > 0 && got === want && !text.includes('complexity') && !errors.length, report.doublesComplexity);
+        await context.close();
+    }
 } finally {
     await browser.close();
 }
