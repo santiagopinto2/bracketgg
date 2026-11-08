@@ -657,25 +657,41 @@ export class EventComponent implements OnInit, AfterViewInit {
     }
 
     entrantSearched(event) {
-        for (const element of this.slotElements.toArray()) {
-            if (element.nativeElement.getAttribute('entrantId') == event.option.value.id) {
-                this.playerHovered = event.option.value.id;
+        const element = this.slotElements.toArray().find(element => element.nativeElement.getAttribute('entrantId') == event.option.value.id);
+        if (!element) return;
+        this.playerHovered = event.option.value.id;
 
-                document.querySelector<HTMLElement>('mat-sidenav-content').addEventListener('scroll', () => {
-                    this.canHover = false;
-                }, { once: true });
+        const container = document.querySelector<HTMLElement>('mat-sidenav-content');
+        container.addEventListener('scroll', () => {
+            this.canHover = false;
+        }, { once: true });
+        const allowHover = () => this.canHover = true;
+        container.addEventListener('scrollend', allowHover, { once: true });
+        setTimeout(allowHover, 1500); // Safari before 26 has no scrollend
 
-                setTimeout(() => {
-                    element.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                });
+        // Scroll the bracket itself so the slot ends up in the middle of the screen
+        const scroll = () => {
+            const box = container.getBoundingClientRect();
+            const slot = element.nativeElement.getBoundingClientRect();
+            container.scrollTo({
+                left: container.scrollLeft + slot.left - box.left - (box.width - slot.width) / 2,
+                top: container.scrollTop + slot.top - box.top - (box.height - slot.height) / 2,
+                behavior: 'smooth'
+            });
+        };
 
-                document.querySelector<HTMLElement>('mat-sidenav-content').addEventListener('scrollend', () => {
-                    this.canHover = true;
-                }, { once: true });
-
-                break;
-            }
-        }
+        // On a phone, close the keyboard. That resizes the page and can stop the scroll partway,
+        // so scroll again once the size settles.
+        (document.activeElement as HTMLElement)?.blur();
+        setTimeout(scroll);
+        let timer;
+        const again = () => { clearTimeout(timer); timer = setTimeout(scroll, 150); };
+        window.addEventListener('resize', again);
+        window.visualViewport?.addEventListener('resize', again);
+        setTimeout(() => {
+            window.removeEventListener('resize', again);
+            window.visualViewport?.removeEventListener('resize', again);
+        }, 1500);
     }
 
     entrantSearchDisplay(entrant) {
