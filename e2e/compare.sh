@@ -10,6 +10,9 @@ mkdir -p $out
 npm ci --no-audit --no-fund > $out/npm-ci.log 2>&1 || { tail -30 $out/npm-ci.log; echo "npm ci failed"; exit 1; }
 echo "npm ci: ok"
 
+node e2e/gql-cache.mjs > $out/gql-cache.json 2>&1 || { cat $out/gql-cache.json; echo "gql-cache tests failed"; exit 1; }
+echo "gql-cache: ok"
+
 node scripts/generate-env.js || exit 1
 npx ng build > $out/build-branch.log 2>&1 || { tail -50 $out/build-branch.log; exit 1; }
 echo "branch build: ok"

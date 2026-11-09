@@ -100,7 +100,8 @@ async function openPage(browser, respond = () => null, contextOptions = {}) {
     let pending = 0;
     let lastActivity = Date.now();
     await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
-    await page.route('https://api.start.gg/gql/alpha', async route => {
+    // start.gg directly (before the shared cache) or through the site's /api/gql
+    await page.route(/api\.start\.gg\/gql\/alpha|\/api\/gql$/, async route => {
         if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
         pending++;
         const query = route.request().postDataJSON().query;
