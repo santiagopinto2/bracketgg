@@ -26,6 +26,8 @@ export class StartggService {
     // no characters reported (a whole phase: 95 sets 951, 100 sets 1001, cap 1000; measured 2026-11-09). Sets with characters cost more, and a
     // refused page shrinks to fit.
     private setsPerPage = 95;
+    // Pools listed per phase on the event's landing page; a phase with more shows only its count
+    private poolsPerPhase = 64;
 
     // Tournament info and entrant lists rarely change during an event, so they are reused for
     // a few minutes. Sets are never cached, so brackets stay live.
@@ -262,6 +264,108 @@ export class StartggService {
             }`;
 
         return this.query(query);
+    }
+
+    // What the event's landing page shows, in one request: the header, the top 8, and every phase with
+    // its pools. An event with a great many pools can pass the 1000-object cap, so a refused query is
+    // asked again without the pools.
+    getEventOverview(eventSlug): Promise<any> {
+        return this.cached(`overview:${eventSlug}`, async () => {
+            let data;
+            try {
+                data = await this.query(this.getEventOverviewQuery(eventSlug, true));
+            } catch (error) {
+                if (!(error instanceof TooComplexError)) throw error;
+                data = await this.query(this.getEventOverviewQuery(eventSlug, false));
+            }
+            if (!data?.event) throw new StartggError('Event not found on start.gg.');
+            return data.event;
+        });
+    }
+
+    private getEventOverviewQuery(eventSlug, withPools) {
+        const pools = `phaseGroups(query: {
+                            page: 1
+                            perPage: ${this.poolsPerPhase}
+                        }) {
+                            nodes {
+                                id
+                                displayIdentifier
+                            }
+                        }`;
+
+        return `query {
+                event(slug: "${eventSlug}") {
+                    id
+                    name
+                    slug
+                    startAt
+                    state
+                    numEntrants
+                    type
+                    videogame {
+                        name
+                        images {
+                            url
+                            type
+                        }
+                    }
+                    phases {
+                        id
+                        name
+                        bracketType
+                        numSeeds
+                        groupCount
+                        state
+                        ${withPools ? pools : ''}
+                    }
+                    ${this.getStandingsQuery(1, 8)}
+                    prizingInfo
+                    rulesMarkdown
+                    matchRulesMarkdown
+                }
+            }`;
+    }
+
+    // One more page of an event's standings, for the landing page's "Show more"
+    async getEventStandings(eventSlug, page, perPage): Promise<any[]> {
+        const query = `query {
+                event(slug: "${eventSlug}") {
+                    ${this.getStandingsQuery(page, perPage)}
+                }
+            }`;
+
+        const data = await this.query(query);
+        return data?.event?.standings?.nodes ?? [];
+    }
+
+    private getStandingsQuery(page, perPage) {
+        return `standings(query: {
+                        page: ${page}
+                        perPage: ${perPage}
+                    }) {
+                        pageInfo {
+                            total
+                        }
+                        nodes {
+                            placement
+                            entrant {
+                                id
+                                name
+                                participants {
+                                    id
+                                    user {
+                                        images {
+                                            url
+                                            type
+                                            width
+                                            height
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }`;
     }
 
     async getPhase(phaseId): Promise<any> {

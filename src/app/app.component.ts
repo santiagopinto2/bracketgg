@@ -14,6 +14,7 @@ import { LoadingService } from './services/loading.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from './services/auth.service';
 import { MatTooltip } from '@angular/material/tooltip';
+import { isBracketPath } from './app-routing.module';
 
 @Component({
     selector: 'app-root',
@@ -85,29 +86,40 @@ export class AppComponent implements AfterViewInit {
 
                     if (url.includes('/event/')) {
                         tournamentData.event = {};
-
-                        if (url.includes('/brackets?filter=')) tournamentData.event.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
-                        else if (url.includes('/brackets/')) {
-                            let bracketEndIndex = url.indexOf('/brackets/') + '/brackets/'.length;
-                            if (url.indexOf('/', bracketEndIndex) == -1) tournamentData.event.phaseId = Number(url.slice(bracketEndIndex));
-                            else tournamentData.event.phaseId = Number(url.slice(bracketEndIndex, url.indexOf('/', bracketEndIndex)));
-                        }
+                        const path = url.split('?')[0];
 
                         let eventSlug = '';
-                        let eventEndIndex = url.indexOf('/event/') + '/event/'.length;
-                        if (url.indexOf('/', eventEndIndex) == -1) eventSlug = url.slice(1);
-                        else eventSlug = url.slice(1, url.indexOf('/', eventEndIndex));
+                        let eventEndIndex = path.indexOf('/event/') + '/event/'.length;
+                        if (path.indexOf('/', eventEndIndex) == -1) eventSlug = path.slice(1);
+                        else eventSlug = path.slice(1, path.indexOf('/', eventEndIndex));
+                        tournamentData.event.slug = eventSlug;
 
                         let eventInfo = this.tournament.events?.find(event => event.slug == eventSlug);
                         if (!eventInfo) throw new StartggError('Event not found in this tournament.');
 
-                        // Also cached, and fetched again when the tournament shows a new entrant count
-                        let eventRes = await this.startggService.getEventBySlug(eventSlug, eventInfo.numEntrants);
-                        if (loadId !== this.loadId) return;
+                        if (isBracketPath(path)) {
+                            if (url.includes('/brackets?filter=')) tournamentData.event.phaseId = Number(url.slice(url.indexOf('"phaseId":') + '"phaseId":'.length, url.indexOf(',')));
+                            else if (path.includes('/brackets/')) {
+                                // start.gg's form: /brackets/<phase id>/<pool id>. The pool is where the bracket view scrolls to.
+                                const [phaseId, poolId] = path.slice(path.indexOf('/brackets/') + '/brackets/'.length).split('/');
+                                tournamentData.event.phaseId = Number(phaseId);
+                                if (Number(poolId)) tournamentData.event.poolId = Number(poolId);
+                            }
 
-                        if (!tournamentData.event.phaseId) tournamentData.event.phaseId = eventRes.phases[0]?.id;
-                        if (!tournamentData.event.phaseId) throw new StartggError('This event has no brackets yet.');
-                        tournamentData.event.event = eventRes;
+                            // Also cached, and fetched again when the tournament shows a new entrant count
+                            let eventRes = await this.startggService.getEventBySlug(eventSlug, eventInfo.numEntrants);
+                            if (loadId !== this.loadId) return;
+
+                            if (!tournamentData.event.phaseId) tournamentData.event.phaseId = eventRes.phases[0]?.id;
+                            if (!tournamentData.event.phaseId) throw new StartggError('This event has no brackets yet.');
+                            tournamentData.event.event = eventRes;
+                        }
+                        else {
+                            // The event's landing page: one small request, and no entrant list
+                            tournamentData.event.overview = await this.startggService.getEventOverview(eventSlug);
+                            if (loadId !== this.loadId) return;
+                            this.loadingService.updateValue(false);
+                        }
                     }
                     else {
                         this.loadingService.updateValue(false);
