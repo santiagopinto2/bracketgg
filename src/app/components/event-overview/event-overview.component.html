@@ -65,7 +65,7 @@
             }
         </div>
         @if (standings().length < standingsTotal()) {
-        <button mat-stroked-button class="show-more" [disabled]="loadingStandings()" (click)="showMoreStandings()">
+        <button mat-stroked-button class="show-more" style="margin-top: 8px" [disabled]="loadingStandings()" (click)="showMoreStandings()">
             {{ loadingStandings() ? 'Loading...' : 'Show more' }}
         </button>
         }
@@ -75,7 +75,7 @@
     <div class="section">
         <h2 class="section-heading">Brackets</h2>
         @if (!event().phases.length) {
-        <p class="empty-note">This event has no brackets yet.</p>
+        <p class="phase-details">This event has no brackets yet.</p>
         }
         <div class="phase-list">
             @for (phase of event().phases; track phase.id) {
@@ -96,7 +96,7 @@
                     <a class="pool-chip" [routerLink]="phaseLink(phase, pool)">{{ pool.displayIdentifier }}</a>
                     }
                     @if (phase.groupCount > phase.pools.length) {
-                    <span class="pool-more">+{{ phase.groupCount - phase.pools.length }} more</span>
+                    <span class="phase-details">+{{ phase.groupCount - phase.pools.length }} more</span>
                     }
                 </div>
                 }
