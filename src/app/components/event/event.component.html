@@ -1,6 +1,7 @@
 <div class="no-select" [style.cursor]="isGrabbing ? 'grabbing' : 'grab'">
     <div class="container-fluid">
-        <button mat-mini-fab class="scroll-to-top-button" [ngStyle]="{'right': scrollToTopOffset + 'px'}" (click)="scrollToTop()">
+        <button mat-mini-fab class="scroll-to-top-button" [class.shown]="showScrollToTop()" [attr.tabindex]="showScrollToTop() ? null : -1"
+            aria-label="Back to top" [ngStyle]="{'right': scrollToTopOffset + 'px', 'bottom': scrollToTopBottomOffset + 'px'}" (click)="scrollToTop()">
             <mat-icon>arrow_upward</mat-icon>
         </button>
 

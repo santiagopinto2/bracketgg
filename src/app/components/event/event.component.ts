@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, ViewChildren, effect, computed, signal } from '@angular/core';
+import { AfterViewInit, Component, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
@@ -23,10 +23,14 @@ import { toSignal } from '@angular/core/rxjs-interop';
     styleUrls: ['./event.component.scss'],
     imports: [MatIconButton, MatIconModule, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule]
 })
-export class EventComponent implements OnInit, AfterViewInit {
+export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
     isDesktop = false;
     scrollToTopOffset = 20;
+    scrollToTopBottomOffset = 20;
+    // The back-to-top button shows once the bracket is scrolled away from its top left corner
+    showScrollToTop = signal(false);
+    private listeners = new AbortController();
     eventId = -1;
     allEntrants = [];
     entrantsById = new Map<any, any>();
@@ -65,7 +69,8 @@ export class EventComponent implements OnInit, AfterViewInit {
         private loadingService: LoadingService,
         private deviceService: DeviceDetectorService,
         private dialog: MatDialog,
-        private router: Router
+        private router: Router,
+        private zone: NgZone
     ) {
         this.isDesktop = this.deviceService.isDesktop();
 
@@ -119,6 +124,14 @@ export class EventComponent implements OnInit, AfterViewInit {
     }
 
     ngAfterViewInit() {
+        // Outside Angular, so scrolling doesn't run change detection on every frame. The signal still updates the view.
+        this.zone.runOutsideAngular(() => {
+            const content = document.querySelector<HTMLElement>('mat-sidenav-content');
+            content.addEventListener('scroll', () => {
+                this.showScrollToTop.set(content.scrollTop > 200 || content.scrollLeft > 200);
+            }, { passive: true, signal: this.listeners.signal });
+        });
+
         // Horizontal and vertical drag
 
         let mouseDown = false;
@@ -768,6 +781,11 @@ export class EventComponent implements OnInit, AfterViewInit {
     getScrollToTopOffset() {
         const sidenavContentElement = document.querySelector<HTMLElement>('mat-sidenav-content');
         this.scrollToTopOffset = !this.isDesktop || sidenavContentElement.scrollHeight == sidenavContentElement.clientHeight ? 20 : 35;
+        this.scrollToTopBottomOffset = !this.isDesktop || sidenavContentElement.scrollWidth == sidenavContentElement.clientWidth ? 20 : 35;
+    }
+
+    ngOnDestroy() {
+        this.listeners.abort();
     }
 
     scrollToTop() {
