@@ -24,10 +24,6 @@ export class SetComponent implements OnInit {
         this.set = this.data.set;
     }
 
-    getCharIcon(game, playerIndex) {
-        return game.selections[playerIndex].character.images.find(image => image.type === 'stockIcon').url;
-    }
-
     getEntrantImage(entrant) {
         let profile = this.getEntrantProfile(entrant);
         return profile ? profile.url : '';
