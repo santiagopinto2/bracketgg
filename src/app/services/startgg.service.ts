@@ -16,7 +16,8 @@ export class TooComplexError extends StartggError { }
 })
 export class StartggService {
 
-    private baseUrl: string = 'https://api.start.gg/gql/alpha';
+    // start.gg's GraphQL API, through this site's server, which shares answers between viewers
+    private baseUrl: string = '/api/gql';
     private entrantsPerPage = 100;
     // start.gg counted 17 objects per set (58 sets: 987, 59: 1004, cap 1000) on 2026-11-08
     private setsWithoutGamesPerPage = 55;

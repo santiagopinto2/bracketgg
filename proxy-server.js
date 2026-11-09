@@ -17,6 +17,12 @@ const REDIRECT_URI = process.env.STARTGG_REDIRECT_URI || 'http://localhost:4200/
 app.use(cors());
 app.use(express.json());
 
+// start.gg's GraphQL API, through a cache shared by every viewer (server/gql-cache.js)
+const { createGqlCache } = require('./server/gql-cache');
+const gqlCache = createGqlCache();
+app.post('/api/gql', gqlCache.handle);
+app.get('/api/gql/stats', (req, res) => res.json({ ...gqlCache.stats, ...gqlCache.size() }));
+
 // Token exchange endpoint
 app.post('/api/auth/token', async (req, res) => {
   try {
