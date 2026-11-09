@@ -681,9 +681,13 @@ export class EventComponent implements OnInit, AfterViewInit {
         };
 
         // On a phone, close the keyboard. That resizes the page and can stop the scroll partway,
-        // so scroll again once the size settles.
-        (document.activeElement as HTMLElement)?.blur();
-        setTimeout(scroll);
+        // so scroll again once the size settles. The blur waits a tick because the autocomplete
+        // focuses the search box again right after this event, and a focused box keeps the keyboard
+        // open and makes iOS scroll back up to it.
+        setTimeout(() => {
+            (document.activeElement as HTMLElement)?.blur();
+            scroll();
+        });
         let timer;
         const again = () => { clearTimeout(timer); timer = setTimeout(scroll, 150); };
         window.addEventListener('resize', again);

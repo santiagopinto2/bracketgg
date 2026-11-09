@@ -336,11 +336,13 @@ try {
                 await page.waitForTimeout(400);
                 await page.locator('mat-option', { hasText: target.tag }).first().tap();
                 await page.waitForTimeout(100);
+                // The keyboard stays open while the search box has focus
+                const keyboardClosed = await page.evaluate(() => !document.activeElement?.matches('.search-entrant-form input'));
                 await page.setViewportSize(size); // keyboard closes
                 await page.waitForTimeout(2000);
                 const after = await inView();
-                report.phoneSearch[name] = { target: target.tag, before, after, errors };
-                check(`${name}: searching an entrant scrolls to them`, !before && after && !errors.length, report.phoneSearch[name]);
+                report.phoneSearch[name] = { target: target.tag, before, keyboardClosed, after, errors };
+                check(`${name}: searching an entrant closes the keyboard and scrolls to them`, !before && keyboardClosed && after && !errors.length, report.phoneSearch[name]);
                 await page.screenshot({ path: `e2e-out/phone-search-${name.replace(/ /g, '-')}.png` }).catch(() => { });
             } catch (e) {
                 report.phoneSearch[name] = { crashed: String(e.message).slice(0, 300) };
