@@ -382,6 +382,40 @@ try {
         check('doubles: oversized pages are retried smaller and the bracket draws', want > 0 && got === want && !text.includes('complexity') && !errors.length, report.doublesComplexity);
         await context.close();
     }
+
+    // 12. The back-to-top button: hidden at the top, shows at the bottom right after scrolling, takes you back
+    report.backToTop = {};
+    const safari3 = await webkit.launch();
+    try {
+        for (const [name, engine, device] of [['Desktop', browser, {}], ['Pixel 7', browser, devices['Pixel 7']], ['iPhone 13', safari3, devices['iPhone 13']]]) {
+            const { context, page, quiet } = await openPage(engine, () => null, device);
+            try {
+                await page.goto(appUrl + eventPath + '/1004');
+                await quiet();
+                await page.waitForTimeout(1000);
+                const button = page.locator('.scroll-to-top-button');
+                const hiddenAtTop = !(await button.isVisible());
+                await page.evaluate(() => document.querySelector('mat-sidenav-content').scrollTo(0, 600));
+                await page.waitForTimeout(500);
+                const shownAfterScroll = await button.isVisible();
+                const box = await button.boundingBox();
+                const view = page.viewportSize();
+                const bottomRight = !!box && box.x > view.width / 2 && box.y > view.height / 2;
+                if (shownAfterScroll) await button.click();
+                await page.waitForTimeout(1500);
+                const backAtTop = await page.evaluate(() => document.querySelector('mat-sidenav-content').scrollTop === 0);
+                const hiddenAgain = !(await button.isVisible());
+                report.backToTop[name] = { hiddenAtTop, shownAfterScroll, bottomRight, backAtTop, hiddenAgain };
+                check(`${name}: back-to-top button shows after scrolling, sits bottom right, and goes back`, hiddenAtTop && shownAfterScroll && bottomRight && backAtTop && hiddenAgain, report.backToTop[name]);
+            } catch (e) {
+                report.backToTop[name] = { crashed: String(e.message).slice(0, 300) };
+                check(`${name}: back-to-top button shows after scrolling, sits bottom right, and goes back`, false, report.backToTop[name]);
+            }
+            await context.close();
+        }
+    } finally {
+        await safari3.close();
+    }
 } finally {
     await browser.close();
 }

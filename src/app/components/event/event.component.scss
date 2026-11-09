@@ -2,6 +2,16 @@
     position: fixed;
     z-index: 1000;
     border-radius: 14px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+
+    &.shown {
+        opacity: 0.9;
+        visibility: visible;
+        transform: none;
+    }
 }
 
 .search-entrant-form {
