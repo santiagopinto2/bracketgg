@@ -18,7 +18,8 @@ export class StartggService {
 
     private baseUrl: string = 'https://api.start.gg/gql/alpha';
     private entrantsPerPage = 100;
-    private setsWithoutGamesPerPage = 66;
+    // start.gg counted 17 objects per set (58 sets: 987, 59: 1004, cap 1000) on 2026-11-08
+    private setsWithoutGamesPerPage = 55;
     private setsWithGamesBo3PerPage = 29;
     private setsWithGamesBo5PerPage = 19;
 
