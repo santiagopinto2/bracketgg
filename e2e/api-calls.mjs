@@ -161,6 +161,7 @@ try {
         await quiet();
         report.firstLoad = count(log);
         check('first load draws the bracket', (await tags(page)).includes('Alpha'), await tags(page));
+        check('a small pool takes one sets request (no sample first)', report.firstLoad.sets === 1, report.firstLoad);
 
         let mark = log.length;
         await page.locator('button:has(mat-icon[fonticon="arrow_forward"])').click();
@@ -372,8 +373,9 @@ try {
         await safari2.close();
     }
 
-    // 11. Doubles: start.gg refuses pages that pass the 1000-object cap (here, more than 20 sets or
-    //     50 entrants), so the pages get smaller
+    // 11. Doubles: start.gg refuses pages that pass the 1000-object cap. Here a set costs 50 objects and
+    //     the refusal gives the count, so one retry fits; entrant refusals give no count (more than 50),
+    //     so those pages halve
     {
         const normal = await openPage(browser);
         await normal.page.goto(appUrl + eventPath + '/1001');
@@ -382,10 +384,11 @@ try {
         const want = (await tags(normal.page)).length;
         await normal.context.close();
 
-        const tooBig = { status: 200, body: { success: false, errors: [{ message: 'Your query complexity is too high. A maximum of 1000 objects may be returned by each request.' }] } };
+        const tooBig = actual => ({ status: 200, body: { success: false, errors: [{ message: `Your query complexity is too high. A maximum of 1000 objects may be returned by each request.${actual ? ` (actual: ${actual})` : ''}` }] } });
         const perPage = q => Number(q.match(/perPage: (\d+)/)?.[1] ?? 0);
         const { context, page, log, quiet } = await openPage(browser, q =>
-            (kindOf(q) === 'sets' && perPage(q) > 20) || (kindOf(q) === 'entrants' && perPage(q) > 50) ? tooBig : null);
+            kindOf(q) === 'sets' && perPage(q) * 50 > 1000 ? tooBig(perPage(q) * 50)
+                : kindOf(q) === 'entrants' && perPage(q) > 50 ? tooBig(null) : null);
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
         await page.goto(appUrl + eventPath + '/1001');
@@ -394,7 +397,8 @@ try {
         const got = (await tags(page)).length;
         const text = await snackText(page);
         report.doublesComplexity = { want, got, snackbar: text, requests: count(log), errors };
-        check('doubles: oversized pages are retried smaller and the bracket draws', want > 0 && got === want && !text.includes('complexity') && !errors.length, report.doublesComplexity);
+        check('doubles: oversized pages are retried smaller (sets in one retry) and the bracket draws',
+            want > 0 && got === want && report.doublesComplexity.requests.sets === 2 && !text.includes('complexity') && !errors.length, report.doublesComplexity);
         await context.close();
     }
 
@@ -494,7 +498,7 @@ try {
         const want = [...one, ...one, ...one];
         report.phaseSets = { requests, drawn: drawn.length, want: want.length, sameOrder: JSON.stringify(drawn) === JSON.stringify(want), pools, errors };
         check('three-pool phase: fetched as one phase (smaller pages after a refusal), every pool drawn the same',
-            report.phaseSets.sameOrder && want.length > 0 && pools === 3 && (requests.phaseSets ?? 0) >= 1 && (requests.sets ?? 0) <= 1 && !errors.length, report.phaseSets);
+            report.phaseSets.sameOrder && want.length > 0 && pools === 3 && (requests.phaseSets ?? 0) >= 1 && !requests.sets && !errors.length, report.phaseSets);
         await page.screenshot({ path: 'e2e-out/three-pools.png', fullPage: true }).catch(() => { });
         await context.close();
     }

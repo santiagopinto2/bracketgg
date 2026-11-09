@@ -8,8 +8,10 @@ import { RequestGate } from './request-gate';
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
 
-// start.gg refused a query for asking for more than 1000 objects
-export class TooComplexError extends StartggError { }
+// start.gg refused a query for asking for more than 1000 objects. `actual` is the count it gave, if any.
+export class TooComplexError extends StartggError {
+    constructor(message: string, public actual: number | null) { super(message); }
+}
 
 @Injectable({
     providedIn: 'root'
@@ -19,10 +21,9 @@ export class StartggService {
     // start.gg's GraphQL API, through this site's server, which shares answers between viewers
     private baseUrl: string = '/api/gql';
     private entrantsPerPage = 100;
-    // start.gg counted 17 objects per set (58 sets: 987, 59: 1004, cap 1000) on 2026-11-08
-    private setsWithoutGamesPerPage = 55;
-    private setsWithGamesBo3PerPage = 29;
-    private setsWithGamesBo5PerPage = 19;
+    // start.gg counts 18 objects per set when no characters are reported (52 sets: 950, 55: 1004,
+    // cap 1000; measured 2026-11-09). Sets with characters cost more, and a refused page shrinks to fit.
+    private setsPerPage = 52;
 
     // Tournament info and entrant lists rarely change during an event, so they are reused for
     // a few minutes. Sets are never cached, so brackets stay live.
@@ -83,7 +84,9 @@ export class StartggService {
             }
             if (res?.errors?.length) {
                 const message = `start.gg error: ${res.errors[0].message}`;
-                throw /complexity|1000 objects/i.test(message) ? new TooComplexError(message) : new StartggError(message);
+                if (!/complexity|1000 objects/i.test(message)) throw new StartggError(message);
+                const actual = Number(message.match(/actual: (\d+)/)?.[1]);
+                throw new TooComplexError(message, actual > 0 ? actual : null);
             }
             return res.data;
         }
@@ -110,9 +113,9 @@ export class StartggService {
         return `start.gg returned an error (${error.status}). Try again in a moment.`;
     }
 
-    // Loads `total` items in pages of `perPage`. Doubles teams have twice the players and characters,
-    // so a page size that fits singles can pass start.gg's 1000-object cap. When it does, this halves
-    // the page size and tries again, and remembers the size that worked under `key`.
+    // Loads `total` items in pages of `perPage`. Sets with characters reported (more so best of 5 and
+    // doubles) can pass start.gg's 1000-object cap. When a page does, this shrinks the page size to fit
+    // the count start.gg gave (or halves it), tries again, and remembers the size that worked under `key`.
     private async loadPages(key: string, total: number, perPage: number, loadPage: (page: number, perPage: number) => Promise<any[]>): Promise<any[]> {
         perPage = Math.min(perPage, this.pageSizes.get(key) ?? perPage);
         for (; ;) {
@@ -125,7 +128,9 @@ export class StartggService {
                 return [first, ...rest].flat();
             } catch (error) {
                 if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
-                perPage = Math.floor(perPage / 2);
+                perPage = error.actual
+                    ? Math.max(1, Math.min(perPage - 1, Math.floor(perPage * 980 / error.actual)))
+                    : Math.floor(perPage / 2);
             }
         }
     }
@@ -295,48 +300,9 @@ export class StartggService {
         return data.phase;
     }
 
-    async getPhaseProperties(phaseGroupId): Promise<any> {
-        if (!phaseGroupId) return { phaseHasGames: false, maxScore: 0, teamSize: 1 };
-        // A sample of the first sets. It shrinks if even this passes the object cap.
-        let sets = [];
-        for (let perPage = 10; ; perPage = Math.floor(perPage / 2)) {
-            try {
-                const firstPage = await this.getPhaseGroupSetsPaginated(phaseGroupId, 1, perPage, true);
-                sets = firstPage?.phaseGroup?.sets?.nodes ?? [];
-                break;
-            } catch (error) {
-                if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
-            }
-        }
-        let phaseHasGames = sets.some(set => set.games);
-        // Players per side: a doubles game lists 4 character picks
-        const picks = sets.flatMap(set => set.games ?? []).map(game => game.selections?.length ?? 0);
-        const teamSize = Math.max(1, Math.ceil(Math.max(0, ...picks) / 2));
-
-        let maxScore = 0;
-        sets.forEach(set => {
-            let firstValue = set.slots[0]?.standing?.stats.score.value ?? 0;
-            let secondValue = set.slots[1]?.standing?.stats.score.value ?? 0;
-            maxScore = Math.max(firstValue, secondValue, maxScore);
-        });
-
-        return { phaseHasGames: phaseHasGames, maxScore: maxScore, teamSize: teamSize }
-    }
-
-    private getSetsPerPage(phaseProperties): number {
-        let setsPerPage = this.setsWithoutGamesPerPage;
-        if (phaseProperties.phaseHasGames) {
-            // Anything but a clear best of 3 gets the smallest page, so a page never passes start.gg's 1000-object cap
-            setsPerPage = phaseProperties.maxScore == 2 ? this.setsWithGamesBo3PerPage : this.setsWithGamesBo5PerPage;
-            // Teams pick a character per player, so their games hold that many more objects
-            setsPerPage = Math.max(1, Math.floor(setsPerPage / (phaseProperties.teamSize ?? 1)));
-        }
-        return setsPerPage;
-    }
-
-    async getPhaseGroupSets(phaseGroupId, totalSets, phaseProperties): Promise<any> {
-        const nodes = await this.loadPages(`sets:${phaseGroupId}`, totalSets, this.getSetsPerPage(phaseProperties), async (page, perPage) => {
-            const data = await this.getPhaseGroupSetsPaginated(phaseGroupId, page, perPage, phaseProperties.phaseHasGames);
+    async getPhaseGroupSets(phaseGroupId, totalSets): Promise<any> {
+        const nodes = await this.loadPages(`sets:${phaseGroupId}`, totalSets, this.setsPerPage, async (page, perPage) => {
+            const data = await this.getPhaseGroupSetsPaginated(phaseGroupId, page, perPage);
             return data?.phaseGroup?.sets?.nodes ?? [];
         });
         return { nodes };
@@ -345,11 +311,11 @@ export class StartggService {
     // Every set in a phase, all pools at once, sorted into a Map from pool id to that pool's sets.
     // start.gg returns each pool's sets in the same order as asking pool by pool, so the bracket
     // draws the same; a phase with many small pools takes far fewer requests.
-    async getPhaseSetsByPool(phaseId, totalSets, phaseProperties): Promise<Map<any, any[]>> {
-        // Each set also names its pool, one more object per set (18 instead of 17)
-        const perPage = Math.max(1, Math.floor(this.getSetsPerPage(phaseProperties) * 17 / 18));
+    async getPhaseSetsByPool(phaseId, totalSets): Promise<Map<any, any[]>> {
+        // Each set also names its pool, one more object per set (19 instead of 18)
+        const perPage = Math.floor(this.setsPerPage * 18 / 19);
         const nodes = await this.loadPages(`phase-sets:${phaseId}`, totalSets, perPage, async (page, perPage) => {
-            const data = await this.getSetsPaginated(`phase(id: ${phaseId})`, page, perPage, phaseProperties.phaseHasGames, 'phaseGroup { id }');
+            const data = await this.getSetsPaginated(`phase(id: ${phaseId})`, page, perPage, 'phaseGroup { id }');
             return data?.phase?.sets?.nodes ?? [];
         });
         const byPool = new Map<any, any[]>();
@@ -360,13 +326,14 @@ export class StartggService {
         return byPool;
     }
 
-    getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage, phaseHasGames): Promise<any> {
-        return this.getSetsPaginated(`phaseGroup(id: ${phaseGroupId})`, page, setsPerPage, phaseHasGames);
+    getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Promise<any> {
+        return this.getSetsPaginated(`phaseGroup(id: ${phaseGroupId})`, page, setsPerPage);
     }
 
     // One page of sets from a pool (`phaseGroup(id: …)`) or a whole phase (`phase(id: …)`)
-    private getSetsPaginated(parent, page, setsPerPage, phaseHasGames, extraFields = ''): Promise<any> {
-        let setGamesQuery = phaseHasGames ? this.getSetGamesQuery() : '';
+    // Always asks for games: where no characters were reported they come back empty and cost little.
+    private getSetsPaginated(parent, page, setsPerPage, extraFields = ''): Promise<any> {
+        let setGamesQuery = this.getSetGamesQuery();
 
         const query = `query {
                 ${parent} {

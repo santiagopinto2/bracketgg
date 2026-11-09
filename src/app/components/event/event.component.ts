@@ -58,7 +58,6 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     isGrabbing = false;
     showUpsets = false;
     showProjected = false;
-    phaseProperties;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
@@ -200,13 +199,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         try {
             let phase = await this.startggService.getPhase(phaseId);
             if (loadId !== this.loadId) return;
-            this.phaseProperties = await this.startggService.getPhaseProperties(phase.phaseGroups.nodes[0]?.id);
-            if (loadId !== this.loadId) return;
 
             // With several pools, fetch the whole phase's sets at once and sort them by pool
             const groups = phase.phaseGroups.nodes;
             const setsByPool = groups.length > 1 && phase.sets?.pageInfo?.total
-                ? await this.startggService.getPhaseSetsByPool(phaseId, phase.sets.pageInfo.total, this.phaseProperties)
+                ? await this.startggService.getPhaseSetsByPool(phaseId, phase.sets.pageInfo.total)
                 : null;
             if (loadId !== this.loadId) return;
 
@@ -232,7 +229,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId, prefetched = null) {
         let phaseGroupSetsRes = prefetched
             ? { nodes: prefetched }
-            : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, this.phaseProperties);
+            : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total);
         if (loadId !== this.loadId || phaseGroupSetsRes.nodes.length == 0) return;
 
         phaseGroup.sets = phaseGroupSetsRes;
