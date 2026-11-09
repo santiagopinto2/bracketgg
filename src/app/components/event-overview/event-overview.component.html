@@ -1,0 +1,145 @@
+@if (event()) {
+<div class="page-content">
+    <a class="back-link" [routerLink]="'/' + tournament().slug">
+        <mat-icon>chevron_left</mat-icon>
+        {{ tournament().name }}
+    </a>
+
+    <div class="event-header">
+        @if (gameImage()) {
+        <img class="game-img" [src]="gameImage()" [alt]="event().videogame?.name" />
+        } @else {
+        <div class="game-img game-img-placeholder"><mat-icon>videogame_asset</mat-icon></div>
+        }
+        <div class="event-header-info">
+            <h1 class="event-title">{{ event().name }}</h1>
+            <div class="meta-row">
+                @if (getStateLabel(event().state)) {
+                <span class="state-chip" [ngClass]="'state-' + event().state.toLowerCase()">{{ getStateLabel(event().state) }}</span>
+                }
+                @if (event().videogame?.name) {
+                <span class="meta-item">
+                    <mat-icon>sports_esports</mat-icon>
+                    {{ event().videogame.name }}
+                </span>
+                }
+                <span class="meta-item">
+                    <mat-icon>person</mat-icon>
+                    {{ event().type === 1 ? 'Singles' : 'Teams' }}
+                </span>
+                @if (formattedDate()) {
+                <span class="meta-item">
+                    <mat-icon>calendar_today</mat-icon>
+                    {{ formattedDate() }}
+                </span>
+                }
+                <span class="meta-item">
+                    <mat-icon>group</mat-icon>
+                    {{ event().numEntrants ?? 0 }} {{ event().numEntrants == 1 ? 'entrant' : 'entrants' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    @if (standings().length) {
+    <div class="section">
+        <h2 class="section-heading">Standings</h2>
+        <div class="standings-list">
+            @for (standing of standings(); track standing.entrant?.id ?? $index) {
+            <div class="standing">
+                <span class="standing-placement placement-{{ standing.placement }}">{{ standing.placement }}<sup>{{ getOrdinalSuffix(standing.placement) }}</sup></span>
+                <div class="standing-profile-image">
+                    @if (getStandingProfileImage(standing) !== '') {
+                    <img [ngClass]="getStandingProfileImageOrientation(standing)" [src]="getStandingProfileImage(standing)" />
+                    } @else {
+                    <div class="standing-profile-image-default" [ngStyle]="{'background-color': standing.backgroundColor}">{{ getStandingInitial(standing) }}</div>
+                    }
+                </div>
+                <span class="standing-name">
+                    @if (standing.sponsor) {
+                    <span class="standing-sponsor">{{ standing.sponsor }}</span>
+                    }
+                    <span class="standing-tag">{{ standing.tag }}</span>
+                </span>
+            </div>
+            }
+        </div>
+        @if (standings().length < standingsTotal()) {
+        <button mat-stroked-button class="show-more" style="margin-top: 8px" [disabled]="loadingStandings()" (click)="showMoreStandings()">
+            {{ loadingStandings() ? 'Loading...' : 'Show more' }}
+        </button>
+        }
+    </div>
+    }
+
+    <div class="section">
+        <h2 class="section-heading">Brackets</h2>
+        @if (!event().phases.length) {
+        <p class="phase-details">This event has no brackets yet.</p>
+        }
+        <div class="phase-list">
+            @for (phase of event().phases; track phase.id) {
+            <div class="phase-card">
+                <a class="phase-link" [routerLink]="phaseLink(phase)">
+                    <div class="phase-info">
+                        <span class="phase-name">{{ phase.name }}</span>
+                        <span class="phase-details">{{ getPhaseDetails(phase) }}</span>
+                    </div>
+                    @if (getStateLabel(phase.state)) {
+                    <span class="state-chip" [ngClass]="'state-' + phase.state.toLowerCase()">{{ getStateLabel(phase.state) }}</span>
+                    }
+                    <mat-icon class="phase-arrow">chevron_right</mat-icon>
+                </a>
+                @if (phase.pools.length > 1) {
+                <div class="pool-list">
+                    @for (pool of phase.pools; track pool.id) {
+                    <a class="pool-chip" [routerLink]="phaseLink(phase, pool)">{{ pool.displayIdentifier }}</a>
+                    }
+                    @if (phase.groupCount > phase.pools.length) {
+                    <span class="phase-details">+{{ phase.groupCount - phase.pools.length }} more</span>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </div>
+
+    @if (prizing()) {
+    <div class="section">
+        <h2 class="section-heading">Prizing</h2>
+        @if (prizing().payouts.length) {
+        <div class="payout-list">
+            @for (payout of prizing().payouts; track payout.placement) {
+            <span class="payout">
+                <span class="standing-placement placement-{{ payout.placement }}">{{ payout.placement }}<sup>{{ getOrdinalSuffix(payout.placement) }}</sup></span>
+                {{ payout.percent }}%
+            </span>
+            }
+        </div>
+        }
+        @if (prizing().text) {
+        <p class="plain-text">{{ prizing().text }}</p>
+        }
+    </div>
+    }
+
+    @if (event().rulesMarkdown || event().matchRulesMarkdown) {
+    <div class="section">
+        <h2 class="section-heading">Rules</h2>
+        @if (event().rulesMarkdown) {
+        <details class="rules">
+            <summary>Event rules</summary>
+            <p class="plain-text">{{ event().rulesMarkdown }}</p>
+        </details>
+        }
+        @if (event().matchRulesMarkdown) {
+        <details class="rules">
+            <summary>Match rules</summary>
+            <p class="plain-text">{{ event().matchRulesMarkdown }}</p>
+        </details>
+        }
+    </div>
+    }
+</div>
+}

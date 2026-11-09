@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
@@ -7,6 +7,7 @@ import { picksBySide } from '../set/character-picks';
 import { NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatInputModule } from '@angular/material/input';
@@ -22,7 +23,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
     selector: 'app-event',
     templateUrl: './event.component.html',
     styleUrls: ['./event.component.scss'],
-    imports: [MatIconButton, MatIconModule, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule]
+    imports: [MatIconButton, MatIconModule, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatMenuModule, RouterLink]
 })
 export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -33,6 +34,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     showScrollToTop = signal(false);
     private listeners = new AbortController();
     eventId = -1;
+    // The event's name and slug, for the link back to its landing page
+    eventName = '';
+    eventSlug = '';
+    // The pool to scroll to once the phase is drawn, from a /brackets/<phase id>/<pool id> link
+    poolId = null;
     allEntrants = [];
     entrantsById = new Map<any, any>();
     // A newer phase load makes older ones stale, so they stop instead of mixing two phases' data
@@ -92,6 +98,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             // Clear this data only if there is no event
             if (!event || !event.phaseId) {
                 this.eventId = -1;
+                this.eventName = '';
+                this.eventSlug = '';
                 this.allEntrants = [];
                 this.entrantsById = new Map();
                 this.loadId++;
@@ -105,6 +113,10 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                     this.allEntrants.forEach(entrant => this.prepareEntrant(entrant));
                     this.entrantsById = new Map(this.allEntrants.map(entrant => [entrant.id, entrant]));
                 }
+
+                this.eventName = event.event.name;
+                this.eventSlug = event.slug;
+                this.poolId = event.poolId ?? null;
 
                 // Get all phase and phase group data
                 this.phases = event.event.phases;
@@ -223,6 +235,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             await Promise.all(phaseGroupPromises);
             if (loadId !== this.loadId) return;
             this.loadingService.updateValue(false);
+            if (this.poolId) setTimeout(() => document.getElementById('pool-' + this.poolId)?.scrollIntoView({ block: 'start' }));
         } catch (error) {
             if (loadId !== this.loadId) return;
             console.error(error);
@@ -635,6 +648,12 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         let url = this.router.url;
         if (url.indexOf('/brackets') == -1) url += '/brackets';
         this.router.navigate([url.slice(0, url.indexOf('/brackets') + '/brackets'.length) + '/' + this.phases[this.currentPhaseIndex + direction].id]);
+    }
+
+    // Jumps straight to any phase, from the menu on the phase's name
+    goToPhase(phase) {
+        if (phase.id == this.phases[this.currentPhaseIndex]?.id) return;
+        this.router.navigate(['/' + this.eventSlug + '/brackets/' + phase.id]);
     }
 
     isWinner(set, slot, typeOfDisplay) {

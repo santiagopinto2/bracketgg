@@ -5,7 +5,18 @@
             <mat-icon>arrow_upward</mat-icon>
         </button>
 
-        <div class="row" style="margin-top: 20px">
+        @if (eventSlug) {
+        <div class="row" style="margin-top: 16px">
+            <div class="col">
+                <a class="event-back" [routerLink]="'/' + eventSlug">
+                    <mat-icon>chevron_left</mat-icon>
+                    {{eventName}}
+                </a>
+            </div>
+        </div>
+        }
+
+        <div class="row" style="margin-top: 12px">
             <div class="col">
                 <form class="search-entrant-form">
                     <mat-form-field style="width: 100%">
@@ -49,7 +60,7 @@
         </div>
 
         @if (phases.length > 1) {
-        <div class="row" style="margin-bottom: 30px">
+        <div class="row align-items-center" style="margin-bottom: 30px">
             @if (currentPhaseIndex > 0) {
             <div class="col-auto">
                 <button mat-icon-button (click)="changePhase(-1)">
@@ -57,10 +68,19 @@
                 </button>
             </div>
             }
-            <div class="col-auto">
-                <p style="font-size: large; font-weight: bold; margin-top: 14px">
-                    {{phases[currentPhaseIndex].name}}
-                </p>
+            <div class="col-auto px-0">
+                <button mat-button class="phase-menu-button" [matMenuTriggerFor]="phaseMenu">
+                    {{phases[currentPhaseIndex]?.name}}
+                    <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
+                </button>
+                <mat-menu #phaseMenu="matMenu">
+                    @for (phase of phases; track phase.id; let i = $index) {
+                    <button mat-menu-item class="phase-menu-item" (click)="goToPhase(phase)">
+                        <mat-icon>{{i == currentPhaseIndex ? 'check' : ''}}</mat-icon>
+                        {{phase.name}}
+                    </button>
+                    }
+                </mat-menu>
             </div>
             @if (currentPhaseIndex < phases.length - 1) { <div class="col-auto">
                 <button mat-icon-button (click)="changePhase(1)">
@@ -72,7 +92,7 @@
     }
 
     @for (phaseGroup of phaseGroups; track i; let i = $index; let lastPhaseGroup = $last) {
-    <div class="row">
+    <div class="row" [attr.id]="phaseGroup ? 'pool-' + phaseGroup.id : null">
         <div class="col-12">
             @if (phaseGroups.length > 1) {
             <p style="font-size: 18px; margin-bottom: 0">
