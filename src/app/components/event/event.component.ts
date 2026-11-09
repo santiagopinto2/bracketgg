@@ -203,11 +203,18 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             this.phaseProperties = await this.startggService.getPhaseProperties(phase.phaseGroups.nodes[0]?.id);
             if (loadId !== this.loadId) return;
 
+            // With several pools, fetch the whole phase's sets at once and sort them by pool
+            const groups = phase.phaseGroups.nodes;
+            const setsByPool = groups.length > 1 && phase.sets?.pageInfo?.total
+                ? await this.startggService.getPhaseSetsByPool(phaseId, phase.sets.pageInfo.total, this.phaseProperties)
+                : null;
+            if (loadId !== this.loadId) return;
+
             // Get all phase groups within the phase
             let phaseGroupPromises = [];
-            for (let i = 0; i < phase.phaseGroups.nodes.length; i++) {
+            for (let i = 0; i < groups.length; i++) {
                 this.maxRounds.push([]);
-                const phaseGroupPromise = this.getPhaseGroup(phase.phaseGroups.nodes[i], i, loadId);
+                const phaseGroupPromise = this.getPhaseGroup(groups[i], i, loadId, setsByPool ? setsByPool.get(groups[i].id) ?? [] : null);
                 phaseGroupPromises.push(phaseGroupPromise);
             }
 
@@ -221,8 +228,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         }
     }
 
-    async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId) {
-        let phaseGroupSetsRes = await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, this.phaseProperties);
+    // `prefetched` is this pool's sets from a whole-phase fetch, or null to fetch the pool alone
+    async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId, prefetched = null) {
+        let phaseGroupSetsRes = prefetched
+            ? { nodes: prefetched }
+            : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, this.phaseProperties);
         if (loadId !== this.loadId || phaseGroupSetsRes.nodes.length == 0) return;
 
         phaseGroup.sets = phaseGroupSetsRes;

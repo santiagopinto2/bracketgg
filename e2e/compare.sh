@@ -28,6 +28,10 @@ echo "main build: ok"
 cp -r dist/bracketgg/browser /tmp/app-main
 git checkout -q HEAD -- src
 
+# With Santi's start.gg token: a real multi-pool phase fetched whole must match each pool fetched alone
+node e2e/live-phase-sets.mjs > $out/live-phase-sets.json 2>&1 || { cat $out/live-phase-sets.json; echo "live phase sets check failed"; exit 1; }
+echo "live phase sets: $(head -c 80 $out/live-phase-sets.json | tr -d '\n')"
+
 npm install --no-save --no-audit --no-fund --loglevel=error playwright > /dev/null || exit 1
 npx playwright install --with-deps chromium webkit > $out/playwright-install.log 2>&1 || { tail -30 $out/playwright-install.log; exit 1; }
 

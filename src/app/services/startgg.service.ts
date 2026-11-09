@@ -261,6 +261,11 @@ export class StartggService {
         const query = `query {
                 phase(id: ${phaseId}) {
                     id
+                    sets(page: 1, perPage: 1, sortType: ROUND) {
+                        pageInfo {
+                            total
+                        }
+                    }
                     phaseGroups(query : {
                         page: 1
                         perPage: 100
@@ -318,7 +323,7 @@ export class StartggService {
         return { phaseHasGames: phaseHasGames, maxScore: maxScore, teamSize: teamSize }
     }
 
-    async getPhaseGroupSets(phaseGroupId, totalSets, phaseProperties): Promise<any> {
+    private getSetsPerPage(phaseProperties): number {
         let setsPerPage = this.setsWithoutGamesPerPage;
         if (phaseProperties.phaseHasGames) {
             // Anything but a clear best of 3 gets the smallest page, so a page never passes start.gg's 1000-object cap
@@ -326,25 +331,52 @@ export class StartggService {
             // Teams pick a character per player, so their games hold that many more objects
             setsPerPage = Math.max(1, Math.floor(setsPerPage / (phaseProperties.teamSize ?? 1)));
         }
+        return setsPerPage;
+    }
 
-        const nodes = await this.loadPages(`sets:${phaseGroupId}`, totalSets, setsPerPage, async (page, perPage) => {
+    async getPhaseGroupSets(phaseGroupId, totalSets, phaseProperties): Promise<any> {
+        const nodes = await this.loadPages(`sets:${phaseGroupId}`, totalSets, this.getSetsPerPage(phaseProperties), async (page, perPage) => {
             const data = await this.getPhaseGroupSetsPaginated(phaseGroupId, page, perPage, phaseProperties.phaseHasGames);
             return data?.phaseGroup?.sets?.nodes ?? [];
         });
         return { nodes };
     }
 
+    // Every set in a phase, all pools at once, sorted into a Map from pool id to that pool's sets.
+    // start.gg returns each pool's sets in the same order as asking pool by pool, so the bracket
+    // draws the same; a phase with many small pools takes far fewer requests.
+    async getPhaseSetsByPool(phaseId, totalSets, phaseProperties): Promise<Map<any, any[]>> {
+        // Each set also names its pool, one more object per set (18 instead of 17)
+        const perPage = Math.max(1, Math.floor(this.getSetsPerPage(phaseProperties) * 17 / 18));
+        const nodes = await this.loadPages(`phase-sets:${phaseId}`, totalSets, perPage, async (page, perPage) => {
+            const data = await this.getSetsPaginated(`phase(id: ${phaseId})`, page, perPage, phaseProperties.phaseHasGames, 'phaseGroup { id }');
+            return data?.phase?.sets?.nodes ?? [];
+        });
+        const byPool = new Map<any, any[]>();
+        for (const { phaseGroup, ...set } of nodes) {
+            if (!byPool.has(phaseGroup?.id)) byPool.set(phaseGroup?.id, []);
+            byPool.get(phaseGroup?.id).push(set);
+        }
+        return byPool;
+    }
+
     getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage, phaseHasGames): Promise<any> {
+        return this.getSetsPaginated(`phaseGroup(id: ${phaseGroupId})`, page, setsPerPage, phaseHasGames);
+    }
+
+    // One page of sets from a pool (`phaseGroup(id: …)`) or a whole phase (`phase(id: …)`)
+    private getSetsPaginated(parent, page, setsPerPage, phaseHasGames, extraFields = ''): Promise<any> {
         let setGamesQuery = phaseHasGames ? this.getSetGamesQuery() : '';
 
         const query = `query {
-                phaseGroup(id: ${phaseGroupId}) {
+                ${parent} {
                     sets(
                         page: ${page}
                         perPage: ${setsPerPage}
                         sortType: ROUND
                     ) {
                         nodes {
+                            ${extraFields}
                             id
                             round
                             fullRoundText

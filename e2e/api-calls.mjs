@@ -45,11 +45,14 @@ const unstartedVariants = {
 // A later-phase pool whose losers bracket starts with players from phase 1, seeded but not played
 const laterPhase = JSON.parse(readFileSync(new URL('./fixtures/later-phase-pool.json', import.meta.url)));
 const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004 };
-const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets };
+// Phase 1005 has three pools, which the app fetches as one phase
+const poolsOf = { 1005: [2005, 2006, 2007] };
+const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700) };
 
 function kindOf(query) {
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
+    if (query.includes('phase(id') && query.includes('slots')) return 'phaseSets';
     if (query.includes('phase(id')) return 'phase';
     if (query.includes('phaseGroup(id')) return 'sets';
     return 'other';
@@ -65,13 +68,24 @@ function answer(query) {
                     startAt: 1794000000, type: 1, videogame: { name: 'Test Game', images: [] }, standings: { nodes: [] } }]
             } } };
         case 'entrants':
-            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }, { id: 1003, name: 'Unstarted Pool' }, { id: 1004, name: 'Later Phase' }],
+            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }, { id: 1003, name: 'Unstarted Pool' }, { id: 1004, name: 'Later Phase' }, { id: 1005, name: 'Three Pools' }],
                 entrants: { nodes: structuredClone(entrants) } } } };
         case 'phase': {
             const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
-            const groupId = phaseGroupOf[phaseId];
-            return { data: { phase: { id: phaseId, phaseGroups: { pageInfo: { total: 1 }, nodes: [
-                { id: groupId, displayIdentifier: 'A', sets: { pageInfo: { total: setsOf[groupId].length } } }] } } } };
+            const groupIds = poolsOf[phaseId] ?? [phaseGroupOf[phaseId]];
+            const total = groupIds.reduce((n, id) => n + setsOf[id].length, 0);
+            return { data: { phase: { id: phaseId, sets: { pageInfo: { total } }, phaseGroups: { pageInfo: { total: groupIds.length }, nodes: groupIds.map((id, i) =>
+                ({ id, displayIdentifier: String.fromCharCode(65 + i), sets: { pageInfo: { total: setsOf[id].length } } })) } } } };
+        }
+        case 'phaseSets': {
+            // start.gg sorts a phase's sets by round across all its pools
+            const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
+            const page = Number(query.match(/page: (\d+)/)[1]);
+            const perPage = Number(query.match(/perPage: (\d+)/)[1]);
+            const all = (poolsOf[phaseId] ?? [phaseGroupOf[phaseId]]).flatMap(id => structuredClone(setsOf[id]).map(({ bye, unreachable, ...set }) => ({ ...set, phaseGroup: { id } })));
+            const order = r => r < 0 ? r : 1000 + r;
+            const nodes = all.map((set, i) => ({ set, i })).sort((a, b) => order(a.set.round) - order(b.set.round) || a.i - b.i).map(x => x.set);
+            return { data: { phase: { sets: { nodes: nodes.slice((page - 1) * perPage, page * perPage) } } } };
         }
         case 'sets': {
             const groupId = Number(query.match(/phaseGroup\(id: (\d+)\)/)[1]);
@@ -455,6 +469,33 @@ try {
         const popupOk = JSON.stringify(games) === JSON.stringify([[['1', '1'], ['4', '4']], [[], ['4']]]);
         check('character picks: each side shows its own picks, doubles shows both, missing ones skipped', bracketOk && popupOk && !errors.length, report.characterPicks);
         await page.screenshot({ path: 'e2e-out/character-picks.png' }).catch(() => { });
+        await context.close();
+    }
+
+    // 14. A phase with three pools: one whole-phase fetch, every pool drawn like a pool fetched alone
+    {
+        const { context, page, log, quiet } = await openPage(browser, q =>
+            kindOf(q) === 'phaseSets' && Number(q.match(/perPage: (\d+)/)[1]) > 7 ? { body: { errors: [{ message: 'Your query complexity is too high.' }] } } : null);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1005');
+        await quiet();
+        await page.waitForTimeout(1000);
+        // Each pool's tags, in drawing order, should match pool 1001 (the same 4-player pool) exactly
+        const pools = await page.getByText(/^\s*Pool [A-C]\s*$/).count();
+        const drawn = await tags(page);
+        const single = await openPage(browser);
+        await single.page.goto(appUrl + eventPath + '/1001');
+        await single.quiet();
+        await single.page.waitForTimeout(1000);
+        const one = await tags(single.page);
+        await single.context.close();
+        const requests = count(log);
+        const want = [...one, ...one, ...one];
+        report.phaseSets = { requests, drawn: drawn.length, want: want.length, sameOrder: JSON.stringify(drawn) === JSON.stringify(want), pools, errors };
+        check('three-pool phase: fetched as one phase (smaller pages after a refusal), every pool drawn the same',
+            report.phaseSets.sameOrder && want.length > 0 && pools === 3 && (requests.phaseSets ?? 0) >= 1 && (requests.sets ?? 0) <= 1 && !errors.length, report.phaseSets);
+        await page.screenshot({ path: 'e2e-out/three-pools.png', fullPage: true }).catch(() => { });
         await context.close();
     }
 } finally {
