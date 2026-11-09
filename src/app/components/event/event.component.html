@@ -138,7 +138,7 @@
                                         </div>
                                         }
                                     </div>
-                                    @if (phaseProperties?.phaseHasGames && hasChars(set)) {
+                                    @if (hasChars(set)) {
                                     <div class="col p-0 set-middle" id="char-images">
                                         @for (slot of set.slots; track slot; let firstSlot = $first; let k = $index) {
                                         <div class="row set-row gx-0" [ngClass]="getSlotBackgroundColor(slot, set)" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
