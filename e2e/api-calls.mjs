@@ -675,7 +675,9 @@ try {
         const texts = (page, selector) => page.locator(selector).allInnerTexts().then(all => all.map(t => t.replace(/\s+/g, ' ').trim()));
         const atLanding = async page => new URL(page.url()).pathname === landingPath && (await texts(page, '.event-title'))[0] === 'Test Event';
         const phaseShown = async page => (await texts(page, '.phase-menu-button'))[0]?.replace(/ ?arrow_drop_down$/, '');
-        const { context, page, log, quiet } = await openPage(browser, () => null, {}, { fonts: true });
+        const { context, page, log, quiet: idle } = await openPage(browser, () => null, { colorScheme: 'dark' }, { fonts: true });
+        // A click or a step through the history starts its requests a moment later
+        const quiet = async ms => { await page.waitForTimeout(400); return idle(ms); };
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
         try {
@@ -702,6 +704,14 @@ try {
                 && landing.phaseDetails === 'Double Elimination · 12 entrants · 3 pools' && landing.pools.join('') === 'ABC' && landing.prizing.includes('60%'), landing);
             await page.waitForTimeout(1500); // the "loaded" notice goes away
             await page.screenshot({ path: 'e2e-out/event-landing-desktop.png' }).catch(() => { });
+            await page.emulateMedia({ colorScheme: 'light' });
+            await page.reload();
+            await quiet();
+            await page.waitForTimeout(1500);
+            await page.screenshot({ path: 'e2e-out/event-landing-desktop-light.png' }).catch(() => { });
+            await page.emulateMedia({ colorScheme: 'dark' });
+            await page.reload();
+            await quiet();
             await page.setViewportSize({ width: 1280, height: 720 });
 
             // Show more: 50 at a time from the top, until all 60 show and the button goes away
@@ -814,7 +824,8 @@ try {
     //     An event that hasn't started shows its phases and no standings.
     {
         const landingPath = '/tournament/test-tourney/event/test-event';
-        const { context, page, quiet } = await openPage(browser, () => null, devices['Pixel 7'], { fonts: true });
+        const { context, page, quiet: idle } = await openPage(browser, () => null, { ...devices['Pixel 7'], colorScheme: 'dark' }, { fonts: true });
+        const quiet = async ms => { await page.waitForTimeout(400); return idle(ms); };
         try {
             const size = page.viewportSize();
             await page.goto(appUrl + landingPath);
@@ -856,7 +867,7 @@ try {
             event.rulesMarkdown = null;
             return { data: { event } };
         };
-        const { context, page, quiet } = await openPage(browser, q => kindOf(q) === 'overview' ? { body: upcoming(q) } : null, {}, { fonts: true });
+        const { context, page, quiet } = await openPage(browser, q => kindOf(q) === 'overview' ? { body: upcoming(q) } : null, { colorScheme: 'dark' }, { fonts: true });
         try {
             await page.goto(appUrl + '/tournament/test-tourney/event/test-event');
             await quiet();
