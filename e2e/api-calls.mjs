@@ -55,8 +55,23 @@ function kindOf(query) {
     if (query.includes('phase(id') && query.includes('slots')) return 'phaseSets';
     if (query.includes('phase(id')) return 'phase';
     if (query.includes('phaseGroup(id')) return 'sets';
+    if (query.includes('set(id')) return 'setScores';
     return 'other';
 }
+
+// A set as start.gg would answer the query: displayScore ("Alpha 2 - Delta 0", or "DQ") when it's
+// asked for, and the slots' standing only when that is asked for
+function asQueried(set, query) {
+    const scores = set.slots.map(slot => slot.standing?.stats?.score?.value);
+    if (query.includes('displayScore')) {
+        set.displayScore = scores.some(v => v == null) ? null
+            : scores.includes(-1) ? 'DQ'
+            : set.slots.map((slot, i) => `${slot.entrant.name} ${scores[i]}`).join(' - ');
+    }
+    if (!query.includes('standing')) for (const slot of set.slots) delete slot.standing;
+    return set;
+}
+const allSets = () => Object.values(setsOf).flat();
 
 function answer(query) {
     switch (kindOf(query)) {
@@ -85,15 +100,24 @@ function answer(query) {
             const all = (poolsOf[phaseId] ?? [phaseGroupOf[phaseId]]).flatMap(id => structuredClone(setsOf[id]).map(({ bye, unreachable, ...set }) => ({ ...set, phaseGroup: { id } })));
             const order = r => r < 0 ? r : 1000 + r;
             const nodes = all.map((set, i) => ({ set, i })).sort((a, b) => order(a.set.round) - order(b.set.round) || a.i - b.i).map(x => x.set);
-            return { data: { phase: { sets: { nodes: nodes.slice((page - 1) * perPage, page * perPage) } } } };
+            return { data: { phase: { sets: { nodes: nodes.slice((page - 1) * perPage, page * perPage).map(set => asQueried(set, query)) } } } };
         }
         case 'sets': {
             const groupId = Number(query.match(/phaseGroup\(id: (\d+)\)/)[1]);
             const page = Number(query.match(/page: (\d+)/)[1]);
             const perPage = Number(query.match(/perPage: (\d+)/)[1]);
             const nodes = structuredClone(setsOf[groupId]).slice((page - 1) * perPage, page * perPage)
-                .map(({ bye, unreachable, ...set }) => set);
+                .map(({ bye, unreachable, ...set }) => asQueried(set, query));
             return { data: { phaseGroup: { sets: { nodes } } } };
+        }
+        case 'setScores': {
+            // Aliased lookups: s0: set(id: "101") { slots { standing { ... } } }
+            const data = {};
+            for (const [, alias, id] of query.matchAll(/(\w+): set\(id: "?([^")]+)"?\)/g)) {
+                const set = allSets().find(set => String(set.id) === id);
+                data[alias] = set ? { slots: set.slots.map(slot => ({ standing: structuredClone(slot.standing ?? null) })) } : null;
+            }
+            return { data };
         }
         default:
             return { errors: [{ message: 'unknown query' }] };
@@ -500,6 +524,36 @@ try {
         check('three-pool phase: fetched as one phase (smaller pages after a refusal), every pool drawn the same',
             report.phaseSets.sameOrder && want.length > 0 && pools === 3 && (requests.phaseSets ?? 0) >= 1 && !requests.sets && !errors.length, report.phaseSets);
         await page.screenshot({ path: 'e2e-out/three-pools.png', fullPage: true }).catch(() => { });
+        await context.close();
+    }
+
+    // 15. Scores come from displayScore; a line the app can't read is looked up separately, and DQ works
+    {
+        // Set 101 (Alpha 2 - Delta 0) gets text no name matches; set 102 (Bravo beats Charlie) becomes a DQ
+        const twist = body => {
+            for (const set of body.data.phaseGroup.sets.nodes) {
+                if (set.id === 101) set.displayScore = 'Alpha?? 2 - ??? 0';
+                if (set.id === 102) set.displayScore = 'DQ';
+            }
+            return body;
+        };
+        const { context, page, log, quiet } = await openPage(browser, q =>
+            kindOf(q) === 'sets' && q.includes('phaseGroup(id: 2001)') ? { body: twist(answer(q)) } : null);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1001');
+        await quiet();
+        await page.waitForTimeout(1000);
+        const shown = await page.locator('.set').evaluateAll(sets => sets.map(set => {
+            const names = [...set.querySelectorAll('.set-tag')].map(tag => tag.textContent.trim());
+            const scores = [...set.querySelectorAll('.set-scores .set-row')].map(row => row.textContent.trim());
+            return names.map((name, i) => `${name} ${scores[i] ?? ''}`).join(' - ');
+        }));
+        const want = ['Alpha 2 - Delta 0', 'Bravo 0 - Charlie DQ', 'Alpha 2 - Bravo 0', 'Bravo 2 - Charlie 1', 'Delta 0 - Charlie 2', 'Alpha 3 - Bravo 1'];
+        const requests = count(log);
+        report.displayScore = { shown, requests, errors };
+        check('scores read from displayScore; an unreadable one is looked up once; DQ shows',
+            want.every(w => shown.includes(w)) && requests.setScores === 1 && requests.sets === 1 && !errors.length, report.displayScore);
         await context.close();
     }
 } finally {

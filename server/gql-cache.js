@@ -16,7 +16,7 @@ const MAX_QUERY_LENGTH = 20_000;
 
 // How long an answer stays fresh, by what the query asks for
 function ttlMs(query) {
-    if (/\bsets\s*\(/.test(query) && /\bslots\b/.test(query)) return 15_000;  // set results: live
+    if (/\bsets?\s*\(/.test(query) && /\bslots\b/.test(query)) return 15_000; // set results: live
     if (/\bphaseGroups\s*\(/.test(query)) return 60_000;                       // a phase's pools
     return 5 * 60_000;                                                           // tournament, entrants
 }

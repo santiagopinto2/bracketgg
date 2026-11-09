@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
+import { scoresFromDisplayScore } from './display-score';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -21,9 +22,10 @@ export class StartggService {
     // start.gg's GraphQL API, through this site's server, which shares answers between viewers
     private baseUrl: string = '/api/gql';
     private entrantsPerPage = 100;
-    // start.gg counts 18 objects per set when no characters are reported (52 sets: 950, 55: 1004,
-    // cap 1000; measured 2026-11-09). Sets with characters cost more, and a refused page shrinks to fit.
-    private setsPerPage = 52;
+    // start.gg counted about 10 objects per set with scores read from displayScore, the pool's id and
+    // no characters reported (a whole phase: 95 sets 951, 100 sets 1001, cap 1000; measured 2026-11-09). Sets with characters cost more, and a
+    // refused page shrinks to fit.
+    private setsPerPage = 95;
 
     // Tournament info and entrant lists rarely change during an event, so they are reused for
     // a few minutes. Sets are never cached, so brackets stay live.
@@ -305,6 +307,7 @@ export class StartggService {
             const data = await this.getPhaseGroupSetsPaginated(phaseGroupId, page, perPage);
             return data?.phaseGroup?.sets?.nodes ?? [];
         });
+        await this.fillScores(nodes);
         return { nodes };
     }
 
@@ -312,18 +315,39 @@ export class StartggService {
     // start.gg returns each pool's sets in the same order as asking pool by pool, so the bracket
     // draws the same; a phase with many small pools takes far fewer requests.
     async getPhaseSetsByPool(phaseId, totalSets): Promise<Map<any, any[]>> {
-        // Each set also names its pool, one more object per set (19 instead of 18)
-        const perPage = Math.floor(this.setsPerPage * 18 / 19);
-        const nodes = await this.loadPages(`phase-sets:${phaseId}`, totalSets, perPage, async (page, perPage) => {
+        const nodes = await this.loadPages(`phase-sets:${phaseId}`, totalSets, this.setsPerPage, async (page, perPage) => {
             const data = await this.getSetsPaginated(`phase(id: ${phaseId})`, page, perPage, 'phaseGroup { id }');
             return data?.phase?.sets?.nodes ?? [];
         });
+        await this.fillScores(nodes);
         const byPool = new Map<any, any[]>();
         for (const { phaseGroup, ...set } of nodes) {
             if (!byPool.has(phaseGroup?.id)) byPool.set(phaseGroup?.id, []);
             byPool.get(phaseGroup?.id).push(set);
         }
         return byPool;
+    }
+
+    // Gives each slot the `standing.stats.score.value` the rest of the app reads, from the set's
+    // displayScore. Sets whose text can't be read (an odd name, say) get their scores asked for the
+    // old way, all in one request per 100 sets, so a score is never guessed.
+    private async fillScores(sets: any[]) {
+        const unread = [];
+        for (const set of sets) {
+            const scores = scoresFromDisplayScore(set);
+            if (scores) set.slots.forEach((slot, i) => slot.standing = { stats: { score: { value: scores[i] } } });
+            else if (set.displayScore == null && !set.winnerId) set.slots.forEach(slot => slot.standing = null); // not played yet
+            else unread.push(set);
+        }
+        for (let i = 0; i < unread.length; i += 100) {
+            const chunk = unread.slice(i, i + 100);
+            const query = `query {
+                ${chunk.map((set, k) => `s${k}: set(id: ${JSON.stringify(String(set.id))}) { slots { standing { stats { score { value } } } } }`).join('\n')}
+            }`;
+            // A failure here only costs those sets their numbers; the winner still shows
+            const data = await this.query(query).catch(error => { console.warn('Could not load scores', error); return null; });
+            chunk.forEach((set, k) => set.slots.forEach((slot, j) => slot.standing = data?.[`s${k}`]?.slots?.[j]?.standing ?? null));
+        }
     }
 
     getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Promise<any> {
@@ -348,6 +372,7 @@ export class StartggService {
                             round
                             fullRoundText
                             winnerId
+                            displayScore
                             ${setGamesQuery}
                             slots {
                                 prereqId
@@ -357,13 +382,6 @@ export class StartggService {
                                     id
                                     name
                                     initialSeedNum
-                                }
-                                standing {
-                                    stats {
-                                        score {
-                                            value
-                                        }
-                                    }
                                 }
                             }
                         }
