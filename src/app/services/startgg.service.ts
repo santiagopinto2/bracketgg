@@ -268,6 +268,7 @@ export class StartggService {
         const query = `query {
                 phase(id: ${phaseId}) {
                     id
+                    bracketType
                     sets(page: 1, perPage: 1, sortType: ROUND) {
                         pageInfo {
                             total

@@ -200,6 +200,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             let phase = await this.startggService.getPhase(phaseId);
             if (loadId !== this.loadId) return;
 
+            // Only elimination brackets can be drawn. Round robin and Swiss get a message, not a spinner.
+            if (phase.bracketType && !['SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION'].includes(phase.bracketType)) {
+                throw new StartggError(`This phase is a ${phase.bracketType.toLowerCase().replace(/_/g, ' ')}. Only single and double elimination brackets can be drawn.`);
+            }
+
             // With several pools, fetch the whole phase's sets at once and sort them by pool
             const groups = phase.phaseGroups.nodes;
             const setsByPool = groups.length > 1 && phase.sets?.pageInfo?.total
@@ -265,11 +270,13 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             else phaseGroupSets.pop();
         }
 
-        // Standardizes the round data for each set
+        // Standardizes the round data for each set. Single elimination has no losers rounds to shift.
         let winnersIndex = phaseGroupSets.findIndex(set => set.round > 0);
-        let losersRoundChange = Math.abs(phaseGroupSets[winnersIndex - 1].round) - 1;
-        if (losersRoundChange != 0) {
-            for (let i = 0; i < winnersIndex; i++) phaseGroupSets[i].round += losersRoundChange;
+        if (winnersIndex > 0) {
+            let losersRoundChange = Math.abs(phaseGroupSets[winnersIndex - 1].round) - 1;
+            if (losersRoundChange != 0) {
+                for (let i = 0; i < winnersIndex; i++) phaseGroupSets[i].round += losersRoundChange;
+            }
         }
 
         // Sorts the round data
@@ -283,10 +290,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             return a.id - b.id;
         });
 
-        // Stores the max round number for each side of bracket and updates the max rounds for the phase
+        // Stores the max round number for each side of bracket and updates the max rounds for the phase.
+        // A single elimination pool has only the winners side, so only that side is drawn.
         let winnersMaxRound = phaseGroupSets[phaseGroupSets.length - 1].round;
-        let losersMaxRound = Math.abs(phaseGroupSets[0].round);
-        this.maxRounds[phaseGroupIndex] = [winnersMaxRound, losersMaxRound];
+        let losersMaxRound = phaseGroupSets[0].round < 0 ? Math.abs(phaseGroupSets[0].round) : 0;
+        this.maxRounds[phaseGroupIndex] = losersMaxRound ? [winnersMaxRound, losersMaxRound] : [winnersMaxRound];
         this.maxRoundsPhase = Math.max(this.maxRoundsPhase, winnersMaxRound, losersMaxRound);
 
         // Convert set data into arrays
@@ -503,8 +511,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     getBlockClass(columnIndex, blockIndex, phaseGroup, bracketSide) {
         let blockColumnIndex = columnIndex % 3;
         let leftRoundSetCount = this.getRoundSets(phaseGroup, bracketSide, (columnIndex / 3 + 1) * this.maxRoundModifier[bracketSide]).length;
-        let rightRoundSetCount = this.getRoundSets(phaseGroup, bracketSide, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]).length;
+        let rightRoundSets = this.getRoundSets(phaseGroup, bracketSide, (columnIndex / 3 + 2) * this.maxRoundModifier[bracketSide]);
+        let rightRoundSetCount = rightRoundSets.length;
 
+        // The 3rd place match is drawn after the final but isn't fed by it, so no line joins them
+        if (rightRoundSets[0] && this.isThirdPlaceMatch(rightRoundSets[0])) return '';
 
         if (leftRoundSetCount / 2 == rightRoundSetCount) {
             if (blockColumnIndex == 1) {
@@ -557,6 +568,12 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         return '';
+    }
+
+    // A single elimination 3rd place match: start.gg puts it in the round after the final, fed by the
+    // semi-finals' losers. Winners side sets are otherwise only ever fed by winners.
+    isThirdPlaceMatch(set) {
+        return set.round > 0 && set.slots.every(slot => slot.prereqType === 'set' && slot.prereqPlacement == 2);
     }
 
     getNumberOfPlayers(phaseGroup) {

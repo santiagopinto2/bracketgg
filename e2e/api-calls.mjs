@@ -17,12 +17,15 @@ const entrants = ['Alpha', 'Bravo', 'Charlie', 'Delta'].map((name, i) => ({
     id: i + 1, name, initialSeedNum: i + 1, participants: [{ gamerTag: name, user: null }]
 }));
 
+// A played slot, and an empty one waiting on another set's winner (placement 1) or loser (2)
+const slot = (entrantId, score) => {
+    const e = entrants[entrantId - 1];
+    return { entrant: { id: e.id, name: e.name, initialSeedNum: e.initialSeedNum }, standing: { stats: { score: { value: score } } } };
+};
+const from = (setId, placement) => ({ prereqType: 'set', prereqId: String(setId), prereqPlacement: placement, entrant: null, standing: null });
+
 // A finished 4-player double elimination pool, in start.gg's ROUND order (losers first)
 function poolSets(idBase) {
-    const slot = (entrantId, score) => {
-        const e = entrants[entrantId - 1];
-        return { entrant: { id: e.id, name: e.name, initialSeedNum: e.initialSeedNum }, standing: { stats: { score: { value: score } } } };
-    };
     return [
         { id: idBase + 5, round: -2, fullRoundText: 'Losers Final', winnerId: 2, slots: [slot(2, 2), slot(3, 1)] },
         { id: idBase + 4, round: -1, fullRoundText: 'Losers Round 1', winnerId: 3, slots: [slot(4, 0), slot(3, 2)] },
@@ -31,6 +34,18 @@ function poolSets(idBase) {
         { id: idBase + 3, round: 2, fullRoundText: 'Winners Final', winnerId: 1, slots: [slot(1, 2), slot(2, 0)] },
         { id: idBase + 6, round: 3, fullRoundText: 'Grand Final', winnerId: 1, slots: [slot(1, 3), slot(2, 1)] },
     ];
+}
+
+// A 4-player single elimination pool with the semi-finals played and the final still empty. start.gg
+// puts a 3rd place match ("3rd Place Tiebreak") in the round after the final, fed by the semi-finals' losers.
+function singleElimSets(idBase, withThirdPlace) {
+    const sets = [
+        { id: idBase + 1, round: 1, fullRoundText: 'Semi-Final', winnerId: 1, slots: [slot(1, 2), slot(4, 0)] },
+        { id: idBase + 2, round: 1, fullRoundText: 'Semi-Final', winnerId: 2, slots: [slot(2, 2), slot(3, 1)] },
+        { id: idBase + 3, round: 2, fullRoundText: 'Final', winnerId: null, slots: [from(idBase + 1, 1), from(idBase + 2, 1)] },
+    ];
+    if (withThirdPlace) sets.push({ id: idBase + 4, round: 3, fullRoundText: '3rd Place Tiebreak', winnerId: null, slots: [from(idBase + 2, 2), from(idBase + 1, 2)] });
+    return sets;
 }
 
 // A real pool that hasn't started (empty slots), where only the top 8 progress, with three guesses
@@ -44,10 +59,13 @@ const unstartedVariants = {
 };
 // A later-phase pool whose losers bracket starts with players from phase 1, seeded but not played
 const laterPhase = JSON.parse(readFileSync(new URL('./fixtures/later-phase-pool.json', import.meta.url)));
-const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004 };
+const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004, 1006: 2008, 1007: 2009, 1008: 2010 };
 // Phase 1005 has three pools, which the app fetches as one phase
 const poolsOf = { 1005: [2005, 2006, 2007] };
-const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700) };
+// Phases are double elimination unless listed here. 1008's sets are never asked for: the type is refused first.
+const bracketTypeOf = { 1006: 'SINGLE_ELIMINATION', 1007: 'SINGLE_ELIMINATION', 1008: 'ROUND_ROBIN' };
+const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700),
+    2008: singleElimSets(800, true), 2009: singleElimSets(900, false), 2010: singleElimSets(1000, false) };
 
 function kindOf(query) {
     if (query.includes('tournament(slug')) return 'tournament';
@@ -83,13 +101,14 @@ function answer(query) {
                     startAt: 1794000000, type: 1, videogame: { name: 'Test Game', images: [] }, standings: { nodes: [] } }]
             } } };
         case 'entrants':
-            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }, { id: 1003, name: 'Unstarted Pool' }, { id: 1004, name: 'Later Phase' }, { id: 1005, name: 'Three Pools' }],
+            return { data: { event: { id: 10, name: 'Test Event', phases: [{ id: 1001, name: 'Pools' }, { id: 1002, name: 'Top 4' }, { id: 1003, name: 'Unstarted Pool' }, { id: 1004, name: 'Later Phase' }, { id: 1005, name: 'Three Pools' },
+                { id: 1006, name: 'Single Elim' }, { id: 1007, name: 'Single Elim, No 3rd Place' }, { id: 1008, name: 'Round Robin' }],
                 entrants: { nodes: structuredClone(entrants) } } } };
         case 'phase': {
             const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
             const groupIds = poolsOf[phaseId] ?? [phaseGroupOf[phaseId]];
             const total = groupIds.reduce((n, id) => n + setsOf[id].length, 0);
-            return { data: { phase: { id: phaseId, sets: { pageInfo: { total } }, phaseGroups: { pageInfo: { total: groupIds.length }, nodes: groupIds.map((id, i) =>
+            return { data: { phase: { id: phaseId, bracketType: bracketTypeOf[phaseId] ?? 'DOUBLE_ELIMINATION', sets: { pageInfo: { total } }, phaseGroups: { pageInfo: { total: groupIds.length }, nodes: groupIds.map((id, i) =>
                 ({ id, displayIdentifier: String.fromCharCode(65 + i), sets: { pageInfo: { total: setsOf[id].length } } })) } } } };
         }
         case 'phaseSets': {
@@ -554,6 +573,62 @@ try {
         report.displayScore = { shown, requests, errors };
         check('scores read from displayScore; an unreadable one is looked up once; DQ shows',
             want.every(w => shown.includes(w)) && requests.setScores === 1 && requests.sets === 1 && !errors.length, report.displayScore);
+        await context.close();
+    }
+
+    // 16. Single elimination: only the winners side is drawn, the 3rd place match comes after the final
+    //     with no line from it, and Show Projected fills the final and 3rd place match from the semis.
+    //     A round robin phase gets a message instead of a spinner, and double elimination keeps both sides.
+    report.singleElim = {};
+    const pairsOf = page => page.locator('.set').evaluateAll(sets => sets.map(set =>
+        [...set.querySelectorAll('.set-tag')].map(tag => tag.textContent.replace(/\u200e/g, '').trim()).filter(Boolean).join(' vs ')));
+    const sidesOf = page => page.locator('#full-round-text-row').count();
+    for (const [name, phaseId, rounds, later] of [
+        ['with 3rd place', 1006, ['Semi-Final', 'Final', '3rd Place Tiebreak'], ['Alpha vs Bravo', 'Charlie vs Delta']],
+        ['without 3rd place', 1007, ['Semi-Final', 'Final'], ['Alpha vs Bravo']],
+    ]) {
+        for (const projected of [false, true]) {
+            const { context, page, quiet } = await openPage(browser);
+            if (projected) await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            await page.goto(appUrl + eventPath + '/' + phaseId);
+            await quiet();
+            await page.waitForTimeout(1000);
+            const got = {
+                sides: await sidesOf(page),
+                rounds: (await page.locator('.full-round-text').allInnerTexts()).map(t => t.trim()),
+                pairs: await pairsOf(page),
+                // Lines in the block columns right of the final: none should join it to the 3rd place match
+                linesAfterFinal: await page.locator('#set-block-column-container').evaluateAll(cols => cols.slice(4).reduce((n, col) =>
+                    n + col.querySelectorAll('.straight-block, .first-block-column-first-row, .first-block-column-second-row').length, 0)),
+                spinner: await spinnerShown(page), errors,
+            };
+            const want = { sides: 1, rounds, pairs: ['Alpha vs Delta', 'Bravo vs Charlie', ...(projected ? later : later.map(() => ''))], linesAfterFinal: 0, spinner: false, errors: [] };
+            const key = `${name}${projected ? ', projected' : ''}`;
+            report.singleElim[key] = got;
+            check(`single elim ${key}: one side, rounds in order, every set drawn, no line into the 3rd place match`, JSON.stringify(got) === JSON.stringify(want), got);
+            await page.screenshot({ path: `e2e-out/single-elim-${key.replace(/[^a-z0-9]+/gi, '-')}.png`, fullPage: true }).catch(() => { });
+            await context.close();
+        }
+    }
+    {
+        const { context, page, quiet } = await openPage(browser);
+        await page.goto(appUrl + eventPath + '/1008');
+        await quiet();
+        await page.waitForTimeout(1000);
+        const text = await snackText(page);
+        report.roundRobin = { snackbar: text, spinnerStillShown: await spinnerShown(page) };
+        check('round robin: a message, not a spinner', text.includes('round robin') && !(await spinnerShown(page)), report.roundRobin);
+        await context.close();
+    }
+    {
+        const { context, page, quiet } = await openPage(browser);
+        await page.goto(appUrl + eventPath + '/1001');
+        await quiet();
+        await page.waitForTimeout(1000);
+        report.doubleElimSides = { sides: await sidesOf(page), sets: await page.locator('.set').count() };
+        check('double elim: still draws both sides and every set', report.doubleElimSides.sides === 2 && report.doubleElimSides.sets === 6, report.doubleElimSides);
         await context.close();
     }
 } finally {
