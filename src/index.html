@@ -6,6 +6,13 @@
     <title>Bracketgg</title>
     <base href="/">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+        // iPhone browsers (Safari and Chrome both use WebKit) zoom in on a tapped text box under 16px and
+        // stay zoomed. maximum-scale=1 stops that, and on iOS pinch zoom still works. Android would lose
+        // pinch zoom with it, so only iOS gets it.
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+            document.querySelector('meta[name=viewport]').content += ', maximum-scale=1';
+    </script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">

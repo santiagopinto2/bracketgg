@@ -329,6 +329,8 @@ try {
                     return r.top >= box.top && r.bottom <= box.bottom && r.left >= box.left && r.right <= box.right;
                 }, target.id);
                 const before = await inView();
+                // iOS zooms in on a tapped text box under 16px unless the viewport has maximum-scale=1
+                const viewport = await page.evaluate(() => document.querySelector('meta[name=viewport]').content);
                 const size = page.viewportSize();
                 await page.locator('.search-entrant-form input').tap();
                 await page.setViewportSize({ width: size.width, height: Math.round(size.height * 0.55) }); // keyboard opens
@@ -341,8 +343,9 @@ try {
                 await page.setViewportSize(size); // keyboard closes
                 await page.waitForTimeout(2000);
                 const after = await inView();
-                report.phoneSearch[name] = { target: target.tag, before, keyboardClosed, after, errors };
+                report.phoneSearch[name] = { target: target.tag, before, keyboardClosed, after, viewport, errors };
                 check(`${name}: searching an entrant closes the keyboard and scrolls to them`, !before && keyboardClosed && after && !errors.length, report.phoneSearch[name]);
+                check(`${name}: maximum-scale=1 on iOS only, so tapping a text box doesn't zoom and Android keeps pinch zoom`, viewport.includes('maximum-scale=1') === (name === 'iPhone 13'), viewport);
                 await page.screenshot({ path: `e2e-out/phone-search-${name.replace(/ /g, '-')}.png` }).catch(() => { });
             } catch (e) {
                 report.phoneSearch[name] = { crashed: String(e.message).slice(0, 300) };
