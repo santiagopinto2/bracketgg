@@ -416,6 +416,46 @@ try {
     } finally {
         await safari3.close();
     }
+
+    // 13. Character picks: matched to sides by entrant, two per side in doubles, and missing ones skipped
+    {
+        // Each team (entrant) has two players. Picks come shuffled; set 101 has a game where only the
+        // bottom side reported, and one pick with no character.
+        const icon = (entrantId, n) => ({ images: [{ type: 'stockIcon', url: `https://icons.test/${entrantId}-${n}.png` }] });
+        const withGames = body => {
+            for (const set of body.data.phaseGroup.sets.nodes) {
+                const [a, b] = set.slots.map(slot => slot.entrant.id);
+                const pick = (id, n) => ({ entrant: { id }, character: icon(id, n) });
+                set.games = [{ winnerId: set.winnerId, stage: { name: 'Stage' }, selections: [pick(b, 1), pick(a, 1), pick(b, 2), pick(a, 2)] }];
+                if (set.id === 101) set.games.push({ winnerId: b, stage: null, selections: [pick(b, 1), { entrant: { id: b }, character: null }] });
+            }
+            return body;
+        };
+        const { context, page, quiet } = await openPage(browser, q =>
+            kindOf(q) === 'sets' && q.includes('phaseGroup(id: 2001)') ? { body: withGames(answer(q)) } : null);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.route('https://icons.test/**', route => route.fulfill({ status: 404 }));
+        await page.goto(appUrl + eventPath + '/1001');
+        await quiet();
+        await page.waitForTimeout(1000);
+        // In the bracket: each slot's icon belongs to that slot's entrant
+        const bracket = await page.locator('.set').evaluateAll(sets => sets.map(set => ({
+            ids: [...set.querySelectorAll('[entrantid]')].map(slot => slot.getAttribute('entrantid')),
+            icons: [...set.querySelectorAll('img.set-image')].map(img => img.getAttribute('src')),
+        })));
+        const bracketOk = bracket.length > 0 && bracket.every(set => set.icons.length === 2 && set.icons.every((src, k) => src.includes(`/${set.ids[k]}-`)));
+        // In the popup for set 101 (Alpha vs Delta): two icons per side in game 1, only Delta's in game 2
+        await page.locator('.set', { hasText: 'Delta' }).filter({ hasText: 'Alpha' }).first().click();
+        await page.waitForTimeout(800);
+        const games = await page.locator('mat-dialog-content mat-card-content > div').evaluateAll(games => games.map(game =>
+            [...game.querySelectorAll('.game-icon')].map(side => [...side.querySelectorAll('img')].map(img => img.getAttribute('src').match(/\/(\d+)-/)[1]))));
+        report.characterPicks = { bracket: bracket.slice(0, 3), games, errors };
+        const popupOk = JSON.stringify(games) === JSON.stringify([[['1', '1'], ['4', '4']], [[], ['4']]]);
+        check('character picks: each side shows its own picks, doubles shows both, missing ones skipped', bracketOk && popupOk && !errors.length, report.characterPicks);
+        await page.screenshot({ path: 'e2e-out/character-picks.png' }).catch(() => { });
+        await context.close();
+    }
 } finally {
     await browser.close();
 }

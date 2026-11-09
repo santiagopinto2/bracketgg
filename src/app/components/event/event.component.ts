@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
+import { picksBySide } from '../set/character-picks';
 import { NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -289,13 +290,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         // Organize set games data
         phaseGroupSets.forEach(set => {
             if (set.games) {
-                set.games.forEach(game => {
-                    if (game.selections && game.selections[0].entrant.id != set.slots[0].entrant.id) {
-                        let tempSelection = game.selections[0];
-                        game.selections[0] = game.selections[1];
-                        game.selections[1] = tempSelection;
-                    }
-                });
+                set.games.forEach(game => game.picks = picksBySide(game, set.slots));
             }
         });
 
@@ -763,11 +758,12 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     hasChars(set) {
-        return set.games && set.games[0].selections;
+        return set.games?.[0]?.picks?.some(side => side.length);
     }
 
+    // The bracket has room for one icon per side: the first player's pick in game 1
     getCharIcon(set, playerIndex) {
-        return set.games[0].selections[playerIndex]?.character.images.find(image => image.type === 'stockIcon').url;
+        return set.games[0].picks[playerIndex]?.[0] ?? null;
     }
 
     onShowUpsetsChange(event) {
