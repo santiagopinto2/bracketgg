@@ -83,7 +83,11 @@
                         <span class="standing-rankings" [class.divided]="standing.socials.length">
                             @for (ranking of standing.rankings; track $index) {
                             <button type="button" class="standing-ranking" #tip="matTooltip" [matTooltip]="ranking.title" (click)="tip.show()">
+                                @if (ranking.image) {
+                                <img class="standing-ranking-image" [src]="ranking.image" [alt]="ranking.title" width="16" height="16" loading="lazy" (error)="ranking.image = ''" />
+                                } @else {
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="rankIcon" /></svg>
+                                }
                                 {{ ranking.rank }}
                             </button>
                             }

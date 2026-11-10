@@ -301,6 +301,10 @@ export class StartggService {
                                         rankings(limit: 3, videogameId: ${Number(videogameId)}) {
                                             rank
                                             title
+                                            images {
+                                                type
+                                                url
+                                            }
                                         }
                                     }`;
         const socialsQuery = `authorizations(types: [TWITTER, TWITCH, DISCORD]) {
