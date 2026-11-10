@@ -266,7 +266,7 @@ const tags = page => page.locator('.set-tag').allInnerTexts().catch(() => []);
 
 // What each standing card on the landing page shows
 const standingsShown = page => page.evaluate(() => [...document.querySelectorAll('.standing')].map(card => {
-    const text = selector => (card.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const text = selector => (card.querySelector(selector)?.innerText ?? '').replace(/\s+/g, ' ').trim();
     return {
         name: text('.standing-placement') + ' ' + text('.standing-name'),
         lostTo: text('.standing-lost-to'),
