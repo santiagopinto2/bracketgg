@@ -26,8 +26,6 @@ export class StartggService {
     // no characters reported (a whole phase: 95 sets 951, 100 sets 1001, cap 1000; measured 2026-11-09). Sets with characters cost more, and a
     // refused page shrinks to fit.
     private setsPerPage = 95;
-    // Pools listed per phase on the event's landing page; a phase with more shows only its count
-    private poolsPerPhase = 64;
     // Sets asked for per entrant in the landing page's top 8, to find who they lost to. An entrant
     // with this many may have more, and then shows no losses.
     readonly setsPerStanding = 50;
@@ -270,16 +268,15 @@ export class StartggService {
         return this.query(query);
     }
 
-    // What the event's landing page shows, in one request: the header, every phase with its pools, and
-    // the top 8 with who each lost to and, for a singles event, each player's socials and rankings.
+    // What the event's landing page shows, in one request: the header, every phase with its pool count,
+    // and the top 8 with who each lost to and, for a singles event, each player's socials and rankings.
     // `videogameId` (from the tournament's event list) picks the rankings for the event's game. A huge
     // event can pass the 1000-object cap, so a refused query is asked again with less: first without
-    // socials and rankings, then also without pools, then also without the sets that tell the losses.
+    // socials and rankings, then also without the sets that tell the losses.
     getEventOverview(eventSlug, videogameId: any = null, singles = true): Promise<any> {
         return this.cached(`overview:${eventSlug}`, async () => {
             const queries = [
-                this.getEventOverviewQuery(eventSlug, { pools: true, lostTo: true, videogameId: singles ? videogameId : null, socials: singles }),
-                this.getEventOverviewQuery(eventSlug, { pools: true, lostTo: true }),
+                this.getEventOverviewQuery(eventSlug, { lostTo: true, videogameId: singles ? videogameId : null, socials: singles }),
                 this.getEventOverviewQuery(eventSlug, { lostTo: true }),
                 this.getEventOverviewQuery(eventSlug, {}),
             ].filter((query, i, all) => all.indexOf(query) === i);
@@ -299,16 +296,7 @@ export class StartggService {
 
     // start.gg counted 261 objects for all of this on a 1544-entrant singles event with 82 pools, and
     // 155 on its doubles event (measured 2026-11-09). Of that, a set costs 1 with these three fields.
-    private getEventOverviewQuery(eventSlug, { pools = false, lostTo = false, videogameId = null as any, socials = false }) {
-        const poolsQuery = `phaseGroups(query: {
-                            page: 1
-                            perPage: ${this.poolsPerPhase}
-                        }) {
-                            nodes {
-                                id
-                                displayIdentifier
-                            }
-                        }`;
+    private getEventOverviewQuery(eventSlug, { lostTo = false, videogameId = null as any, socials = false }) {
         const rankingsQuery = `player {
                                         rankings(limit: 3, videogameId: ${Number(videogameId)}) {
                                             rank
@@ -352,7 +340,6 @@ export class StartggService {
                         numSeeds
                         groupCount
                         state
-                        ${pools ? poolsQuery : ''}
                     }
                     standings(query: {
                         page: 1
