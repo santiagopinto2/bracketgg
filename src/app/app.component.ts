@@ -116,7 +116,7 @@ export class AppComponent implements AfterViewInit {
                         }
                         else {
                             // The event's landing page: one small request, and no entrant list
-                            tournamentData.event.overview = await this.startggService.getEventOverview(eventSlug);
+                            tournamentData.event.overview = await this.startggService.getEventOverview(eventSlug, eventInfo.videogame?.id, eventInfo.type === 1);
                             if (loadId !== this.loadId) return;
                             this.loadingService.updateValue(false);
                         }

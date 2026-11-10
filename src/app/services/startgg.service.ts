@@ -28,6 +28,9 @@ export class StartggService {
     private setsPerPage = 95;
     // Pools listed per phase on the event's landing page; a phase with more shows only its count
     private poolsPerPhase = 64;
+    // Sets asked for per entrant in the landing page's top 8, to find who they lost to. An entrant
+    // with this many may have more, and then shows no losses.
+    readonly setsPerStanding = 50;
 
     // Tournament info and entrant lists rarely change during an event, so they are reused for
     // a few minutes. Sets are never cached, so brackets stay live.
@@ -173,6 +176,7 @@ export class StartggService {
                         startAt
                         type
                         videogame {
+                            id
                             name
                             images {
                                 url
@@ -266,25 +270,37 @@ export class StartggService {
         return this.query(query);
     }
 
-    // What the event's landing page shows, in one request: the header, the top 8, and every phase with
-    // its pools. An event with a great many pools can pass the 1000-object cap, so a refused query is
-    // asked again without the pools.
-    getEventOverview(eventSlug): Promise<any> {
+    // What the event's landing page shows, in one request: the header, every phase with its pools, and
+    // the top 8 with who each lost to and, for a singles event, each player's socials and rankings.
+    // `videogameId` (from the tournament's event list) picks the rankings for the event's game. A huge
+    // event can pass the 1000-object cap, so a refused query is asked again with less: first without
+    // socials and rankings, then also without pools, then also without the sets that tell the losses.
+    getEventOverview(eventSlug, videogameId: any = null, singles = true): Promise<any> {
         return this.cached(`overview:${eventSlug}`, async () => {
+            const queries = [
+                this.getEventOverviewQuery(eventSlug, { pools: true, lostTo: true, videogameId: singles ? videogameId : null, socials: singles }),
+                this.getEventOverviewQuery(eventSlug, { pools: true, lostTo: true }),
+                this.getEventOverviewQuery(eventSlug, { lostTo: true }),
+                this.getEventOverviewQuery(eventSlug, {}),
+            ].filter((query, i, all) => all.indexOf(query) === i);
             let data;
-            try {
-                data = await this.query(this.getEventOverviewQuery(eventSlug, true));
-            } catch (error) {
-                if (!(error instanceof TooComplexError)) throw error;
-                data = await this.query(this.getEventOverviewQuery(eventSlug, false));
+            for (const [i, query] of queries.entries()) {
+                try {
+                    data = await this.query(query);
+                    break;
+                } catch (error) {
+                    if (!(error instanceof TooComplexError) || i == queries.length - 1) throw error;
+                }
             }
             if (!data?.event) throw new StartggError('Event not found on start.gg.');
             return data.event;
         });
     }
 
-    private getEventOverviewQuery(eventSlug, withPools) {
-        const pools = `phaseGroups(query: {
+    // start.gg counted 261 objects for all of this on a 1544-entrant singles event with 82 pools, and
+    // 155 on its doubles event (measured 2026-11-09). Of that, a set costs 1 with these three fields.
+    private getEventOverviewQuery(eventSlug, { pools = false, lostTo = false, videogameId = null as any, socials = false }) {
+        const poolsQuery = `phaseGroups(query: {
                             page: 1
                             perPage: ${this.poolsPerPhase}
                         }) {
@@ -293,6 +309,25 @@ export class StartggService {
                                 displayIdentifier
                             }
                         }`;
+        const rankingsQuery = `player {
+                                        rankings(limit: 3, videogameId: ${Number(videogameId)}) {
+                                            rank
+                                            title
+                                        }
+                                    }`;
+        const socialsQuery = `authorizations(types: [TWITTER, TWITCH, DISCORD]) {
+                                            type
+                                            externalUsername
+                                            url
+                                        }`;
+        // Every set the entrant played in the event: a loss on the winners side can be many sets back
+        const setsQuery = `paginatedSets(page: 1, perPage: ${this.setsPerStanding}) {
+                                    nodes {
+                                        winnerId
+                                        displayScore
+                                        completedAt
+                                    }
+                                }`;
 
         return `query {
                 event(slug: "${eventSlug}") {
@@ -317,36 +352,12 @@ export class StartggService {
                         numSeeds
                         groupCount
                         state
-                        ${withPools ? pools : ''}
+                        ${pools ? poolsQuery : ''}
                     }
-                    ${this.getStandingsQuery(1, 8)}
-                    prizingInfo
-                    rulesMarkdown
-                    matchRulesMarkdown
-                }
-            }`;
-    }
-
-    // One more page of an event's standings, for the landing page's "Show more"
-    async getEventStandings(eventSlug, page, perPage): Promise<any[]> {
-        const query = `query {
-                event(slug: "${eventSlug}") {
-                    ${this.getStandingsQuery(page, perPage)}
-                }
-            }`;
-
-        const data = await this.query(query);
-        return data?.event?.standings?.nodes ?? [];
-    }
-
-    private getStandingsQuery(page, perPage) {
-        return `standings(query: {
-                        page: ${page}
-                        perPage: ${perPage}
+                    standings(query: {
+                        page: 1
+                        perPage: 8
                     }) {
-                        pageInfo {
-                            total
-                        }
                         nodes {
                             placement
                             entrant {
@@ -354,6 +365,7 @@ export class StartggService {
                                 name
                                 participants {
                                     id
+                                    ${Number(videogameId) ? rankingsQuery : ''}
                                     user {
                                         images {
                                             url
@@ -361,11 +373,18 @@ export class StartggService {
                                             width
                                             height
                                         }
+                                        ${socials ? socialsQuery : ''}
                                     }
                                 }
+                                ${lostTo ? setsQuery : ''}
                             }
                         }
-                    }`;
+                    }
+                    prizingInfo
+                    rulesMarkdown
+                    matchRulesMarkdown
+                }
+            }`;
     }
 
     async getPhase(phaseId): Promise<any> {

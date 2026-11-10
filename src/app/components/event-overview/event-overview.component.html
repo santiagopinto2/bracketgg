@@ -44,7 +44,7 @@
     @if (standings().length) {
     <div class="section">
         <h2 class="section-heading">Standings</h2>
-        <div class="standings-list">
+        <div class="standings-list" [style.--rows]="standingRows()">
             @for (standing of standings(); track standing.entrant?.id ?? $index) {
             <div class="standing">
                 <span class="standing-placement placement-{{ standing.placement }}">{{ standing.placement }}<sup>{{ getOrdinalSuffix(standing.placement) }}</sup></span>
@@ -55,20 +55,39 @@
                     <div class="standing-profile-image-default" [ngStyle]="{'background-color': standing.backgroundColor}">{{ getStandingInitial(standing) }}</div>
                     }
                 </div>
-                <span class="standing-name">
-                    @if (standing.sponsor) {
-                    <span class="standing-sponsor">{{ standing.sponsor }}</span>
+                <div class="standing-info">
+                    <span class="standing-name">
+                        @if (standing.sponsor) {
+                        <span class="standing-sponsor">{{ standing.sponsor }}</span>
+                        }
+                        <span class="standing-tag">{{ standing.tag }}</span>
+                    </span>
+                    @if (standing.lostTo) {
+                    <span class="standing-lost-to">Lost to: {{ standing.lostTo }}</span>
                     }
-                    <span class="standing-tag">{{ standing.tag }}</span>
-                </span>
+                    @if (standing.socials.length || standing.rankings.length) {
+                    <div class="standing-extras">
+                        @for (social of standing.socials; track social.type) {
+                        @if (social.url) {
+                        <a class="standing-social" [href]="social.url" target="_blank" rel="noopener noreferrer" [title]="social.label" [attr.aria-label]="social.label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg>
+                        </a>
+                        } @else {
+                        <span class="standing-social" [title]="social.label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg>
+                            <span class="standing-social-name">{{ social.username }}</span>
+                        </span>
+                        }
+                        }
+                        @for (ranking of standing.rankings; track $index) {
+                        <span class="standing-ranking" [title]="'#' + ranking.rank + ' ' + ranking.title">#{{ ranking.rank }} {{ ranking.title }}</span>
+                        }
+                    </div>
+                    }
+                </div>
             </div>
             }
         </div>
-        @if (standings().length < standingsTotal()) {
-        <button mat-stroked-button class="show-more" style="margin-top: 8px" [disabled]="loadingStandings()" (click)="showMoreStandings()">
-            {{ loadingStandings() ? 'Loading...' : 'Show more' }}
-        </button>
-        }
     </div>
     }
 
