@@ -92,28 +92,24 @@ const setsOfEntrant = {
 const lostToShown = ['', 'Alpha ×2', 'Player 30, Bravo', 'DQ, Charlie', 'Player 31, Charlie', 'Player 32, Delta', 'Player 33, Player 5', 'Player 34, Player 6'];
 // Alpha has all three socials and Bravo only Discord; Charlie has no account, and Delta's has an empty
 // username and a ranking without a title, which must not show. Lucky Rank and SSBMRank (in any case) are
-// series with a built-in logo, which wins over the ranking's own picture. TestRank is not, and shows its own
-// picture (wide, like start.gg's 1920x1080 ones). The long one's picture does not load and Plain Rank has
-// none: those two show the trophy.
+// series with a built-in logo; the others show the trophy.
 const socialsOf = {
     1: [{ type: 'DISCORD', externalUsername: 'alpha.gg', url: null }, { type: 'TWITCH', externalUsername: 'AlphaTV', url: 'https://twitch.tv/AlphaTV' }, { type: 'TWITTER', externalUsername: 'AlphaSSB', url: 'https://twitter.com/AlphaSSB' }],
     2: [{ type: 'DISCORD', externalUsername: 'bravo#1234', url: null }],
     4: [{ type: 'TWITTER', externalUsername: '', url: null }],
     5: [{ type: 'TWITTER', externalUsername: 'player five', url: null }],
 };
-const rankImage = [{ type: 'banner', url: 'https://images.test/rank-banner.svg' }, { type: 'profile', url: 'https://images.test/rank-profile.svg' }];
 const rankingsOf = {
-    1: [{ rank: 2, title: 'TestRank: 2025', images: rankImage }, { rank: 1, title: 'Lucky Rank: Active Season', images: [] },
-        { rank: 2, title: 'Test New Markdown: A Rather Long Regional Ranking Name 2025', images: [{ type: 'profile', url: 'https://images.test/missing.png' }] }],
-    2: [{ rank: 23, title: 'SSBMRANK: 2025', images: rankImage }],
-    5: [{ rank: 7, title: 'Plain Rank: 2026', images: [] }],
+    1: [{ rank: 2, title: 'TestRank: 2025' }, { rank: 1, title: 'Lucky Rank: Active Season' }, { rank: 2, title: 'Test New Markdown: A Rather Long Regional Ranking Name 2025' }],
+    2: [{ rank: 23, title: 'SSBMRANK: 2025' }],
     4: [{ rank: null, title: 'TestRank: 2025' }, { rank: 5, title: null }],
+    5: [{ rank: 7, title: 'Plain Rank: 2026' }],
     6: null,
 };
 const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg|'], ['Discord: bravo#1234|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
 const rankingsShown = [['2', '1', '2'], ['23'], [], [], ['7'], [], [], []];
-// Each ranking's picture as "alt text, drawn size, file", or the trophy
-const rankIconsShown = [['TestRank: 2025 16x16 rank-profile.svg', 'Lucky Rank: Active Season 16x16 lucky-rank.webp', 'trophy'], ['SSBMRANK: 2025 16x16 ssbmrank.webp'], [], [], ['trophy'], [], [], []];
+// Each ranking's logo as "alt text, drawn size, file", or the trophy
+const rankIconsShown = [['trophy', 'Lucky Rank: Active Season 16x16 lucky-rank.webp', 'trophy'], ['SSBMRANK: 2025 16x16 ssbmrank.webp'], [], [], ['trophy'], [], [], []];
 const standingNames = ['SPN | Alpha', 'Bravo', 'Charlie', 'Delta', 'Player 5', 'Player 6', 'Player 7', 'Player 8 - Jr'];
 // The top 8 as start.gg would answer the query: sets, socials and rankings only when they are asked for
 const standingsPage = query => ({
@@ -235,10 +231,6 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
     let pending = 0;
     let lastActivity = Date.now();
     if (!fonts) await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
-    // A ranking's pictures: a wide two-color one, and one that is missing
-    await page.route('https://images.test/**', route => /rank-\w+\.svg$/.test(route.request().url())
-        ? route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><rect width="1920" height="1080" fill="#1d4ed8"/><circle cx="960" cy="540" r="400" fill="#fbbf24"/></svg>' })
-        : route.fulfill({ status: 404 }));
     // start.gg directly (before the shared cache) or through the site's /api/gql
     await page.route(/api\.start\.gg\/gql\/alpha|\/api\/gql$/, async route => {
         if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
@@ -294,7 +286,7 @@ const standingsShown = page => page.evaluate(() => [...document.querySelectorAll
         iconsDrawn: [...card.querySelectorAll('.standing-social svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
     };
 }));
-// Waits until every ranking picture has loaded, or failed and given way to the trophy
+// Waits until every ranking logo has loaded
 const rankImagesSettled = page => page.waitForFunction(() => [...document.querySelectorAll('.standing-ranking img')].every(image => image.complete && image.naturalWidth), null, { timeout: 5000 }).catch(() => { });
 // Which of the landing page's optional parts an overview query asks for
 const detailsAsked = query => [['pools', 'phaseGroups('], ['sets', 'paginatedSets('], ['socials', 'authorizations('], ['rankings', 'rankings(']].filter(([, text]) => query.includes(text)).map(([name]) => name).join(' ');
@@ -780,9 +772,9 @@ try {
                 && landing.phaseDetails === 'Double Elimination · 12 entrants · 3 pools' && landing.poolLinks === 0 && landing.prizing.includes('60%'), landing);
             check('event landing: each of the top 8 shows who they lost to, oldest loss first, and the winner shows none',
                 JSON.stringify(landing.standings.map(s => s.lostTo)) === JSON.stringify(lostToShown.map(names => names && 'Lost to: ' + names)), landing.standings.map(s => s.lostTo));
-            check('event landing: a ranking shows its series\' built-in logo, else its own picture, at 16 px with the ranking\'s name as alt text; one with neither, or one that fails to load, shows the trophy',
+            check('event landing: a ranking of a built-in series shows its logo at 16 px with the ranking\'s name as alt text, and any other shows the trophy',
                 JSON.stringify(landing.standings.map(s => s.rankIcons)) === JSON.stringify(rankIconsShown), landing.standings.map(s => s.rankIcons));
-            check('event landing: socials are icon links (Discord a username), rankings are a picture or a trophy and the rank, and empty ones are hidden',
+            check('event landing: socials are icon links (Discord a username), rankings are a logo or a trophy and the rank, and empty ones are hidden',
                 JSON.stringify(landing.standings.map(s => s.socials)) === JSON.stringify(socialsShown) && JSON.stringify(landing.standings.map(s => s.rankings)) === JSON.stringify(rankingsShown)
                 && landing.standings.filter(s => s.extrasRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
             // A ranking's name shows on hover, and on keyboard focus
@@ -941,7 +933,7 @@ try {
                 const content = document.querySelector('mat-sidenav-content');
                 // Nothing in a card (a long ranking, a Discord name) sticks out of it
                 const cardsFit = [...document.querySelectorAll('.standing')].every(card => [...card.querySelectorAll('*')].every(el => el.getBoundingClientRect().right <= card.getBoundingClientRect().right + 0.5));
-                const rankIcons = [...document.querySelectorAll('.standing-ranking')].map(el => el.querySelector('img') ? 'picture' : 'trophy').join(' ');
+                const rankIcons = [...document.querySelectorAll('.standing-ranking')].map(el => el.querySelector('img') ? 'logo' : 'trophy').join(' ');
                 return { cardsFit, rankIcons, oneColumn: lefts.length === 8 && lefts.every(left => left === lefts[0]), fits: content.scrollWidth <= content.clientWidth, sidebarOpen: !!document.querySelector('mat-sidenav.mat-drawer-opened') };
             });
             await page.waitForTimeout(1500);
@@ -969,8 +961,8 @@ try {
             const menuItems = await page.locator('.phase-menu-item').count();
             await page.screenshot({ path: 'e2e-out/phase-menu-phone.png' }).catch(() => { });
             report.eventLandingPhone = { ...layout, tapped, tappedAway, opened, menuItems };
-            check('phone: the landing page is one column that fits the screen, rankings show their picture or the trophy, a tap on a ranking shows its name, a phase opens on tap, and the phase menu opens',
-                layout.rankIcons === 'picture picture trophy picture trophy' && tapped === rankingsOf[1][2].title && tappedAway === '' && layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
+            check('phone: the landing page is one column that fits the screen, rankings show their logo or the trophy, a tap on a ranking shows its name, a phase opens on tap, and the phase menu opens',
+                layout.rankIcons === 'trophy logo trophy logo trophy' && tapped === rankingsOf[1][2].title && tappedAway === '' && layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
         } catch (e) {
             report.eventLandingPhone = { crashed: String(e.message).slice(0, 300) };
             check('phone: event landing page', false, report.eventLandingPhone);

@@ -1,5 +1,6 @@
 // The logo of each ranking series start.gg shows beside a player's rank. start.gg's API has no ranking
-// series (a ranking's own `images` are a card made for that one player), so the common ones are kept here.
+// series (a ranking's own `images` are a 1920x1080 card made for that one player, of no use at this
+// size), so the common ones are kept here. A ranking of any other series shows a trophy.
 //
 // To add a series: open an event's standings on start.gg where a player has the ranking, and find its
 // `<span aria-label="SSBMRank: 2025"><img src="https://images.start.gg/images/RankingSeries/...">`.
