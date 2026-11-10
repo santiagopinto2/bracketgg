@@ -67,23 +67,62 @@ const bracketTypeOf = { 1006: 'SINGLE_ELIMINATION', 1007: 'SINGLE_ELIMINATION', 
 const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700),
     2008: singleElimSets(800, true), 2009: singleElimSets(900, false), 2010: singleElimSets(1000, false) };
 
-// The event's landing page: 60 standings with start.gg's tied placements (5th, 5th, 7th, 7th, 9th, ...).
+// The event's landing page: the top 8 of a 60-entrant event, with start.gg's tied placements (5th, 5th, 7th, 7th).
 // Alpha has a sponsor and Bravo an avatar; everyone else gets a colored initial.
 const phaseNames = { 1001: 'Pools', 1002: 'Top 4', 1003: 'Unstarted Pool', 1004: 'Later Phase', 1005: 'Three Pools', 1006: 'Single Elim', 1007: 'Single Elim, No 3rd Place', 1008: 'Round Robin' };
 const phaseStateOf = { 1003: 'CREATED', 1004: 'ACTIVE' };
 const svg = (width, height, color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${color}"/></svg>`)}`;
-const placements = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49];
-const standings = Array.from({ length: 60 }, (_, i) => ({
-    placement: placements.findLast(p => p <= i + 1),
-    entrant: { id: i + 1, name: i == 0 ? 'SPN | Alpha' : entrants[i]?.name ?? `Player ${i + 1}`,
-        participants: [{ id: 100 + i, user: i == 1 ? { images: [{ url: svg(40, 40, '#2a7'), type: 'profile', width: 40, height: 40 }] } : null }] }
-}));
-const standingsPage = query => {
-    const [, page, perPage] = query.match(/standings\(query: \{\s*page: (\d+)\s*perPage: (\d+)/).map(Number);
-    return { pageInfo: { total: standings.length }, nodes: structuredClone(standings.slice((page - 1) * perPage, page * perPage)) };
+const placements = [1, 2, 3, 4, 5, 7];
+const numEntrants = 60;
+const videogameId = 7;
+// Each entrant's sets as start.gg lists them, newest first: [winner's entrant id, displayScore].
+// Bravo lost to Alpha twice. Charlie and Players 5 to 8 lost to entrants outside the top 8, whose names
+// are only in the text. Delta was disqualified against an outsider (no name anywhere), then against Charlie.
+// Player 5 has a set still being played, and Player 8 a name with a dash in it.
+const setsOfEntrant = {
+    1: [[1, 'SPN | Alpha 3 - Bravo 2'], [1, 'Bravo 1 - SPN | Alpha 3'], [1, 'DQ']],
+    2: [[1, 'SPN | Alpha 3 - Bravo 2'], [2, 'Bravo 3 - Charlie 0'], [1, 'Bravo 1 - SPN | Alpha 3'], [2, 'Player 9 0 - Bravo 2']],
+    3: [[2, 'Bravo 3 - Charlie 0'], [3, 'DQ'], [3, 'Charlie 3 - Player 5 1'], [30, 'Charlie 1 - XYZ | Player 30 2'], [3, 'Charlie 2 - Player 40 0']],
+    4: [[3, 'DQ'], [4, 'Delta 2 - Player 6 0'], [41, 'DQ'], [4, 'Player 50 0 - Delta 2']],
+    5: [[null, null], [3, 'Charlie 3 - Player 5 1'], [5, 'Player 5 2 - Player 7 1'], [31, 'A - B | Player 31 2 - Player 5 0']],
+    6: [[4, 'Delta 2 - Player 6 0'], [6, 'Player 6 2 - Player 8 - Jr 0'], [32, 'Player 6 1 - Player 32 2']],
+    7: [[5, 'Player 5 2 - Player 7 1'], [33, 'Player 33 2 - Player 7 0']],
+    8: [[6, 'Player 6 2 - Player 8 - Jr 0'], [34, 'Player 8 - Jr 0 - Player 34 2']],
 };
+const lostToShown = ['', 'Alpha ×2', 'Player 30, Bravo', 'DQ, Charlie', 'Player 31, Charlie', 'Player 32, Delta', 'Player 33, Player 5', 'Player 34, Player 6'];
+// Alpha has all three socials and Bravo only Discord; Charlie has no account, and Delta's has an empty
+// username and a ranking without a title, which must not show
+const socialsOf = {
+    1: [{ type: 'DISCORD', externalUsername: 'alpha.gg', url: null }, { type: 'TWITCH', externalUsername: 'AlphaTV', url: 'https://twitch.tv/AlphaTV' }, { type: 'TWITTER', externalUsername: 'AlphaSSB', url: 'https://twitter.com/AlphaSSB' }],
+    2: [{ type: 'DISCORD', externalUsername: 'bravo#1234', url: null }],
+    4: [{ type: 'TWITTER', externalUsername: '', url: null }],
+    5: [{ type: 'TWITTER', externalUsername: 'player five', url: null }],
+};
+const rankingsOf = {
+    1: [{ rank: 2, title: 'TestRank: 2025' }, { rank: 1, title: 'Lucky Rank: Active Season' }, { rank: 2, title: 'Test New Markdown: A Rather Long Regional Ranking Name 2025' }],
+    2: [{ rank: 23, title: 'TestRank: 2025' }],
+    4: [{ rank: null, title: 'TestRank: 2025' }, { rank: 5, title: null }],
+    6: null,
+};
+const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg|'], ['Discord: bravo#1234|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
+const rankingsShown = [['#2 TestRank: 2025', '#1 Lucky Rank: Active Season', '#2 Test New Markdown: A Rather Long Regional Ranking Name 2025'], ['#23 TestRank: 2025'], [], [], [], [], [], []];
+const standingNames = ['SPN | Alpha', 'Bravo', 'Charlie', 'Delta', 'Player 5', 'Player 6', 'Player 7', 'Player 8 - Jr'];
+// The top 8 as start.gg would answer the query: sets, socials and rankings only when they are asked for
+const standingsPage = query => ({
+    nodes: standingNames.map((name, i) => {
+        const id = i + 1;
+        const user = i == 2 ? null : { images: i == 1 ? [{ url: svg(40, 40, '#2a7'), type: 'profile', width: 40, height: 40 }] : [] };
+        if (user && query.includes('authorizations(types: [TWITTER, TWITCH, DISCORD])')) user.authorizations = socialsOf[id] ?? [];
+        const participant = { id: 100 + i, user };
+        if (query.includes(`rankings(limit: 3, videogameId: ${videogameId})`)) participant.player = { rankings: id in rankingsOf ? rankingsOf[id] : [] };
+        const entrant = { id, name, participants: [participant] };
+        if (query.includes('paginatedSets(')) entrant.paginatedSets = { nodes: setsOfEntrant[id].map(([winnerId, displayScore], k, all) =>
+            ({ winnerId, displayScore, completedAt: winnerId ? 1794000000 + (all.length - k) * 600 : null })) };
+        return { placement: placements.findLast(p => p <= id), entrant };
+    })
+});
 const overview = query => ({
-    id: 10, name: 'Test Event', slug: 'tournament/test-tourney/event/test-event', startAt: 1794000000, state: 'COMPLETED', numEntrants: standings.length, type: 1,
+    id: 10, name: 'Test Event', slug: 'tournament/test-tourney/event/test-event', startAt: 1794000000, state: 'COMPLETED', numEntrants, type: 1,
     videogame: { name: 'Test Game', images: [{ url: svg(96, 128, '#345'), type: 'primary' }] },
     phases: Object.entries(phaseNames).map(([id, name]) => {
         const groupIds = poolsOf[id] ?? [phaseGroupOf[id]];
@@ -101,7 +140,6 @@ function kindOf(query) {
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
     if (query.includes('event(slug') && query.includes('phases')) return 'overview';
-    if (query.includes('standings(query')) return 'standings';
     if (query.includes('phase(id') && query.includes('slots')) return 'phaseSets';
     if (query.includes('phase(id')) return 'phase';
     if (query.includes('phaseGroup(id')) return 'sets';
@@ -130,15 +168,13 @@ function answer(query) {
                 images: [], rules: null, id: 1, name: 'Test Tourney', slug: 'tournament/test-tourney', venueAddress: null,
                 startAt: 1794000000, primaryContact: null, primaryContactType: null,
                 events: [{ name: 'Test Event', slug: 'tournament/test-tourney/event/test-event', numEntrants: entrants.length,
-                    startAt: 1794000000, type: 1, videogame: { name: 'Test Game', images: [] }, standings: { nodes: [] } }]
+                    startAt: 1794000000, type: 1, videogame: { id: videogameId, name: 'Test Game', images: [] }, standings: { nodes: [] } }]
             } } };
         case 'entrants':
             return { data: { event: { id: 10, name: 'Test Event', phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name })),
                 entrants: { nodes: structuredClone(entrants) } } } };
         case 'overview':
             return { data: { event: overview(query) } };
-        case 'standings':
-            return { data: { event: { standings: standingsPage(query) } } };
         case 'phase': {
             const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
             const groupIds = poolsOf[phaseId] ?? [phaseGroupOf[phaseId]];
@@ -200,7 +236,7 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
         const query = route.request().postDataJSON().query;
         const n = log.length + 1;
         const override = respond(query, n);
-        log.push({ n, at: Date.now(), kind: kindOf(query), status: override?.status ?? 200 });
+        log.push({ n, at: Date.now(), kind: kindOf(query), status: override?.status ?? 200, query });
         await new Promise(r => setTimeout(r, 50));
         await route.fulfill({ status: override?.status ?? 200, headers: { ...cors, 'content-type': 'application/json' },
             body: JSON.stringify(override?.body ?? answer(query)) });
@@ -227,6 +263,24 @@ const count = (log, from = 0) => {
 const snackText = page => page.locator('app-snack-bar').innerText().catch(() => '');
 const spinnerShown = page => page.locator('app-snack-bar mat-spinner').isVisible().catch(() => false);
 const tags = page => page.locator('.set-tag').allInnerTexts().catch(() => []);
+
+// What each standing card on the landing page shows
+const standingsShown = page => page.evaluate(() => [...document.querySelectorAll('.standing')].map(card => {
+    const text = selector => (card.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return {
+        name: text('.standing-placement') + ' ' + text('.standing-name'),
+        lostTo: text('.standing-lost-to'),
+        socials: [...card.querySelectorAll('.standing-social')].map(el => `${el.getAttribute('title')}|${el.getAttribute('href') ?? ''}`),
+        rankings: [...card.querySelectorAll('.standing-ranking')].map(el => el.textContent.trim()),
+        extrasRow: !!card.querySelector('.standing-extras'),
+        discordText: text('.standing-social-name'),
+        iconsDrawn: [...card.querySelectorAll('.standing-social svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
+    };
+}));
+// Which of the landing page's optional parts an overview query asks for
+const detailsAsked = query => [['pools', 'phaseGroups('], ['sets', 'paginatedSets('], ['socials', 'authorizations('], ['rankings', 'rankings(']].filter(([, text]) => query.includes(text)).map(([name]) => name).join(' ');
+const overviewQueries = log => log.filter(r => r.kind === 'overview').map(r => r.query);
+const tooComplex = { body: { errors: [{ message: 'Your query complexity is too high. A maximum of 1000 objects may be returned by each request. (actual: 1400)' }] } };
 
 const report = { app: appUrl, checks: [] };
 const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail });
@@ -689,7 +743,9 @@ try {
                 requests,
                 title: (await texts(page, '.event-title'))[0],
                 header: (await texts(page, '.event-header .meta-row'))[0],
-                standings: (await texts(page, '.standing')).slice(0, 8),
+                standings: await standingsShown(page),
+                showMore: await page.locator('.show-more').count() + await page.getByText('Show more').count(),
+                detailsAsked: overviewQueries(log).map(detailsAsked),
                 phases: await texts(page, '.phase-name'),
                 phaseDetails: (await texts(page, '.phase-details'))[4],
                 pools: await texts(page, '.pool-chip'),
@@ -699,11 +755,19 @@ try {
             check('event landing: header, top 8 and every phase, in two requests',
                 requests.total === 2 && requests.tournament === 1 && requests.overview === 1 && landing.title === 'Test Event'
                 && landing.header.includes('Completed') && landing.header.includes('60 entrants') && landing.header.includes('Test Game')
-                && JSON.stringify(landing.standings) === JSON.stringify(['1st A SPN Alpha', '2nd Bravo', '3rd C Charlie', '4th D Delta', '5th P Player 5', '5th P Player 6', '7th P Player 7', '7th P Player 8'])
+                && JSON.stringify(landing.standings.map(s => s.name)) === JSON.stringify(['1st SPN Alpha', '2nd Bravo', '3rd Charlie', '4th Delta', '5th Player 5', '5th Player 6', '7th Player 7', '7th Player 8 - Jr'])
                 && JSON.stringify(landing.phases) === JSON.stringify(Object.values(phaseNames))
                 && landing.phaseDetails === 'Double Elimination · 12 entrants · 3 pools' && landing.pools.join('') === 'ABC' && landing.prizing.includes('60%'), landing);
+            check('event landing: each of the top 8 shows who they lost to, oldest loss first, and the winner shows none',
+                JSON.stringify(landing.standings.map(s => s.lostTo)) === JSON.stringify(lostToShown.map(names => names && 'Lost to: ' + names)), landing.standings.map(s => s.lostTo));
+            check('event landing: socials are icon links (Discord a username), rankings are tags, and empty ones are hidden',
+                JSON.stringify(landing.standings.map(s => s.socials)) === JSON.stringify(socialsShown) && JSON.stringify(landing.standings.map(s => s.rankings)) === JSON.stringify(rankingsShown)
+                && landing.standings.filter(s => s.extrasRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn, landing.standings);
+            check('event landing: the one overview request asks for the sets, socials and rankings, and there is no Show more',
+                JSON.stringify(landing.detailsAsked) === JSON.stringify(['pools sets socials rankings']) && landing.showMore === 0, { detailsAsked: landing.detailsAsked, showMore: landing.showMore });
             await page.waitForTimeout(1500); // the "loaded" notice goes away
             await page.screenshot({ path: 'e2e-out/event-landing-desktop.png' }).catch(() => { });
+            await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-desktop.png' }).catch(() => { });
             await page.emulateMedia({ colorScheme: 'light' });
             await page.reload();
             await quiet();
@@ -714,17 +778,14 @@ try {
             await quiet();
             await page.setViewportSize({ width: 1280, height: 720 });
 
-            // Show more: 50 at a time from the top, until all 60 show and the button goes away
+            // The standings are all there is: scrolling to the bottom and hovering a card asks for nothing more
             let mark = log.length;
-            await page.locator('.show-more').click();
+            await page.locator('.standing').last().hover();
+            await page.mouse.wheel(0, 3000);
             await quiet(800);
-            const afterOne = await page.locator('.standing').count();
-            await page.locator('.show-more').click();
-            await quiet(800);
-            const all = await texts(page, '.standing');
-            report.eventLanding.showMore = { afterOne, afterTwo: all.length, last: all.at(-1), buttonLeft: await page.locator('.show-more').count(), requests: count(log, mark) };
-            check('event landing: Show more loads the rest of the standings, one request per click',
-                afterOne === 50 && all.length === 60 && all[32].startsWith('33rd') && all.at(-1) === '49th P Player 60' && report.eventLanding.showMore.buttonLeft === 0 && report.eventLanding.showMore.requests.total === 2, report.eventLanding.showMore);
+            report.eventLanding.afterLoad = { standings: await page.locator('.standing').count(), requests: count(log, mark) };
+            check('event landing: the standings stay at 8 and make no request after the page loads',
+                report.eventLanding.afterLoad.standings === 8 && report.eventLanding.afterLoad.requests.total === 0, report.eventLanding.afterLoad);
 
             // A phase opens its bracket; the link at the top goes back to the event; so does the browser
             await page.locator('.phase-link', { hasText: 'Top 4' }).click();
@@ -833,10 +894,13 @@ try {
             const layout = await page.evaluate(() => {
                 const lefts = [...document.querySelectorAll('.standing')].map(el => Math.round(el.getBoundingClientRect().left));
                 const content = document.querySelector('mat-sidenav-content');
-                return { oneColumn: lefts.length === 8 && lefts.every(left => left === lefts[0]), fits: content.scrollWidth <= content.clientWidth, sidebarOpen: !!document.querySelector('mat-sidenav.mat-drawer-opened') };
+                // Nothing in a card (a long ranking, a Discord name) sticks out of it
+                const cardsFit = [...document.querySelectorAll('.standing')].every(card => [...card.querySelectorAll('*')].every(el => el.getBoundingClientRect().right <= card.getBoundingClientRect().right + 0.5));
+                return { cardsFit, oneColumn: lefts.length === 8 && lefts.every(left => left === lefts[0]), fits: content.scrollWidth <= content.clientWidth, sidebarOpen: !!document.querySelector('mat-sidenav.mat-drawer-opened') };
             });
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'e2e-out/event-landing-phone.png' }).catch(() => { });
+            await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-phone.png' }).catch(() => { });
             await page.setViewportSize({ width: size.width, height: 2600 });
             await page.waitForTimeout(300);
             await page.screenshot({ path: 'e2e-out/event-landing-phone-full.png' }).catch(() => { });
@@ -850,7 +914,7 @@ try {
             await page.screenshot({ path: 'e2e-out/phase-menu-phone.png' }).catch(() => { });
             report.eventLandingPhone = { ...layout, opened, menuItems };
             check('phone: the landing page is one column that fits the screen, a phase opens on tap, and the phase menu opens',
-                layout.oneColumn && layout.fits && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
+                layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
         } catch (e) {
             report.eventLandingPhone = { crashed: String(e.message).slice(0, 300) };
             check('phone: event landing page', false, report.eventLandingPhone);
@@ -862,7 +926,7 @@ try {
             const event = overview(q);
             event.state = 'CREATED';
             event.phases = event.phases.slice(0, 2).map(phase => ({ ...phase, state: 'CREATED' }));
-            event.standings = { pageInfo: { total: 0 }, nodes: [] };
+            event.standings = { nodes: [] };
             event.prizingInfo.enablePrizing = false;
             event.rulesMarkdown = null;
             return { data: { event } };
@@ -883,6 +947,72 @@ try {
         } catch (e) {
             report.eventLandingUpcoming = { crashed: String(e.message).slice(0, 300) };
             check('event landing: an event that has not started', false, report.eventLandingUpcoming);
+        }
+        await context.close();
+    }
+
+    // 19. start.gg refuses the overview for being too big: the page asks again with less each time
+    //     (socials and rankings go first, then pools, then the sets behind "Lost to").
+    {
+        report.eventLandingTooComplex = {};
+        for (const refusals of [1, 3]) {
+            let asked = 0;
+            const { context, page, log, quiet } = await openPage(browser, q => kindOf(q) === 'overview' && ++asked <= refusals ? tooComplex : null, { colorScheme: 'dark' });
+            try {
+                await page.goto(appUrl + '/tournament/test-tourney/event/test-event');
+                await quiet();
+                const shown = await standingsShown(page);
+                const result = report.eventLandingTooComplex[`refused${refusals}`] = {
+                    requests: count(log), asked: overviewQueries(log).map(detailsAsked), standings: shown.length, lostTo: shown.filter(s => s.lostTo).length,
+                    extras: shown.filter(s => s.extrasRow).length, pools: await page.locator('.pool-chip').count(), phases: await page.locator('.phase-card').count(), snack: await snackText(page),
+                };
+                if (refusals === 1) check('event landing: a refused overview is asked again without socials and rankings, and still shows who each lost to',
+                    JSON.stringify(result.asked) === JSON.stringify(['pools sets socials rankings', 'pools sets']) && result.standings === 8 && result.lostTo === 7 && result.extras === 0 && result.pools === 3 && result.phases === 8, result);
+                else check('event landing: an overview refused three times ends as the plain top 8 and phases',
+                    JSON.stringify(result.asked) === JSON.stringify(['pools sets socials rankings', 'pools sets', 'sets', '']) && result.standings === 8 && result.lostTo === 0 && result.extras === 0 && result.pools === 0 && result.phases === 8, result);
+            } catch (e) {
+                check(`event landing: overview refused ${refusals} times`, false, String(e.message).slice(0, 300));
+            }
+            await context.close();
+        }
+    }
+
+    // 20. A teams event: who each team lost to, and no socials or rankings, which are not asked for
+    {
+        const teamOf = name => name.replace('SPN | ', '') + ' / Partner ' + name.at(-1);
+        const teams = q => {
+            const event = overview(q);
+            event.type = 5;
+            event.standings.nodes.forEach(({ entrant }) => {
+                entrant.name = teamOf(entrant.name);
+                entrant.participants = [entrant.participants[0], { id: entrant.id + 200, user: null }];
+                entrant.paginatedSets?.nodes.forEach(set => {
+                    if (set.displayScore && set.displayScore !== 'DQ') set.displayScore = set.displayScore.replace(/^(.+) (\d+) - (.+) (\d+)$/, (_, a, x, b, y) => `${teamOf(a)} ${x} - ${teamOf(b)} ${y}`);
+                });
+            });
+            return { data: { event } };
+        };
+        const tournament = q => {
+            const body = answer(q);
+            body.data.tournament.events[0].type = 5;
+            return body;
+        };
+        const { context, page, log, quiet } = await openPage(browser, q => kindOf(q) === 'overview' ? { body: teams(q) } : kindOf(q) === 'tournament' ? { body: tournament(q) } : null, { colorScheme: 'dark' }, { fonts: true });
+        try {
+            await page.setViewportSize({ width: 1280, height: 1100 });
+            await page.goto(appUrl + '/tournament/test-tourney/event/test-event');
+            await quiet();
+            const shown = await standingsShown(page);
+            report.eventLandingTeams = { requests: count(log), asked: overviewQueries(log).map(detailsAsked), names: shown.map(s => s.name), lostTo: shown.map(s => s.lostTo), extras: shown.filter(s => s.extrasRow).length };
+            await page.waitForTimeout(1500);
+            await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-teams.png' }).catch(() => { });
+            check('event landing: a teams event shows who each team lost to, and asks for no socials or rankings',
+                report.eventLandingTeams.requests.total === 2 && JSON.stringify(report.eventLandingTeams.asked) === JSON.stringify(['pools sets'])
+                && report.eventLandingTeams.names[0] === '1st Alpha / Partner a' && report.eventLandingTeams.extras === 0
+                && JSON.stringify(report.eventLandingTeams.lostTo.slice(0, 5)) === JSON.stringify(['', 'Lost to: Alpha / Partner a ×2', 'Lost to: XYZ | Player 30 / Partner 0, Bravo / Partner o', 'Lost to: DQ, Charlie / Partner e', 'Lost to: A - B | Player 31 / Partner 1, Charlie / Partner e']), report.eventLandingTeams);
+        } catch (e) {
+            report.eventLandingTeams = { crashed: String(e.message).slice(0, 300) };
+            check('event landing: a teams event', false, report.eventLandingTeams);
         }
         await context.close();
     }

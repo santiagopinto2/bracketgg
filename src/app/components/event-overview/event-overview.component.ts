@@ -1,16 +1,22 @@
 import { Component, computed, effect, signal } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { StartggError, StartggService } from 'src/app/services/startgg.service';
+import { StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
-import { LoadingService } from 'src/app/services/loading.service';
+import { lostTo } from 'src/app/services/lost-to';
 
-// An event's landing page: header, top standings, and its phases with their pools, each linked to its bracket
+// Each social's name, profile address (Discord has none) and icon, a 24x24 path, in the order they show
+const socials = [
+    { type: 'TWITTER', name: 'X', profile: 'https://x.com/', icon: 'M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z' },
+    { type: 'TWITCH', name: 'Twitch', profile: 'https://twitch.tv/', icon: 'M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z' },
+    { type: 'DISCORD', name: 'Discord', profile: '', icon: 'M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z' },
+];
+
+// An event's landing page: header, the top 8, and its phases with their pools, each linked to its bracket
 @Component({
     selector: 'app-event-overview',
-    imports: [MatIconModule, MatButtonModule, RouterLink, NgClass, NgStyle],
+    imports: [MatIconModule, RouterLink, NgClass, NgStyle],
     templateUrl: './event-overview.component.html',
     styleUrl: './event-overview.component.scss',
 })
@@ -19,11 +25,8 @@ export class EventOverviewComponent {
     tournament = signal<any>(null);
     event = signal<any>(null);
     standings = signal<any[]>([]);
-    standingsTotal = signal(0);
-    loadingStandings = signal(false);
-    // "Show more" loads the standings in pages of this size, starting over from the top
-    private standingsPerPage = 50;
-    private standingsPagesLoaded = 0;
+    // On a wide screen the standings read down the first column, then the second
+    standingRows = computed(() => Math.ceil(this.standings().length / 2));
     private colors = new Map<any, string>();
 
     formattedDate = computed(() => {
@@ -48,8 +51,7 @@ export class EventOverviewComponent {
 
     constructor(
         private tournamentDataService: TournamentDataService,
-        private startggService: StartggService,
-        private loadingService: LoadingService
+        private startggService: StartggService
     ) {
         effect(() => {
             const data = this.tournamentDataService.tournamentSource();
@@ -60,22 +62,22 @@ export class EventOverviewComponent {
                     phase.pools = (phase.phaseGroups?.nodes ?? []).slice()
                         .sort((a: any, b: any) => String(a.displayIdentifier).localeCompare(String(b.displayIdentifier), 'en', { numeric: true }));
                 });
-                this.standings.set((event.standings?.nodes ?? []).map((standing: any) => this.prepareStanding(standing, event)));
-                this.standingsTotal.set(event.standings?.pageInfo?.total ?? 0);
-                this.standingsPagesLoaded = 0;
+                const nodes = event.standings?.nodes ?? [];
+                const names = new Map<string, string>(nodes.map((standing: any) => [String(standing.entrant?.id), standing.entrant?.name]));
+                this.standings.set(nodes.map((standing: any) => this.prepareStanding(standing, event, names)));
             }
             this.tournament.set(event ? data : null);
             this.event.set(event);
         });
     }
 
-    // Fixes up a standing for display: sponsor split off the name, and a color when there's no avatar
-    private prepareStanding(standing: any, event: any) {
+    // Fixes up a standing for display: sponsor split off the name, a color when there's no avatar, who
+    // the entrant lost to, and a singles player's socials and rankings. `names` is every standing's entrant.
+    private prepareStanding(standing: any, event: any, names: Map<string, string>) {
+        const singles = event.type === 1;
         const name: string = standing.entrant?.name ?? '';
-        // A team's name holds every player's sponsor, so only a singles name is split
-        const pipeIndex = event.type === 1 ? name.lastIndexOf('|') : -1;
-        standing.sponsor = pipeIndex != -1 ? name.slice(0, pipeIndex - 1) : '';
-        standing.tag = pipeIndex != -1 ? name.slice(pipeIndex + 2) : name;
+        standing.sponsor = singles ? this.splitName(name).sponsor : '';
+        standing.tag = singles ? this.splitName(name).tag : name;
 
         if (!this.getStandingProfile(standing)) {
             const key = standing.entrant?.id;
@@ -86,29 +88,31 @@ export class EventOverviewComponent {
             }
             standing.backgroundColor = this.colors.get(key);
         }
+
+        // "Cody Schwab ×2, Zain": oldest loss first, as start.gg lists them, with a repeat counted
+        const losses = new Map<string, number>();
+        lostTo(standing.entrant, names, this.startggService.setsPerStanding)
+            .map(winner => singles ? this.splitName(winner).tag : winner)
+            .forEach(tag => losses.set(tag, (losses.get(tag) ?? 0) + 1));
+        standing.lostTo = [...losses].map(([tag, count]) => count > 1 ? `${tag} ×${count}` : tag).join(', ');
+
+        // A team would need these per player, which is too much for one card
+        const participant = singles ? standing.entrant?.participants?.[0] : null;
+        const accounts = participant?.user?.authorizations ?? [];
+        standing.socials = socials.flatMap(social => {
+            const account = accounts.find((a: any) => a?.type === social.type && a.externalUsername);
+            if (!account) return [];
+            const url = /^https:\/\//.test(account.url ?? '') ? account.url : social.profile ? social.profile + encodeURIComponent(account.externalUsername) : '';
+            return [{ ...social, username: account.externalUsername, url, label: `${social.name}: ${account.externalUsername}` }];
+        });
+        standing.rankings = (participant?.player?.rankings ?? []).filter((ranking: any) => ranking?.rank && ranking.title);
         return standing;
     }
 
-    async showMoreStandings() {
-        const event = this.event();
-        if (!event || this.loadingStandings()) return;
-        this.loadingStandings.set(true);
-        try {
-            const page = this.standingsPagesLoaded + 1;
-            const nodes = await this.startggService.getEventStandings(event.slug, page, this.standingsPerPage);
-            // The event on screen changed while this was loading
-            if (this.event() !== event) return;
-            const more = nodes.map(standing => this.prepareStanding(standing, event));
-            // The first page starts from 1st place again, so it replaces the top 8
-            this.standings.update(standings => page == 1 ? more : [...standings, ...more]);
-            this.standingsPagesLoaded = page;
-            if (!nodes.length) this.standingsTotal.set(this.standings().length);
-        } catch (error) {
-            console.error(error);
-            this.loadingService.error(error instanceof StartggError ? error.message : 'Could not load more standings.');
-        } finally {
-            this.loadingStandings.set(false);
-        }
+    // "TSM | Leffen" is the sponsor "TSM" and the tag "Leffen"
+    private splitName(name: string) {
+        const pipeIndex = name.lastIndexOf('|');
+        return pipeIndex != -1 ? { sponsor: name.slice(0, pipeIndex - 1), tag: name.slice(pipeIndex + 2) } : { sponsor: '', tag: name };
     }
 
     phaseLink(phase: any, pool: any = null): string {
