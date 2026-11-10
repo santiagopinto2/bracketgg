@@ -1,3 +1,4 @@
+import { rankingSeriesLogo } from './ranking-series';
 import { Component, computed, effect, signal } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -104,10 +105,11 @@ export class EventOverviewComponent {
             const url = /^https:\/\//.test(account.url ?? '') ? account.url : social.profile ? social.profile + encodeURIComponent(account.externalUsername) : '';
             return [{ ...social, username: account.externalUsername, url, label: `${social.name}: ${account.externalUsername}` }];
         });
-        // A ranking's own picture stands in for the trophy; many rankings have none
+        // A ranking shows its series' logo; if that is not one of the built-in ones, its own picture
+        // from start.gg; and if it has none, the trophy
         standing.rankings = (participant?.player?.rankings ?? []).filter((ranking: any) => ranking?.rank && ranking.title).map((ranking: any) => {
             const images = (ranking.images ?? []).filter((image: any) => /^https:\/\//.test(image?.url ?? ''));
-            return { ...ranking, image: (images.find((image: any) => image.type === 'profile') ?? images[0])?.url ?? '' };
+            return { ...ranking, image: rankingSeriesLogo(ranking.title) || ((images.find((image: any) => image.type === 'profile') ?? images[0])?.url ?? '') };
         });
         return standing;
     }

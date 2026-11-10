@@ -91,8 +91,10 @@ const setsOfEntrant = {
 };
 const lostToShown = ['', 'Alpha ×2', 'Player 30, Bravo', 'DQ, Charlie', 'Player 31, Charlie', 'Player 32, Delta', 'Player 33, Player 5', 'Player 34, Player 6'];
 // Alpha has all three socials and Bravo only Discord; Charlie has no account, and Delta's has an empty
-// username and a ranking without a title, which must not show. TestRank has a picture (wide, like
-// SSBMRank's 1920x1080), Lucky Rank has none, and the long one's does not load: those two show the trophy
+// username and a ranking without a title, which must not show. Lucky Rank and SSBMRank (in any case) are
+// series with a built-in logo, which wins over the ranking's own picture. TestRank is not, and shows its own
+// picture (wide, like start.gg's 1920x1080 ones). The long one's picture does not load and Plain Rank has
+// none: those two show the trophy.
 const socialsOf = {
     1: [{ type: 'DISCORD', externalUsername: 'alpha.gg', url: null }, { type: 'TWITCH', externalUsername: 'AlphaTV', url: 'https://twitch.tv/AlphaTV' }, { type: 'TWITTER', externalUsername: 'AlphaSSB', url: 'https://twitter.com/AlphaSSB' }],
     2: [{ type: 'DISCORD', externalUsername: 'bravo#1234', url: null }],
@@ -103,14 +105,15 @@ const rankImage = [{ type: 'banner', url: 'https://images.test/rank-banner.svg' 
 const rankingsOf = {
     1: [{ rank: 2, title: 'TestRank: 2025', images: rankImage }, { rank: 1, title: 'Lucky Rank: Active Season', images: [] },
         { rank: 2, title: 'Test New Markdown: A Rather Long Regional Ranking Name 2025', images: [{ type: 'profile', url: 'https://images.test/missing.png' }] }],
-    2: [{ rank: 23, title: 'TestRank: 2025', images: rankImage }],
+    2: [{ rank: 23, title: 'SSBMRANK: 2025', images: rankImage }],
+    5: [{ rank: 7, title: 'Plain Rank: 2026', images: [] }],
     4: [{ rank: null, title: 'TestRank: 2025' }, { rank: 5, title: null }],
     6: null,
 };
 const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg|'], ['Discord: bravo#1234|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
-const rankingsShown = [['2', '1', '2'], ['23'], [], [], [], [], [], []];
+const rankingsShown = [['2', '1', '2'], ['23'], [], [], ['7'], [], [], []];
 // Each ranking's picture as "alt text, drawn size, file", or the trophy
-const rankIconsShown = [['TestRank: 2025 16x16 rank-profile.svg', 'trophy', 'trophy'], ['TestRank: 2025 16x16 rank-profile.svg'], [], [], [], [], [], []];
+const rankIconsShown = [['TestRank: 2025 16x16 rank-profile.svg', 'Lucky Rank: Active Season 16x16 lucky-rank.webp', 'trophy'], ['SSBMRANK: 2025 16x16 ssbmrank.webp'], [], [], ['trophy'], [], [], []];
 const standingNames = ['SPN | Alpha', 'Bravo', 'Charlie', 'Delta', 'Player 5', 'Player 6', 'Player 7', 'Player 8 - Jr'];
 // The top 8 as start.gg would answer the query: sets, socials and rankings only when they are asked for
 const standingsPage = query => ({
@@ -777,7 +780,7 @@ try {
                 && landing.phaseDetails === 'Double Elimination · 12 entrants · 3 pools' && landing.poolLinks === 0 && landing.prizing.includes('60%'), landing);
             check('event landing: each of the top 8 shows who they lost to, oldest loss first, and the winner shows none',
                 JSON.stringify(landing.standings.map(s => s.lostTo)) === JSON.stringify(lostToShown.map(names => names && 'Lost to: ' + names)), landing.standings.map(s => s.lostTo));
-            check('event landing: a ranking with a picture shows it at 16 px with the ranking\'s name as alt text; one with none, or one that fails to load, shows the trophy',
+            check('event landing: a ranking shows its series\' built-in logo, else its own picture, at 16 px with the ranking\'s name as alt text; one with neither, or one that fails to load, shows the trophy',
                 JSON.stringify(landing.standings.map(s => s.rankIcons)) === JSON.stringify(rankIconsShown), landing.standings.map(s => s.rankIcons));
             check('event landing: socials are icon links (Discord a username), rankings are a picture or a trophy and the rank, and empty ones are hidden',
                 JSON.stringify(landing.standings.map(s => s.socials)) === JSON.stringify(socialsShown) && JSON.stringify(landing.standings.map(s => s.rankings)) === JSON.stringify(rankingsShown)
@@ -967,7 +970,7 @@ try {
             await page.screenshot({ path: 'e2e-out/phase-menu-phone.png' }).catch(() => { });
             report.eventLandingPhone = { ...layout, tapped, tappedAway, opened, menuItems };
             check('phone: the landing page is one column that fits the screen, rankings show their picture or the trophy, a tap on a ranking shows its name, a phase opens on tap, and the phase menu opens',
-                layout.rankIcons === 'picture trophy trophy picture' && tapped === rankingsOf[1][2].title && tappedAway === '' && layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
+                layout.rankIcons === 'picture picture trophy picture trophy' && tapped === rankingsOf[1][2].title && tappedAway === '' && layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
         } catch (e) {
             report.eventLandingPhone = { crashed: String(e.message).slice(0, 300) };
             check('phone: event landing page', false, report.eventLandingPhone);

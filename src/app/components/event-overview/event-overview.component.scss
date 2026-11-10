@@ -266,7 +266,7 @@ a.standing-social:hover {
     text-overflow: ellipsis;
 }
 
-// A ranking is its picture (a trophy when it has none) and the rank, as on start.gg; its name is the tooltip
+// A ranking is its series' logo (or its own picture, or a trophy) and the rank, as on start.gg; its name is the tooltip
 .standing-rankings {
     display: inline-flex;
     gap: 8px;
@@ -298,11 +298,11 @@ a.standing-social:hover {
     }
 }
 
-// start.gg's ranking pictures come in any shape (SSBMRank's is 1920x1080), so the middle is cut to a square
+// Square and unrounded like start.gg's, which are 12 px. A ranking's own picture can be any shape
+// (SSBMRank's are 1920x1080), so its middle is cut to a square.
 .standing-ranking-image {
     width: 16px;
     height: 16px;
-    border-radius: 3px;
     object-fit: cover;
 }
 
