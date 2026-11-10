@@ -79,8 +79,15 @@
                         </span>
                         }
                         }
-                        @for (ranking of standing.rankings; track $index) {
-                        <span class="standing-ranking" [title]="'#' + ranking.rank + ' ' + ranking.title">#{{ ranking.rank }} {{ ranking.title }}</span>
+                        @if (standing.rankings.length) {
+                        <span class="standing-rankings" [class.divided]="standing.socials.length">
+                            @for (ranking of standing.rankings; track $index) {
+                            <button type="button" class="standing-ranking" #tip="matTooltip" [matTooltip]="ranking.title" (click)="tip.show()">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="rankIcon" /></svg>
+                                {{ ranking.rank }}
+                            </button>
+                            }
+                        </span>
                         }
                     </div>
                     }
@@ -109,16 +116,6 @@
                     }
                     <mat-icon class="phase-arrow">chevron_right</mat-icon>
                 </a>
-                @if (phase.pools.length > 1) {
-                <div class="pool-list">
-                    @for (pool of phase.pools; track pool.id) {
-                    <a class="pool-chip" [routerLink]="phaseLink(phase, pool)">{{ pool.displayIdentifier }}</a>
-                    }
-                    @if (phase.groupCount > phase.pools.length) {
-                    <span class="phase-details">+{{ phase.groupCount - phase.pools.length }} more</span>
-                    }
-                </div>
-                }
             </div>
             }
         </div>

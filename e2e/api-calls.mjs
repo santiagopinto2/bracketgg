@@ -105,7 +105,7 @@ const rankingsOf = {
     6: null,
 };
 const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg|'], ['Discord: bravo#1234|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
-const rankingsShown = [['#2 TestRank: 2025', '#1 Lucky Rank: Active Season', '#2 Test New Markdown: A Rather Long Regional Ranking Name 2025'], ['#23 TestRank: 2025'], [], [], [], [], [], []];
+const rankingsShown = [['2', '1', '2'], ['23'], [], [], [], [], [], []];
 const standingNames = ['SPN | Alpha', 'Bravo', 'Charlie', 'Delta', 'Player 5', 'Player 6', 'Player 7', 'Player 8 - Jr'];
 // The top 8 as start.gg would answer the query: sets, socials and rankings only when they are asked for
 const standingsPage = query => ({
@@ -127,8 +127,6 @@ const overview = query => ({
     phases: Object.entries(phaseNames).map(([id, name]) => {
         const groupIds = poolsOf[id] ?? [phaseGroupOf[id]];
         const phase = { id: Number(id), name, bracketType: bracketTypeOf[id] ?? 'DOUBLE_ELIMINATION', numSeeds: entrants.length * groupIds.length, groupCount: groupIds.length, state: phaseStateOf[id] ?? 'COMPLETED' };
-        // Out of order, as start.gg returns them
-        if (query.includes('phaseGroups')) phase.phaseGroups = { nodes: groupIds.map((id, i) => ({ id, displayIdentifier: String.fromCharCode(65 + i) })).reverse() };
         return phase;
     }),
     standings: standingsPage(query),
@@ -272,6 +270,7 @@ const standingsShown = page => page.evaluate(() => [...document.querySelectorAll
         lostTo: text('.standing-lost-to'),
         socials: [...card.querySelectorAll('.standing-social')].map(el => `${el.getAttribute('title')}|${el.getAttribute('href') ?? ''}`),
         rankings: [...card.querySelectorAll('.standing-ranking')].map(el => el.textContent.trim()),
+        rankIconsDrawn: [...card.querySelectorAll('.standing-ranking svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
         extrasRow: !!card.querySelector('.standing-extras'),
         discordText: text('.standing-social-name'),
         iconsDrawn: [...card.querySelectorAll('.standing-social svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
@@ -748,7 +747,7 @@ try {
                 detailsAsked: overviewQueries(log).map(detailsAsked),
                 phases: await texts(page, '.phase-name'),
                 phaseDetails: (await texts(page, '.phase-details'))[4],
-                pools: await texts(page, '.pool-chip'),
+                poolLinks: await page.locator('.pool-chip, .pool-list, .phase-card a[href*="/1005/"]').count(),
                 prizing: (await texts(page, '.payout')).join(', '),
             };
             report.eventLanding = { landing };
@@ -757,17 +756,41 @@ try {
                 && landing.header.includes('Completed') && landing.header.includes('60 entrants') && landing.header.includes('Test Game')
                 && JSON.stringify(landing.standings.map(s => s.name)) === JSON.stringify(['1st SPN Alpha', '2nd Bravo', '3rd Charlie', '4th Delta', '5th Player 5', '5th Player 6', '7th Player 7', '7th Player 8 - Jr'])
                 && JSON.stringify(landing.phases) === JSON.stringify(Object.values(phaseNames))
-                && landing.phaseDetails === 'Double Elimination · 12 entrants · 3 pools' && landing.pools.join('') === 'ABC' && landing.prizing.includes('60%'), landing);
+                && landing.phaseDetails === 'Double Elimination · 12 entrants · 3 pools' && landing.poolLinks === 0 && landing.prizing.includes('60%'), landing);
             check('event landing: each of the top 8 shows who they lost to, oldest loss first, and the winner shows none',
                 JSON.stringify(landing.standings.map(s => s.lostTo)) === JSON.stringify(lostToShown.map(names => names && 'Lost to: ' + names)), landing.standings.map(s => s.lostTo));
-            check('event landing: socials are icon links (Discord a username), rankings are tags, and empty ones are hidden',
+            check('event landing: socials are icon links (Discord a username), rankings are a trophy and the rank, and empty ones are hidden',
                 JSON.stringify(landing.standings.map(s => s.socials)) === JSON.stringify(socialsShown) && JSON.stringify(landing.standings.map(s => s.rankings)) === JSON.stringify(rankingsShown)
-                && landing.standings.filter(s => s.extrasRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn, landing.standings);
-            check('event landing: the one overview request asks for the sets, socials and rankings, and there is no Show more',
-                JSON.stringify(landing.detailsAsked) === JSON.stringify(['pools sets socials rankings']) && landing.showMore === 0, { detailsAsked: landing.detailsAsked, showMore: landing.showMore });
+                && landing.standings.filter(s => s.extrasRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
+            // A ranking's name shows on hover, and on keyboard focus
+            const rankingButtons = page.locator('.standing-ranking');
+            const tooltip = async () => (await texts(page, '.mat-mdc-tooltip')).join('|');
+            const tooltips = { hover: [] };
+            for (const i of [0, 1, 2, 3]) {
+                await rankingButtons.nth(i).hover();
+                await page.waitForTimeout(400);
+                tooltips.hover.push(await tooltip());
+            }
+            await page.mouse.move(5, 5);
+            await page.waitForTimeout(400);
+            tooltips.afterLeaving = await tooltip();
+            await page.locator('a.standing-social').nth(1).focus();
+            await page.keyboard.press('Tab');
+            await page.waitForTimeout(400);
+            tooltips.focus = await tooltip();
+            const card = await page.locator('.standing').first().boundingBox();
+            await page.screenshot({ path: 'e2e-out/ranking-tooltip-desktop.png', clip: { x: card.x - 10, y: card.y - 10, width: card.width + 20, height: card.height + 70 } }).catch(() => { });
+            await page.keyboard.press('Escape');
+            await page.evaluate(() => document.activeElement?.blur());
+            report.eventLanding.rankingTooltips = tooltips;
+            check('event landing: a ranking shows its full name in a tooltip on hover and on keyboard focus',
+                JSON.stringify(tooltips.hover) === JSON.stringify([...rankingsOf[1], ...rankingsOf[2]].map(r => r.title)) && tooltips.afterLeaving === '' && tooltips.focus === 'TestRank: 2025', tooltips);
+            check('event landing: the one overview request asks for the sets, socials and rankings but no pools, and there is no Show more',
+                JSON.stringify(landing.detailsAsked) === JSON.stringify(['sets socials rankings']) && landing.showMore === 0, { detailsAsked: landing.detailsAsked, showMore: landing.showMore });
             await page.waitForTimeout(1500); // the "loaded" notice goes away
             await page.screenshot({ path: 'e2e-out/event-landing-desktop.png' }).catch(() => { });
             await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-desktop.png' }).catch(() => { });
+            await page.locator('.phase-list').screenshot({ path: 'e2e-out/phases-desktop.png' }).catch(() => { });
             await page.emulateMedia({ colorScheme: 'light' });
             await page.reload();
             await quiet();
@@ -826,10 +849,8 @@ try {
                 && menu.url === eventPath + '/1006' && menu.phase === 'Single Elim' && menu.rounds.join() === 'Semi-Final,Final' && menu.arrows === 2
                 && !menu.requests.tournament && !menu.requests.entrants, menu);
 
-            // A pool chip opens its phase scrolled down to that pool
-            await page.goto(appUrl + landingPath);
-            await quiet();
-            await page.locator('.pool-chip', { hasText: 'C' }).click();
+            // A pool's own URL still opens its phase scrolled down to that pool
+            await page.goto(appUrl + eventPath + '/1005/2007');
             await quiet();
             await page.waitForTimeout(500);
             const pool = await page.evaluate(() => {
@@ -839,7 +860,7 @@ try {
             });
             pool.url = new URL(page.url()).pathname;
             report.eventLanding.pool = pool;
-            check('event landing: a pool opens its phase, scrolled to that pool', pool.url === eventPath + '/1005/2007' && pool.scrollTop > 0 && pool.top !== null && pool.top >= 0 && pool.top < pool.viewHeight - 100, pool);
+            check('bracket URLs: a pool URL opens its phase, scrolled to that pool', pool.url === eventPath + '/1005/2007' && pool.scrollTop > 0 && pool.top !== null && pool.top >= 0 && pool.top < pool.viewHeight - 100, pool);
 
             // /brackets with no phase, and start.gg's ?filter= form, still open a bracket
             await page.goto(appUrl + eventPath);
@@ -901,6 +922,16 @@ try {
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'e2e-out/event-landing-phone.png' }).catch(() => { });
             await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-phone.png' }).catch(() => { });
+            await page.locator('.phase-list').screenshot({ path: 'e2e-out/phases-phone.png' }).catch(() => { });
+            // A tap on a ranking shows its name, and a tap elsewhere puts it away
+            const tooltip = async () => (await page.locator('.mat-mdc-tooltip').allInnerTexts()).join('|').trim();
+            await page.locator('.standing-ranking').nth(2).tap();
+            await page.waitForTimeout(500);
+            const tapped = await tooltip();
+            await page.screenshot({ path: 'e2e-out/ranking-tooltip-phone.png' }).catch(() => { });
+            await page.locator('.section-heading').first().tap();
+            await page.waitForTimeout(500);
+            const tappedAway = await tooltip();
             await page.setViewportSize({ width: size.width, height: 2600 });
             await page.waitForTimeout(300);
             await page.screenshot({ path: 'e2e-out/event-landing-phone-full.png' }).catch(() => { });
@@ -912,9 +943,9 @@ try {
             await page.waitForTimeout(500);
             const menuItems = await page.locator('.phase-menu-item').count();
             await page.screenshot({ path: 'e2e-out/phase-menu-phone.png' }).catch(() => { });
-            report.eventLandingPhone = { ...layout, opened, menuItems };
-            check('phone: the landing page is one column that fits the screen, a phase opens on tap, and the phase menu opens',
-                layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
+            report.eventLandingPhone = { ...layout, tapped, tappedAway, opened, menuItems };
+            check('phone: the landing page is one column that fits the screen, a tap on a ranking shows its name, a phase opens on tap, and the phase menu opens',
+                tapped === rankingsOf[1][2].title && tappedAway === '' && layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
         } catch (e) {
             report.eventLandingPhone = { crashed: String(e.message).slice(0, 300) };
             check('phone: event landing page', false, report.eventLandingPhone);
@@ -952,10 +983,10 @@ try {
     }
 
     // 19. start.gg refuses the overview for being too big: the page asks again with less each time
-    //     (socials and rankings go first, then pools, then the sets behind "Lost to").
+    //     (socials and rankings go first, then the sets behind "Lost to").
     {
         report.eventLandingTooComplex = {};
-        for (const refusals of [1, 3]) {
+        for (const refusals of [1, 2]) {
             let asked = 0;
             const { context, page, log, quiet } = await openPage(browser, q => kindOf(q) === 'overview' && ++asked <= refusals ? tooComplex : null, { colorScheme: 'dark' });
             try {
@@ -964,12 +995,12 @@ try {
                 const shown = await standingsShown(page);
                 const result = report.eventLandingTooComplex[`refused${refusals}`] = {
                     requests: count(log), asked: overviewQueries(log).map(detailsAsked), standings: shown.length, lostTo: shown.filter(s => s.lostTo).length,
-                    extras: shown.filter(s => s.extrasRow).length, pools: await page.locator('.pool-chip').count(), phases: await page.locator('.phase-card').count(), snack: await snackText(page),
+                    extras: shown.filter(s => s.extrasRow).length, phases: await page.locator('.phase-card').count(), snack: await snackText(page),
                 };
                 if (refusals === 1) check('event landing: a refused overview is asked again without socials and rankings, and still shows who each lost to',
-                    JSON.stringify(result.asked) === JSON.stringify(['pools sets socials rankings', 'pools sets']) && result.standings === 8 && result.lostTo === 7 && result.extras === 0 && result.pools === 3 && result.phases === 8, result);
-                else check('event landing: an overview refused three times ends as the plain top 8 and phases',
-                    JSON.stringify(result.asked) === JSON.stringify(['pools sets socials rankings', 'pools sets', 'sets', '']) && result.standings === 8 && result.lostTo === 0 && result.extras === 0 && result.pools === 0 && result.phases === 8, result);
+                    JSON.stringify(result.asked) === JSON.stringify(['sets socials rankings', 'sets']) && result.standings === 8 && result.lostTo === 7 && result.extras === 0 && result.phases === 8, result);
+                else check('event landing: an overview refused twice ends as the plain top 8 and phases',
+                    JSON.stringify(result.asked) === JSON.stringify(['sets socials rankings', 'sets', '']) && result.standings === 8 && result.lostTo === 0 && result.extras === 0 && result.phases === 8, result);
             } catch (e) {
                 check(`event landing: overview refused ${refusals} times`, false, String(e.message).slice(0, 300));
             }
@@ -1007,7 +1038,7 @@ try {
             await page.waitForTimeout(1500);
             await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-teams.png' }).catch(() => { });
             check('event landing: a teams event shows who each team lost to, and asks for no socials or rankings',
-                report.eventLandingTeams.requests.total === 2 && JSON.stringify(report.eventLandingTeams.asked) === JSON.stringify(['pools sets'])
+                report.eventLandingTeams.requests.total === 2 && JSON.stringify(report.eventLandingTeams.asked) === JSON.stringify(['sets'])
                 && report.eventLandingTeams.names[0] === '1st Alpha / Partner a' && report.eventLandingTeams.extras === 0
                 && JSON.stringify(report.eventLandingTeams.lostTo.slice(0, 5)) === JSON.stringify(['', 'Lost to: Alpha / Partner a ×2', 'Lost to: XYZ | Player 30 / Partner 0, Bravo / Partner o', 'Lost to: DQ, Charlie / Partner e', 'Lost to: A - B | Player 31 / Partner 1, Charlie / Partner e']), report.eventLandingTeams);
         } catch (e) {
