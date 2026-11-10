@@ -266,7 +266,7 @@ a.standing-social:hover {
     text-overflow: ellipsis;
 }
 
-// A ranking is a trophy and the rank, as on start.gg; its name is the tooltip
+// A ranking is its series' logo (or a trophy) and the rank, as on start.gg; its name is the tooltip
 .standing-rankings {
     display: inline-flex;
     gap: 8px;
@@ -296,6 +296,12 @@ a.standing-social:hover {
         height: 13px;
         fill: #ffc94d;
     }
+}
+
+// Square and unrounded like start.gg's, which are 12 px
+.standing-ranking-image {
+    width: 16px;
+    height: 16px;
 }
 
 .phase-list {
