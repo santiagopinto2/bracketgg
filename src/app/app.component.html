@@ -1,5 +1,5 @@
 <mat-toolbar color="primary" class="mat-elevation-z8">
-    @if (!isLarge) { <button mat-icon-button (click)="sidenav.toggle()">
+    @if (!isLarge) { <button mat-icon-button aria-label="Menu" (click)="sidenav.toggle()">
         <mat-icon>menu</mat-icon>
         </button>
         }
@@ -8,18 +8,17 @@
 
         <span class="header-spacer"></span>
 
+        <!-- Logging in is optional. On a phone these are in the menu. -->
         @if (isLarge) {
-        <button mat-icon-button style="margin-right: 10px" (click)="goToDiscord()" matTooltip="Discord Server">
-            <mat-icon>discord</mat-icon>
-        </button>
-
         @if (authService.isAuthenticated()) {
-        <button mat-icon-button style="margin-right: 10px" (click)="logout()" matTooltip="Logout">
+        <button type="button" class="header-auth header-logout" (click)="logout()">
             <mat-icon>logout</mat-icon>
+            <span>Log out</span>
         </button>
         } @else {
-        <button mat-icon-button style="margin-right: 10px" (click)="login()" matTooltip="Login With Start.gg">
+        <button type="button" class="header-auth header-login" (click)="login()">
             <mat-icon>login</mat-icon>
+            <span>Log in with start.gg</span>
         </button>
         }
         }
@@ -31,7 +30,9 @@
 </mat-toolbar>
 
 <mat-sidenav-container class="sidenav-container" autosize>
-    <mat-sidenav #sidenav mode="side" [(opened)]="sidenavOpen">
+    <!-- On a phone the menu lies over the page, with a backdrop that closes it. autoFocus="dialog" keeps
+         the search box from taking focus, which would open the phone keyboard. -->
+    <mat-sidenav #sidenav [mode]="isLarge ? 'side' : 'over'" autoFocus="dialog" [(opened)]="sidenavOpen">
         <div class="d-flex flex-column justify-content-between sidenav-div">
             <div style="width: 250px">
                 <div style="margin-top: 20px"><app-search (submitted)="closeSidenav()"></app-search></div>
@@ -57,10 +58,31 @@
                     }
                 </mat-nav-list>
             </div>
+
+            @if (!isLarge) {
+            <mat-nav-list class="sidenav-account">
+                @if (authService.isAuthenticated()) {
+                <button mat-list-item type="button" class="menu-logout" (click)="logout(); closeSidenav()">
+                    <span class="sidenav-account-item"><mat-icon>logout</mat-icon>Log out</span>
+                </button>
+                } @else {
+                <button mat-list-item type="button" class="menu-login" (click)="login()">
+                    <span class="sidenav-account-item"><mat-icon>login</mat-icon>Log in with start.gg</span>
+                </button>
+                }
+            </mat-nav-list>
+            }
         </div>
     </mat-sidenav>
 
     <mat-sidenav-content>
         <router-outlet></router-outlet>
+
+        <!-- start.gg's API terms ask for this credit. It sits at the end of each page, or at the bottom of the window on a short one. -->
+        <footer class="site-footer">
+            <span>Data from <a href="https://www.start.gg" target="_blank" rel="noopener">start.gg</a></span>
+            <span aria-hidden="true">·</span>
+            <a routerLink="/privacy">Privacy</a>
+        </footer>
     </mat-sidenav-content>
 </mat-sidenav-container>

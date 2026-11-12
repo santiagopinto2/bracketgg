@@ -13,7 +13,6 @@ import { MatNavList, MatListItem } from '@angular/material/list';
 import { LoadingService } from './services/loading.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from './services/auth.service';
-import { MatTooltip } from '@angular/material/tooltip';
 import { isBracketPath } from './app-routing.module';
 
 @Component({
@@ -21,7 +20,7 @@ import { isBracketPath } from './app-routing.module';
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet, MatTooltip]
+    imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet]
 })
 export class AppComponent implements AfterViewInit {
 
@@ -156,10 +155,6 @@ export class AppComponent implements AfterViewInit {
 
     goToAboutPage() {
         this.router.navigate(['/']);
-    }
-
-    goToDiscord() {
-
     }
 
     toggleDarkMode() {
