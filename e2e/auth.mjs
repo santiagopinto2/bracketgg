@@ -331,7 +331,7 @@ try {
         const mark = fake.gql.length;
         const answers = await Promise.all(Array.from({ length: SITE_PER_MINUTE + 10 }, (_, i) =>
             api('/api/gql', { method: 'POST', body: { query: Q.tournamentQuery, variables: { slug: `gate-${i}` } } })));
-        const siteCalls = fake.gql.filter(r => r.authorization === `Bearer ${SITE_TOKEN}`).length;
+        const siteCalls = gqlFrom(mark).filter(r => r.authorization === `Bearer ${SITE_TOKEN}`).length;
         const busy = answers.filter(a => a.status === 503);
         check(`the site token is held to ${SITE_PER_MINUTE} a minute here, with a clear busy answer past that`,
             siteCalls <= SITE_PER_MINUTE && busy.length >= 10 && busy.every(a => a.json?.errors?.[0]?.extensions?.code === 'SITE_BUSY' && Number(a.headers.get('retry-after')) > 0),
