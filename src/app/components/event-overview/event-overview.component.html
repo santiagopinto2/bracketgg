@@ -7,7 +7,7 @@
 
     <div class="event-header">
         @if (gameImage()) {
-        <img class="game-img" [src]="gameImage()" [alt]="event().videogame?.name" />
+        <img class="game-img" [src]="gameImage()" [alt]="$safeNavigationMigration(event().videogame?.name)" />
         } @else {
         <div class="game-img game-img-placeholder"><mat-icon>videogame_asset</mat-icon></div>
         }

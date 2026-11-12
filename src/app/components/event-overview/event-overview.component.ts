@@ -1,5 +1,5 @@
 import { rankingSeriesLogo } from './ranking-series';
-import { Component, computed, effect, signal } from '@angular/core';
+import { Component, computed, effect, signal, ChangeDetectionStrategy } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,6 +20,7 @@ const socials = [
     selector: 'app-event-overview',
     imports: [MatIconModule, MatTooltipModule, RouterLink, NgClass, NgStyle],
     templateUrl: './event-overview.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
     styleUrl: './event-overview.component.scss',
 })
 export class EventOverviewComponent {

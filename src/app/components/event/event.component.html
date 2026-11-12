@@ -137,7 +137,7 @@
                                                 <img [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
                                                 }
                                                 @if (getEntrantImage(slot.entrant) === '') {
-                                                <div class="entrant-set-image-default" [ngStyle]="{'background-color': slot.entrant?.backgroundColor}">
+                                                <div class="entrant-set-image-default" [ngStyle]="{'background-color': $safeNavigationMigration(slot.entrant?.backgroundColor)}">
                                                     {{slot.entrant?.participants[0].gamerTag[0].toUpperCase()}}
                                                 </div>
                                                 }

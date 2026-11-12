@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -11,6 +11,7 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule, MatProgressSpinnerModule, MatIconModule, MatButtonModule],
   templateUrl: './callback.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./callback.component.scss']
 })
 export class CallbackComponent implements OnInit {

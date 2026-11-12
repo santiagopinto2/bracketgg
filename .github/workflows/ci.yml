@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    # labeled: adding the visual-change label reruns the checks
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
 
@@ -22,6 +24,8 @@ jobs:
           BASE_REF: origin/${{ github.base_ref || 'main' }}
           # Santi's start.gg test token, for one live check of the shared cache (absent on forks)
           STARTGG_TOKEN: ${{ secrets.STARTGG_TOKEN }}
+          # A PR labeled visual-change may look different from the base branch (e2e/visual-diff.mjs)
+          VISUAL_CHANGES_OK: ${{ contains(github.event.pull_request.labels.*.name, 'visual-change') }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ViewChild, effect } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ViewChild, effect, ChangeDetectionStrategy } from '@angular/core';
 import { ColorSchemeService } from './services/color-scheme.service';
 import { StartggError, StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -20,6 +20,7 @@ import { isBracketPath } from './app-routing.module';
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet, MatTooltip]
 })
 export class AppComponent implements AfterViewInit {

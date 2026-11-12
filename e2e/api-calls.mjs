@@ -2,6 +2,7 @@
 // Counts the requests a bracket view and an event landing page cost, and checks rate-limit and error handling.
 //
 //   node e2e/api-calls.mjs <app url> [--report-only]
+//   node e2e/api-calls.mjs <app url> --screenshots <dir>   (only the screenshots e2e/visual-diff.mjs compares)
 //
 // The app must be served (STATIC_DIR=dist/bracketgg/browser node proxy-server.js). Needs the
 // playwright package and Chromium (npm install --no-save playwright && npx playwright install chromium).
@@ -318,6 +319,14 @@ const rankImagesSettled = page => page.waitForFunction(() => [...document.queryS
 const detailsAsked = query => [['pools', 'phaseGroups('], ['sets', 'paginatedSets('], ['socials', 'authorizations('], ['rankings', 'rankings(']].filter(([, text]) => query.includes(text)).map(([name]) => name).join(' ');
 const overviewQueries = log => log.filter(r => r.kind === 'overview').map(r => r.query);
 const tooComplex = { body: { errors: [{ message: 'Your query complexity is too high. A maximum of 1000 objects may be returned by each request. (actual: 1400)' }] } };
+
+// --screenshots <dir>: only take e2e/screenshots.mjs's screenshots, for e2e/visual-diff.mjs
+const screenshotsAt = process.argv.indexOf('--screenshots');
+if (screenshotsAt > 0) {
+    const { takeScreenshots } = await import('./screenshots.mjs');
+    await takeScreenshots({ appUrl, eventPath, openPage, outDir: process.argv[screenshotsAt + 1] });
+    process.exit(0);
+}
 
 const report = { app: appUrl, checks: [] };
 const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail });
