@@ -107,7 +107,7 @@ const rankingsOf = {
     5: [{ rank: 7, title: 'Plain Rank: 2026' }],
     6: null,
 };
-const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg|'], ['Discord: bravo#1234|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
+const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg, copy|'], ['Discord: bravo#1234, copy|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
 const rankingsShown = [['2', '1', '2'], ['23'], [], [], ['7'], [], [], []];
 // Each ranking's logo as "alt text, drawn size, file", or the trophy
 const rankIconsShown = [['trophy', 'Lucky Rank: Active Season 16x16 lucky-rank.webp', 'trophy'], ['SSBMRANK: 2025 16x16 ssbmrank.webp'], [], [], ['trophy'], [], [], []];
@@ -273,7 +273,7 @@ const standingsShown = page => page.evaluate(() => [...document.querySelectorAll
     return {
         name: text('.standing-placement') + ' ' + text('.standing-name'),
         lostTo: text('.standing-lost-to'),
-        socials: [...card.querySelectorAll('.standing-social')].map(el => `${el.getAttribute('title')}|${el.getAttribute('href') ?? ''}`),
+        socials: [...card.querySelectorAll('.standing-social')].map(el => `${el.getAttribute('title') ?? el.getAttribute('aria-label')}|${el.getAttribute('href') ?? ''}`),
         rankings: [...card.querySelectorAll('.standing-ranking')].map(el => el.textContent.trim()),
         rankIconsDrawn: [...card.querySelectorAll('.standing-ranking svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
         rankIcons: [...card.querySelectorAll('.standing-ranking')].map(el => {
@@ -285,7 +285,7 @@ const standingsShown = page => page.evaluate(() => [...document.querySelectorAll
         socialsRow: !!card.querySelector('.standing-socials'),
         rankingsRow: !!card.querySelector('.standing-rankings'),
         titles: [...card.querySelectorAll('.standing-name, .standing-lost-to')].map(el => el.getAttribute('title')),
-        discordText: text('.standing-social-name'),
+        discordText: [...card.querySelectorAll('button.standing-social')].map(el => el.innerText.trim() + el.getBoundingClientRect().width).join(),
         iconsDrawn: [...card.querySelectorAll('.standing-social svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
     };
 }));
@@ -819,9 +819,9 @@ try {
                 JSON.stringify(landing.standings.map(s => s.lostTo)) === JSON.stringify(lostToShown.map(names => names && 'Lost to: ' + names)), landing.standings.map(s => s.lostTo));
             check('event landing: a ranking of a built-in series shows its logo at 16 px with the ranking\'s name as alt text, and any other shows the trophy',
                 JSON.stringify(landing.standings.map(s => s.rankIcons)) === JSON.stringify(rankIconsShown), landing.standings.map(s => s.rankIcons));
-            check('event landing: socials are icon links (Discord a username), rankings are a logo or a trophy and the rank, and empty ones are hidden',
+            check('event landing: socials are icons alone (X and Twitch links, Discord a 15 px button), rankings are a logo or a trophy and the rank, and empty ones are hidden',
                 JSON.stringify(landing.standings.map(s => s.socials)) === JSON.stringify(socialsShown) && JSON.stringify(landing.standings.map(s => s.rankings)) === JSON.stringify(rankingsShown)
-                && landing.standings.filter(s => s.socialsRow).length === 3 && landing.standings.filter(s => s.rankingsRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
+                && landing.standings.filter(s => s.socialsRow).length === 3 && landing.standings.filter(s => s.rankingsRow).length === 3 && landing.standings[0].discordText === '15' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
             const cards = await standingsLayout(page);
             report.eventLanding.cards = cards;
             // 1st | 2nd, 3rd | 4th, 5th | 5th, 7th | 7th
@@ -850,12 +850,33 @@ try {
             await page.locator('a.standing-social').nth(1).focus();
             await page.keyboard.press('Tab');
             await page.waitForTimeout(400);
+            tooltips.discordFocus = await tooltip();
+            await page.keyboard.press('Tab');
+            await page.waitForTimeout(400);
             tooltips.focus = await tooltip();
             const card = await page.locator('.standing').first().boundingBox();
             await page.screenshot({ path: 'e2e-out/ranking-tooltip-desktop.png', clip: { x: card.x - 10, y: card.y - 10, width: card.width + 20, height: card.height + 70 } }).catch(() => { });
             await page.keyboard.press('Escape');
             await page.evaluate(() => document.activeElement?.blur());
+            // The Discord icon shows the username on hover, and a click copies it and says so for a moment
+            await page.evaluate(() => { window.copiedTexts = []; navigator.clipboard.writeText = async text => { window.copiedTexts.push(text); }; });
+            const discord = page.locator('button.standing-social').first();
+            await discord.hover();
+            await page.waitForTimeout(400);
+            tooltips.discordHover = await tooltip();
+            await discord.click();
+            await page.waitForTimeout(400);
+            tooltips.discordClicked = await tooltip();
+            await page.screenshot({ path: 'e2e-out/discord-copied-desktop.png', clip: { x: card.x - 10, y: card.y - 10, width: card.width + 20, height: card.height + 70 } }).catch(() => { });
+            await page.waitForTimeout(2200);
+            tooltips.discordLater = await tooltip();
+            tooltips.copiedTexts = await page.evaluate(() => window.copiedTexts);
+            await page.mouse.move(5, 5);
+            await page.waitForTimeout(400);
             report.eventLanding.rankingTooltips = tooltips;
+            check('event landing: the Discord icon shows the username in a tooltip on hover and on keyboard focus, and a click copies it and says "Copied" for 2 seconds',
+                tooltips.discordHover === 'Discord: alpha.gg' && tooltips.discordFocus === 'Discord: alpha.gg' && tooltips.discordClicked === 'Copied alpha.gg'
+                && tooltips.discordLater === 'Discord: alpha.gg' && JSON.stringify(tooltips.copiedTexts) === '["alpha.gg"]', tooltips);
             check('event landing: a ranking shows its full name in a tooltip on hover and on keyboard focus',
                 JSON.stringify(tooltips.hover) === JSON.stringify([...rankingsOf[1], ...rankingsOf[2]].map(r => r.title)) && tooltips.afterLeaving === '' && tooltips.focus === 'TestRank: 2025', tooltips);
             check('event landing: the one overview request asks for the sets, socials and rankings but no pools, and there is no Show more',
@@ -1013,6 +1034,15 @@ try {
             await page.locator('.section-heading').first().tap();
             await page.waitForTimeout(500);
             const tappedAway = await tooltip();
+            // A tap on the Discord icon copies the username and says which
+            await page.evaluate(() => { window.copiedTexts = []; navigator.clipboard.writeText = async text => { window.copiedTexts.push(text); }; });
+            await page.locator('button.standing-social').first().tap();
+            await page.waitForTimeout(500);
+            const discordTapped = [await tooltip(), ...await page.evaluate(() => window.copiedTexts)];
+            await page.screenshot({ path: 'e2e-out/discord-copied-phone.png' }).catch(() => { });
+            await page.locator('.section-heading').first().tap();
+            await page.waitForTimeout(500);
+            check('phone: a tap on the Discord icon copies the username and shows "Copied" with the name', JSON.stringify(discordTapped) === '["Copied alpha.gg","alpha.gg"]', discordTapped);
             await page.setViewportSize({ width: size.width, height: 2600 });
             await page.waitForTimeout(300);
             await page.screenshot({ path: 'e2e-out/event-landing-phone-full.png' }).catch(() => { });

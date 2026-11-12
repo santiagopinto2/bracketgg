@@ -8,7 +8,7 @@ import { StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { lostTo } from 'src/app/services/lost-to';
 
-// Each social's name, profile address (Discord has none) and icon, a 24x24 path, in the order they show
+// Each social's name, profile address (Discord has none: its icon copies the username) and icon, a 24x24 path, in the order they show
 const socials = [
     { type: 'TWITTER', name: 'X', profile: 'https://x.com/', icon: 'M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z' },
     { type: 'TWITCH', name: 'Twitch', profile: 'https://twitch.tv/', icon: 'M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z' },
@@ -32,6 +32,9 @@ export class EventOverviewComponent {
     private colors = new Map<any, string>();
     // A trophy, drawn beside the number of a ranking whose series has no built-in logo (a 24x24 path)
     readonly rankIcon = 'M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z';
+
+    // The Discord account whose username was just copied: its tooltip says so for a moment
+    copied = signal<any>(null);
 
     formattedDate = computed(() => {
         const startAt = this.event()?.startAt;
@@ -109,6 +112,14 @@ export class EventOverviewComponent {
         standing.rankings = (participant?.player?.rankings ?? []).filter((ranking: any) => ranking?.rank && ranking.title)
             .map((ranking: any) => ({ ...ranking, image: rankingSeriesLogo(ranking.title) }));
         return standing;
+    }
+
+    // Discord has no profile page to link to, so its icon copies the username
+    copy(social: any) {
+        navigator.clipboard?.writeText(social.username).then(() => {
+            this.copied.set(social);
+            setTimeout(() => this.copied() === social && this.copied.set(null), 2000);
+        }, () => { });
     }
 
     // "TSM | Leffen" is the sponsor "TSM" and the tag "Leffen"

@@ -250,10 +250,11 @@
 .standing-social {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
     color: rgb(197, 197, 197);
-    font-size: 0.75rem;
+    cursor: pointer;
 
     svg {
         width: 15px;
@@ -263,14 +264,8 @@
     }
 }
 
-a.standing-social:hover {
+.standing-social:hover {
     color: #fff;
-}
-
-.standing-social-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 // A ranking is its series' logo (or a trophy) and the rank, as on start.gg; its name is the tooltip
@@ -397,7 +392,7 @@ a.standing-social:hover {
     }
 
     // Room for a thumb on the social links and the rankings
-    a.standing-social,
+    .standing-social,
     .standing-ranking {
         margin: -6px;
         padding: 6px;
