@@ -1169,6 +1169,147 @@ try {
         }
         await context.close();
     }
+
+    // Logging in is optional: a button in the header on desktop and in the menu on a phone, where the
+    // menu lies over the page. Every page ends with the credit to start.gg and a link to /privacy.
+    {
+        report.loginUi = {};
+        const menuButton = 'mat-toolbar button:has(mat-icon:text("menu"))';
+        const visibleText = async locator => (await locator.isVisible().catch(() => false)) ? (await locator.innerText()).replace(/\s+/g, ' ').trim() : null;
+        // The Material icon font is blocked here, so an icon's name is in the text: "login Log in with start.gg"
+        const label = text => text?.replace(/^(login|logout)\s*/, '') ?? null;
+        for (const loggedIn of [false, true]) {
+            const state = loggedIn ? 'logged in' : 'logged out';
+            const want = loggedIn ? 'Log out' : 'Log in with start.gg';
+            const [mine, other] = loggedIn ? ['logout', 'login'] : ['login', 'logout'];
+            try {
+                const { context, page } = await openPage(browser, () => null, { viewport: { width: 1280, height: 900 } }, { loggedIn });
+                await page.goto(appUrl + '/');
+                await page.waitForTimeout(800);
+                const desktop = {
+                    button: label(await visibleText(page.locator(`mat-toolbar .header-${mine}`))),
+                    otherButton: await page.locator(`mat-toolbar .header-${other}`).count(),
+                    menuButton: await page.locator(menuButton).count(),
+                    inMenu: await page.locator('mat-sidenav .sidenav-account').count(),
+                    discord: await page.locator('mat-toolbar').getByText('discord', { exact: false }).count(),
+                    sidenavMode: await page.locator('mat-sidenav').evaluate(el => el.classList.contains('mat-drawer-side') ? 'side' : 'over'),
+                    contentLeft: await page.locator('mat-sidenav-content').evaluate(el => Math.round(el.getBoundingClientRect().left)),
+                };
+                report.loginUi[`desktop, ${state}`] = desktop;
+                check(`desktop, ${state}: the header has "${want}" and no Discord button, and the sidebar stays beside the page`,
+                    desktop.button === want && !desktop.otherButton && !desktop.menuButton && !desktop.inMenu && !desktop.discord && desktop.sidenavMode === 'side' && desktop.contentLeft >= 250 && desktop.contentLeft <= 252, desktop);
+                await context.close();
+            } catch (e) {
+                check(`desktop, ${state}: header`, false, String(e.message).slice(0, 300));
+            }
+
+            try {
+                const { context, page } = await openPage(browser, () => null, devices['Pixel 7'], { loggedIn });
+                await page.goto(appUrl + '/');
+                await page.waitForTimeout(800);
+                const inHeader = await page.locator('mat-toolbar .header-auth').count();
+                await page.locator(menuButton).click();
+                await page.waitForTimeout(700);
+                const phone = await page.evaluate(() => {
+                    const box = el => el?.getBoundingClientRect();
+                    const sidenav = document.querySelector('mat-sidenav');
+                    const account = box(document.querySelector('mat-sidenav .sidenav-account button'));
+                    return {
+                        opened: sidenav.classList.contains('mat-drawer-opened'),
+                        mode: sidenav.classList.contains('mat-drawer-over') ? 'over' : 'side',
+                        backdrop: !!document.querySelector('.mat-drawer-backdrop.mat-drawer-shown'),
+                        contentLeft: Math.round(box(document.querySelector('mat-sidenav-content')).left),
+                        contentWidth: Math.round(box(document.querySelector('mat-sidenav-content')).width),
+                        windowWidth: innerWidth,
+                        pageWidth: document.documentElement.scrollWidth,
+                        // The button is on screen, inside the menu
+                        buttonOnScreen: !!account && account.top >= 0 && account.bottom <= innerHeight && account.left >= 0 && account.right <= box(sidenav).right + 1,
+                        // The search box didn't take focus, which would open the keyboard
+                        focusedInput: document.activeElement?.tagName === 'INPUT',
+                    };
+                });
+                phone.inHeader = inHeader;
+                phone.button = label(await visibleText(page.locator(`mat-sidenav .menu-${mine}`)));
+                phone.otherButton = await page.locator(`mat-sidenav .menu-${other}`).count();
+                // A tap on the page beside the menu closes it
+                await page.mouse.click(phone.windowWidth - 30, 400);
+                await page.waitForTimeout(700);
+                phone.closedByBackdrop = await page.locator('mat-sidenav.mat-drawer-opened').count() === 0;
+                report.loginUi[`phone, ${state}`] = phone;
+                check(`phone, ${state}: the menu has "${want}" and the header does not`, phone.button === want && !phone.otherButton && !phone.inHeader && phone.buttonOnScreen, phone);
+                check(`phone, ${state}: the menu lies over the page with a backdrop, does not push the page sideways or focus the search box, and a tap beside it closes it`,
+                    phone.opened && phone.mode === 'over' && phone.backdrop && phone.contentLeft === 0 && phone.contentWidth === phone.windowWidth && phone.pageWidth <= phone.windowWidth
+                    && !phone.focusedInput && phone.closedByBackdrop, phone);
+                await context.close();
+            } catch (e) {
+                check(`phone, ${state}: menu`, false, String(e.message).slice(0, 300));
+            }
+        }
+
+        // The footer, on each kind of page and both layouts
+        const pages = { home: '/', bracket: eventPath + '/1001', tournament: '/tournament/test-tourney', 'event landing': '/tournament/test-tourney/event/test-event', privacy: '/privacy' };
+        for (const [size, device] of [['desktop', { viewport: { width: 1280, height: 900 } }], ['phone', devices['Pixel 7']]]) {
+            const { context, page, quiet } = await openPage(browser, () => null, device);
+            for (const [name, path] of Object.entries(pages)) {
+                try {
+                    await page.goto(appUrl + path);
+                    await quiet(800);
+                    const footer = await page.evaluate(async () => {
+                        const content = document.querySelector('mat-sidenav-content');
+                        const el = content.querySelector('footer.site-footer');
+                        if (!el) return null;
+                        content.scrollTo({ top: content.scrollHeight, left: 0, behavior: 'instant' });
+                        await new Promise(r => setTimeout(r, 200));
+                        const box = el.getBoundingClientRect(), view = content.getBoundingClientRect();
+                        const last = [...content.children].at(-1);
+                        return {
+                            text: el.innerText.replace(/\s+/g, ' ').trim(),
+                            links: [...el.querySelectorAll('a')].map(a => `${a.innerText.trim()}|${a.getAttribute('href')}`),
+                            isLast: last === el,
+                            // Inside the visible part of the page once scrolled to the end, and flush with its bottom
+                            inView: box.left >= view.left - 1 && box.right <= view.left + content.clientWidth + 1 && box.top >= view.top,
+                            fromBottom: Math.round(view.top + content.clientHeight - box.bottom),
+                            height: Math.round(box.height),
+                            // Nothing wider than the window, and on pages other than a bracket nothing to scroll sideways
+                            pageWidth: document.documentElement.scrollWidth, windowWidth: innerWidth,
+                            contentOverflow: content.scrollWidth - content.clientWidth,
+                        };
+                    });
+                    report.loginUi[`footer, ${size}, ${name}`] = footer;
+                    check(`${size}, ${name}: the page ends with "Data from start.gg" and a Privacy link, inside the window, and nothing overflows sideways`,
+                        footer && footer.text === 'Data from start.gg · Privacy' && JSON.stringify(footer.links) === '["start.gg|https://www.start.gg","Privacy|/privacy"]'
+                        && footer.isLast && footer.inView && Math.abs(footer.fromBottom) <= 1 && footer.height <= 60 && footer.pageWidth <= footer.windowWidth
+                        && (name === 'bracket' || footer.contentOverflow <= 0), footer);
+                } catch (e) {
+                    check(`${size}, ${name}: footer`, false, String(e.message).slice(0, 300));
+                }
+            }
+
+            // The privacy page, reached from the footer's link
+            try {
+                await page.goto(appUrl + '/');
+                await page.locator('footer.site-footer a', { hasText: 'Privacy' }).click();
+                await page.waitForTimeout(600);
+                const privacy = await page.evaluate(() => {
+                    const article = document.querySelector('app-privacy');
+                    return {
+                        url: location.pathname,
+                        heading: article?.querySelector('h1')?.innerText,
+                        text: article?.innerText.replace(/\s+/g, ' ') ?? '',
+                        links: [...(article?.querySelectorAll('a') ?? [])].map(a => a.getAttribute('href')),
+                    };
+                });
+                const said = ['Last updated November 12, 2026', "You don't need an account", 'Logging in is optional', 'user.identity', 'session cookie', 'Logging out deletes', 'a few seconds to a few minutes', 'No analytics and no ads'].filter(t => !privacy.text.includes(t));
+                report.loginUi[`privacy, ${size}`] = { url: privacy.url, heading: privacy.heading, links: privacy.links, missing: said };
+                check(`${size}: the footer's Privacy link opens /privacy, which says what the site keeps and links to start.gg and the GitHub issues`,
+                    privacy.url === '/privacy' && privacy.heading === 'Privacy' && !said.length
+                    && JSON.stringify(privacy.links) === '["https://www.start.gg","https://github.com/santiagopinto2/bracketgg/issues"]', report.loginUi[`privacy, ${size}`]);
+            } catch (e) {
+                check(`${size}: privacy page`, false, String(e.message).slice(0, 300));
+            }
+            await context.close();
+        }
+    }
 } finally {
     await browser.close();
 }

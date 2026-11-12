@@ -16,13 +16,39 @@
     flex: 1 1 auto;
 }
 
-.header-option {
-    font-size: 20px;
-    margin-left: 10px;
-}
-
-.header-option:hover {
+// Log in / Log out in the header: white on the red toolbar in both color schemes
+.header-auth {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 18px;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.25px;
     cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: #fff;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+    }
 }
 
 .sidenav-container {
@@ -60,4 +86,61 @@
 .home-text {
     font-size: 18px;
     font-weight: 600;
+}
+
+// The page, then the footer. A short page leaves the footer at the bottom of the window.
+mat-sidenav-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidenav-account {
+    flex-shrink: 0;
+    width: 250px;
+    padding: 4px 0 8px;
+    border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+// A list item that is a button: without the browser's own button look
+.sidenav-account button {
+    width: 100%;
+    border: 0;
+    background: none;
+    text-align: start;
+    cursor: pointer;
+}
+
+.sidenav-account-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.site-footer {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: auto;
+    padding: 20px 16px 14px;
+    font-size: 12px;
+    line-height: 16px;
+    color: inherit;
+    opacity: 0.65;
+
+    a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    a:hover {
+        text-decoration-thickness: 2px;
+    }
+
+    a:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
 }
