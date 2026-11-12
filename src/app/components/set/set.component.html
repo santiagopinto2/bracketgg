@@ -13,7 +13,7 @@
             <img [ngClass]="getEntrantImageOrientation(set.slots[0].entrant)" [src]="getEntrantImage(set.slots[0].entrant)" />
             }
             @if (getEntrantImage(set.slots[0].entrant) === '') {
-            <div class="entrant-set-image-default" [ngStyle]="{'background-color': set.slots[0].entrant?.backgroundColor}">
+            <div class="entrant-set-image-default" [ngStyle]="{'background-color': $safeNavigationMigration(set.slots[0].entrant?.backgroundColor)}">
                 {{set.slots[0].entrant?.participants[0].gamerTag[0].toUpperCase()}}
             </div>
             }
@@ -32,7 +32,7 @@
             <img [ngClass]="getEntrantImageOrientation(set.slots[1].entrant)" [src]="getEntrantImage(set.slots[1].entrant)" />
             }
             @if (getEntrantImage(set.slots[1].entrant) === '') {
-            <div class="entrant-set-image-default" [ngStyle]="{'background-color': set.slots[1].entrant?.backgroundColor}">
+            <div class="entrant-set-image-default" [ngStyle]="{'background-color': $safeNavigationMigration(set.slots[1].entrant?.backgroundColor)}">
                 {{set.slots[1].entrant?.participants[0].gamerTag[0].toUpperCase()}}
             </div>
             }

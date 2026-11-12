@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgStyle, NgClass } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
     selector: 'app-set',
     templateUrl: './set.component.html',
     styleUrl: './set.component.scss',
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [CdkScrollable, FormsModule, ReactiveFormsModule, NgStyle, NgClass, MatButtonModule, MatCardModule, MatDialogModule, MatIconModule]
 })
 export class SetComponent implements OnInit {

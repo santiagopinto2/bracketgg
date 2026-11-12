@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal } from '@angular/core';
+import { AfterViewInit, Component, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
@@ -23,6 +23,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
     selector: 'app-event',
     templateUrl: './event.component.html',
     styleUrls: ['./event.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     imports: [MatIconButton, MatIconModule, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatMenuModule, RouterLink]
 })
 export class EventComponent implements OnInit, AfterViewInit, OnDestroy {

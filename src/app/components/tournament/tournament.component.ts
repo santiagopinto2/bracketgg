@@ -1,4 +1,4 @@
-import { Component, computed, effect, signal } from '@angular/core';
+import { Component, computed, effect, signal, ChangeDetectionStrategy } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import { TournamentDataService } from 'src/app/services/tournamentData.service';
     selector: 'app-tournament',
     imports: [MatIconModule, RouterLink, NgClass, NgStyle],
     templateUrl: './tournament.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
     styleUrl: './tournament.component.scss',
 })
 export class TournamentComponent {
