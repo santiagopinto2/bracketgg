@@ -1,112 +1,194 @@
-// Tests server/gql-cache.js against a fake start.gg, and once against the real one when STARTGG_TOKEN is set.
-// Usage: node e2e/gql-cache.mjs   Prints a JSON report and exits 1 if a check fails.
+// Tests server/gql-cache.js and server/site-gate.js against a fake start.gg, and the cache once against
+// the real one when STARTGG_TOKEN is set.
+// Usage: node e2e/gql-cache.mjs   Prints a JSON report and exits 1 if a check fails. Needs Node 22.18+.
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const express = require('express');
 const { createGqlCache } = require('../server/gql-cache.js');
+const { loadAllowlist } = require('../server/gql-allowlist.js');
+const { createSiteGate, SiteBusyError } = require('../server/site-gate.js');
+const Q = await import('../src/app/services/startgg-queries.ts');
 
 const report = { checks: [] };
 const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail });
 
-// A fake start.gg: answers per query text, counts calls, can be slow
+const allowed = await loadAllowlist();
+check('the allowlist holds every query the app can send', allowed.size === 2 + 8 + 1 + 2 + Q.MAX_SET_SCORES && allowed.has(Q.tournamentQuery) && allowed.has(Q.setScoresQuery(37)), allowed.size);
+
+// A fake start.gg: answers per query, counts calls and the tokens they came with, can be slow
 let upstreamCalls = 0;
+let tokensSeen = [];
 let reply = () => ({ status: 200, body: { data: { ok: true } } });
 const fakeFetch = async (url, init) => {
     upstreamCalls++;
+    tokensSeen.push(init.headers.authorization);
     await new Promise(r => setTimeout(r, 50));
-    const { status, body, headers = {} } = reply(JSON.parse(init.body).query, init.headers.authorization);
-    return new Response(JSON.stringify(body), { status, headers });
+    const { query, variables } = JSON.parse(init.body);
+    const { status, body, headers = {} } = reply(query, variables, init.headers.authorization);
+    return new Response(typeof body === 'string' ? body : JSON.stringify(body), { status, headers });
+};
+
+// Who each request runs as, from a test header: "user:<token>", "user401:<token>" (start.gg will say
+// 401 to it; the retry gets "<token>-new"), "site", or nothing (no one: neither a session nor a site token)
+const SITE = { kind: 'site', authorization: 'Bearer site-token' };
+const tokenFor = async req => {
+    const as = req.get('x-test-as') ?? '';
+    if (as === 'site') return SITE;
+    if (as.startsWith('user:')) return { kind: 'user', authorization: `Bearer ${as.slice(5)}`, onUnauthorized: async () => SITE };
+    if (as.startsWith('user401:')) return { kind: 'user', authorization: `Bearer ${as.slice(8)}`, onUnauthorized: async () => ({ kind: 'user', authorization: `Bearer ${as.slice(8)}-new` }) };
+    return null;
 };
 
 let clock = 1_000_000;
-const cache = createGqlCache({ fetchImpl: fakeFetch, now: () => clock, maxBytes: 4000 });
+const gate = createSiteGate({ perWindow: 5, windowMs: 60_000, maxWaitMs: 0 });
+const cache = createGqlCache({ allowed, tokenFor, siteGate: gate, fetchImpl: fakeFetch, now: () => clock, maxBytes: 4000 });
 const app = express();
 app.use(express.json());
 app.post('/api/gql', cache.handle);
 const server = await new Promise(r => { const s = app.listen(0, () => r(s)); });
 const base = `http://localhost:${server.address().port}/api/gql`;
 
-const post = async (query, token = 'Bearer viewer-a') => {
-    const res = await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: token } : {}) }, body: JSON.stringify({ query }) });
+const post = async (query, variables, as = 'user:viewer-a') => {
+    const res = await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', ...(as ? { 'x-test-as': as } : {}) }, body: JSON.stringify({ query, variables }) });
     return { status: res.status, cache: res.headers.get('x-cache'), retryAfter: res.headers.get('retry-after'), body: await res.json() };
 };
-const setsQuery = id => `query { phaseGroup(id: ${id}) { sets(page: 1 perPage: 55 sortType: ROUND) { nodes { id slots { entrant { id } } } } } }`;
-const eventQuery = slug => `query { event(slug: "${slug}") { id name } }`;
+const event = slug => [Q.entrantsQuery, { slug, page: 1, perPage: 100 }];
+const sets = id => [Q.setsQuery('phaseGroup'), { id, page: 1, perPage: 55 }];
 
 try {
     // 1. The second viewer of the same thing gets the cached answer
     upstreamCalls = 0;
-    const first = await post(eventQuery('a'), 'Bearer viewer-a');
-    const second = await post(eventQuery('a'), 'Bearer viewer-b');
+    const first = await post(...event('a'), 'user:viewer-a');
+    const second = await post(...event('a'), 'user:viewer-b');
     check('a repeat query is served from the cache', first.cache === 'MISS' && second.cache === 'HIT' && upstreamCalls === 1 && second.body.data?.ok, { first, second, upstreamCalls });
 
     // 2. Identical requests at the same moment share one upstream call
     upstreamCalls = 0;
-    const together = await Promise.all(Array.from({ length: 5 }, () => post(eventQuery('b'))));
+    const together = await Promise.all(Array.from({ length: 5 }, () => post(...event('b'))));
     check('identical requests in flight share one call', upstreamCalls === 1 && together.every(r => r.status === 200), { upstreamCalls });
 
     // 3. GraphQL errors (like the object cap) are passed on, not cached
     upstreamCalls = 0;
     reply = () => ({ status: 200, body: { errors: [{ message: 'Your query complexity is too high.' }] } });
-    const e1 = await post(eventQuery('c'));
-    const e2 = await post(eventQuery('c'));
+    const e1 = await post(...event('c'));
+    const e2 = await post(...event('c'));
     check('errors are passed on and not cached', upstreamCalls === 2 && e1.body.errors && e2.cache === 'MISS', { e1, upstreamCalls });
 
     // 4. Rate limits pass through with Retry-After, not cached
     upstreamCalls = 0;
     reply = () => ({ status: 429, body: { message: 'Rate limit exceeded' }, headers: { 'retry-after': '7' } });
-    const r1 = await post(eventQuery('d'));
-    const r2 = await post(eventQuery('d'));
+    const r1 = await post(...event('d'));
+    const r2 = await post(...event('d'));
     check('429 passes through with Retry-After and is not cached', r1.status === 429 && r1.retryAfter === '7' && upstreamCalls === 2, { r1, r2 });
+
+    // 5. Another failure keeps start.gg's status but not its error page
+    reply = () => ({ status: 500, body: '<html>secret stack trace</html>' });
+    const r500 = await post(...event('d2'));
+    check("a start.gg error page isn't passed on", r500.status === 502 && !JSON.stringify(r500.body).includes('secret'), r500);
     reply = () => ({ status: 200, body: { data: { ok: true } } });
 
-    // 5. No token, private data or mutations never reach start.gg
+    // 6. Only the app's own queries run; no one (no session and no site token) gets anything, not even a cached answer
     upstreamCalls = 0;
-    const noToken = await post(eventQuery('a'), null);
-    const me = await post('query { currentUser { email } }');
-    const mutation = await post('mutation { updatePhaseSeeding(phaseId: 1) { id } }');
-    check('no token is 401; currentUser and mutations are refused', noToken.status === 401 && me.status === 400 && mutation.status === 400 && upstreamCalls === 0, { noToken: noToken.status, me: me.status, mutation: mutation.status });
+    const noOne = await post(...event('a'), null);
+    const other = await post('query { event(slug: "x") { id name } }', {});
+    const otherSite = await post('query { event(slug: "x") { id name } }', {}, 'site');
+    const me = await post('query { currentUser { email } }', {}, 'site');
+    const mutation = await post('mutation { updatePhaseSeeding(phaseId: 1) { id } }', {}, 'site');
+    const changed = await post(Q.tournamentQuery + ' ', { slug: 'x' }, 'site');
+    const nested = await post(Q.tournamentQuery, { slug: { a: 1 } }, 'site');
+    check('a cached answer still needs a session or the site token (401)', noOne.status === 401 && !noOne.body.data, noOne);
+    check('any query not in the app, currentUser, mutations, a changed text and odd variables are refused before start.gg',
+        [other, otherSite, me, mutation, changed, nested].every(r => r.status === 400) && upstreamCalls === 0,
+        { other: other.status, otherSite: otherSite.status, me: me.status, mutation: mutation.status, changed: changed.status, nested: nested.status, upstreamCalls });
 
-    // 6. Set results go stale after 15 s; tournament info lasts 5 minutes
+    // 7. Variables are part of the key, in any order
     upstreamCalls = 0;
-    await post(setsQuery(1));
-    await post(eventQuery('e'));
+    const v1 = await post(Q.entrantsQuery, { slug: 'v', page: 1, perPage: 100 });
+    const v2 = await post(Q.entrantsQuery, { perPage: 100, page: 1, slug: 'v' });
+    const v3 = await post(Q.entrantsQuery, { slug: 'v', page: 2, perPage: 100 });
+    check('the cache keys on the query and its variables', v1.cache === 'MISS' && v2.cache === 'HIT' && v3.cache === 'MISS' && upstreamCalls === 2, { v1: v1.cache, v2: v2.cache, v3: v3.cache });
+
+    // 8. Set results go stale after 15 s; entrant lists last 5 minutes
+    upstreamCalls = 0;
+    await post(...sets(1));
+    await post(...event('e'));
     clock += 16_000;
-    const sets = await post(setsQuery(1));
-    const event = await post(eventQuery('e'));
+    const setsLater = await post(...sets(1));
+    const eventSoon = await post(...event('e'));
     clock += 5 * 60_000;
-    const eventLater = await post(eventQuery('e'));
-    check('sets refresh after 15 s, tournament info after 5 min', sets.cache === 'MISS' && event.cache === 'HIT' && eventLater.cache === 'MISS', { sets: sets.cache, event: event.cache, eventLater: eventLater.cache });
+    const eventLater = await post(...event('e'));
+    check('sets refresh after 15 s, entrants after 5 min', setsLater.cache === 'MISS' && eventSoon.cache === 'HIT' && eventLater.cache === 'MISS', { sets: setsLater.cache, event: eventSoon.cache, eventLater: eventLater.cache });
 
-    // 7. The cache stays under its byte cap, dropping the least recently used
+    // 9. A visitor's token that start.gg refuses (401) is retried once with the new token
+    upstreamCalls = 0;
+    tokensSeen = [];
+    reply = (q, v, auth) => auth === 'Bearer old' ? { status: 401, body: { message: 'Invalid token' } } : { status: 200, body: { data: { ok: true } } };
+    const retried = await post(...event('f'), 'user401:old');
+    check('after a 401 the retry uses the new token', retried.status === 200 && JSON.stringify(tokensSeen) === JSON.stringify(['Bearer old', 'Bearer old-new']), { status: retried.status, tokensSeen });
+    reply = () => ({ status: 200, body: { data: { ok: true } } });
+
+    // 10. The site token passes through the gate (5 a minute here); past that the answer is "busy", and logged-in visitors don't wait
+    upstreamCalls = 0;
+    tokensSeen = [];
+    const siteAnswers = [];
+    for (let i = 0; i < 7; i++) siteAnswers.push(await post(...event(`g${i}`), 'site'));
+    const busy = siteAnswers.filter(r => r.status === 503);
+    const userAfter = await post(...event('h'), 'user:viewer-c');
+    const hitAfter = await post(...event('g0'), 'site');
+    check('the site token stops at its limit with a clear "busy" answer and Retry-After',
+        siteAnswers.slice(0, 5).every(r => r.status === 200) && busy.length === 2 && busy.every(r => r.body.errors?.[0]?.extensions?.code === 'SITE_BUSY' && Number(r.retryAfter) > 0 && /log in/i.test(r.body.errors[0].message))
+        && tokensSeen.filter(t => t === 'Bearer site-token').length === 5,
+        { statuses: siteAnswers.map(r => r.status), busy: busy[0], siteCalls: tokensSeen.filter(t => t === 'Bearer site-token').length });
+    check('logged-in visitors and cache hits skip the site gate', userAfter.status === 200 && hitAfter.cache === 'HIT', { user: userAfter.status, hit: hitAfter.cache });
+
+    // 11. The cache stays under its byte cap, dropping the least recently used
     const big = 'x'.repeat(900);
-    reply = q => ({ status: 200, body: { data: { q, big } } });
-    for (let i = 0; i < 10; i++) await post(eventQuery(`big${i}`));
+    reply = q => ({ status: 200, body: { data: { big } } });
+    for (let i = 0; i < 10; i++) await post(...event(`big${i}`));
     const { bytes, entries } = cache.size();
-    const newest = await post(eventQuery('big9'));
-    const oldest = await post(eventQuery('big0'));
+    const newest = await post(...event('big9'));
+    const oldest = await post(...event('big0'));
     check('cache stays under its byte cap, dropping the oldest', bytes <= 4000 && newest.cache === 'HIT' && oldest.cache === 'MISS', { bytes, entries });
 } finally {
     server.close();
     cache.stop();
 }
 
-// 8. The real start.gg, through the cache: one call, then a hit
+// 12. The gate on its own, with a fake clock: 3 a second, waiting at most 1.5 s
+{
+    let t = 0;
+    const g = createSiteGate({ perWindow: 3, windowMs: 1000, maxWaitMs: 1500, now: () => t });
+    const started = [];
+    const results = [];
+    for (let i = 0; i < 9; i++) results.push(g.run(async () => { started.push(t); return i; }).catch(e => e));
+    await new Promise(r => setTimeout(r, 20));
+    const firstSecond = started.length;
+    const busyAtOnce = (await Promise.all(results.slice(6))).every(r => r instanceof SiteBusyError && r.retryAfterS >= 1);
+    t = 1000;
+    g.pause(0);
+    await new Promise(r => setTimeout(r, 20));
+    const afterOneSecond = started.length;
+    check('the gate starts 3 a second, queues the next 3, and turns away the rest', firstSecond === 3 && afterOneSecond === 6 && busyAtOnce, { firstSecond, afterOneSecond, busyAtOnce });
+}
+
+// 13. The real start.gg, through the cache: the app's own queries with variables answer, then a repeat is a hit
 if (process.env.STARTGG_TOKEN) {
-    const live = createGqlCache();
+    const live = createGqlCache({ allowed, tokenFor: async () => ({ kind: 'site', authorization: `Bearer ${process.env.STARTGG_TOKEN}` }) });
     const liveApp = express();
     liveApp.use(express.json());
     liveApp.post('/api/gql', live.handle);
     const liveServer = await new Promise(r => { const s = liveApp.listen(0, () => r(s)); });
     try {
         const url = `http://localhost:${liveServer.address().port}/api/gql`;
-        const ask = () => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.STARTGG_TOKEN}` },
-            body: JSON.stringify({ query: 'query { event(slug: "tournament/tussle-thru-time/event/brawl-doubles") { id name } }' }) })
+        const ask = (query, variables) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query, variables }) })
             .then(async res => ({ status: res.status, cache: res.headers.get('x-cache'), body: await res.json() }));
-        const a = await ask();
-        const b = await ask();
-        check('live start.gg: answers, then serves the repeat from the cache', a.status === 200 && a.body.data?.event?.id && b.cache === 'HIT' && live.stats.upstream === 1,
-            { first: { status: a.status, cache: a.cache, event: a.body.data?.event, errors: a.body.errors }, second: b.cache });
+        const slug = 'tournament/tussle-thru-time/event/brawl-doubles';
+        const a = await ask(Q.eventOverviewQuery({ lostTo: true, rankings: true, socials: true }), { slug, videogameId: 1 });
+        const b = await ask(Q.eventOverviewQuery({ lostTo: true, rankings: true, socials: true }), { slug, videogameId: 1 });
+        const t = await ask(Q.tournamentQuery, { slug: 'tussle-thru-time' });
+        check('live start.gg: the overview query with variables answers, then the repeat is a hit; the tournament query answers',
+            a.status === 200 && a.body.data?.event?.id && b.cache === 'HIT' && t.body.data?.tournament?.id,
+            { first: { status: a.status, cache: a.cache, event: a.body.data?.event?.name, errors: a.body.errors }, second: b.cache, tournament: t.body.data?.tournament?.name ?? t.body.errors });
     } finally {
         liveServer.close();
         live.stop();

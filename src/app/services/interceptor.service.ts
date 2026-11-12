@@ -1,38 +1,25 @@
-import { HttpInterceptorFn } from '@angular/common/http';
-import { catchError, timer, throwError, retry, switchMap, from } from 'rxjs';
-import { inject } from '@angular/core';
+import { HttpInterceptorFn, HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { Injector, inject } from '@angular/core';
+import { tap } from 'rxjs';
 import { AuthService } from './auth.service';
 
+// The browser never holds a start.gg token: the server adds one to each /api/gql request and refreshes
+// it when it expires, then retries with the new one. When start.gg refuses the refresh, the server
+// ends the session, answers with the site's token instead and says so in the x-session header.
+// Rate limits (429) are retried in StartggService, which pauses every request at once.
 export const InterceptorService: HttpInterceptorFn = (req, next) => {
-  // Rate limits (429) are retried in StartggService, which pauses every request at once
-  const maxRetries = 1;
-  const authService = inject(AuthService);
+  // Looked up only when needed: AuthService's own first request passes through here while it is being created
+  const injector = inject(Injector);
+  const ended = (headers: { get(name: string): string | null } | undefined) => headers?.get('x-session') === 'ended';
 
   return next(req).pipe(
-    retry({
-      count: maxRetries,
-      delay: (error, retryCount) => {
-        // Handle unauthorized (401) - try to refresh token once
-        if (error.status === 401 && retryCount === 1) {
-          return from(authService.refreshAccessToken()).pipe(
-            switchMap(() => timer(0)), // Retry immediately after refresh
-            catchError(() => {
-              authService.logout(); // Force logout if refresh fails
-              return throwError(() => error);
-            })
-          );
-        }
-
-        return throwError(() => error);
+    tap({
+      next: event => {
+        if (event instanceof HttpResponse && ended(event.headers)) injector.get(AuthService).sessionEnded();
       },
-    }),
-    catchError((error) => {
-      if (error.status === 401) {
-        console.log('Authentication failed. Please login again.');
-      } else {
-        console.log('Request failed after retries:', error.error?.message);
-      }
-      return throwError(() => error);
+      error: error => {
+        if (error instanceof HttpErrorResponse && ended(error.headers)) injector.get(AuthService).sessionEnded();
+      },
     })
   );
 };

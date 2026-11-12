@@ -3,6 +3,7 @@
 # Reports go to e2e-out/. Exits with the branch run's result. Meant for a fleet job or CI, not the VM.
 set -u
 export NODE_OPTIONS=--max-old-space-size=1536 NG_BUILD_MAX_WORKERS=2
+# The secret is only for older generate-env.js versions (the base branch), which still require it
 export STARTGG_CLIENT_ID=test STARTGG_CLIENT_SECRET=unused-in-browser STARTGG_REDIRECT_URI=http://localhost/callback
 out=e2e-out
 mkdir -p $out
@@ -56,6 +57,13 @@ node e2e/api-calls.mjs http://localhost:4302 > $out/branch.json 2> $out/branch.e
 status=$?
 echo "branch run exit: $status"
 cat $out/branch.json
+
+# The server's login, sessions, site token, query allowlist and security headers, against a fake start.gg
+node e2e/auth.mjs /tmp/app-branch 4303 > $out/auth.json 2> $out/auth.err
+auth=$?
+echo "auth run exit: $auth"
+cat $out/auth.json; tail -20 $out/auth.err
+[ $auth -ne 0 ] && status=1
 
 # The same pages from both builds, pixel for pixel. A PR that changes the look on purpose gets the
 # visual-change label (VISUAL_CHANGES_OK=true), which keeps the report but doesn't fail on it.
