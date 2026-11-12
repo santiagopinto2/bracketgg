@@ -44,7 +44,7 @@
     @if (standings().length) {
     <div class="section">
         <h2 class="section-heading">Standings</h2>
-        <div class="standings-list" [style.--rows]="standingRows()">
+        <div class="standings-list">
             @for (standing of standings(); track standing.entrant?.id ?? $index) {
             <div class="standing">
                 <span class="standing-placement placement-{{ standing.placement }}">{{ standing.placement }}<sup>{{ getOrdinalSuffix(standing.placement) }}</sup></span>
@@ -56,17 +56,17 @@
                     }
                 </div>
                 <div class="standing-info">
-                    <span class="standing-name">
+                    <span class="standing-name" [title]="(standing.sponsor ? standing.sponsor + ' ' : '') + standing.tag">
                         @if (standing.sponsor) {
                         <span class="standing-sponsor">{{ standing.sponsor }}</span>
                         }
                         <span class="standing-tag">{{ standing.tag }}</span>
                     </span>
                     @if (standing.lostTo) {
-                    <span class="standing-lost-to">Lost to: {{ standing.lostTo }}</span>
+                    <span class="standing-lost-to" [title]="'Lost to: ' + standing.lostTo">Lost to: {{ standing.lostTo }}</span>
                     }
-                    @if (standing.socials.length || standing.rankings.length) {
-                    <div class="standing-extras">
+                    @if (standing.socials.length) {
+                    <div class="standing-extras standing-socials">
                         @for (social of standing.socials; track social.type) {
                         @if (social.url) {
                         <a class="standing-social" [href]="social.url" target="_blank" rel="noopener noreferrer" [title]="social.label" [attr.aria-label]="social.label">
@@ -79,19 +79,19 @@
                         </span>
                         }
                         }
-                        @if (standing.rankings.length) {
-                        <span class="standing-rankings" [class.divided]="standing.socials.length">
-                            @for (ranking of standing.rankings; track $index) {
-                            <button type="button" class="standing-ranking" #tip="matTooltip" [matTooltip]="ranking.title" (click)="tip.show()">
-                                @if (ranking.image) {
-                                <img class="standing-ranking-image" [src]="ranking.image" [alt]="ranking.title" width="16" height="16" loading="lazy" (error)="ranking.image = ''" />
-                                } @else {
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="rankIcon" /></svg>
-                                }
-                                {{ ranking.rank }}
-                            </button>
+                    </div>
+                    }
+                    @if (standing.rankings.length) {
+                    <div class="standing-extras standing-rankings">
+                        @for (ranking of standing.rankings; track $index) {
+                        <button type="button" class="standing-ranking" #tip="matTooltip" [matTooltip]="ranking.title" (click)="tip.show()">
+                            @if (ranking.image) {
+                            <img class="standing-ranking-image" [src]="ranking.image" [alt]="ranking.title" width="16" height="16" loading="lazy" (error)="ranking.image = ''" />
+                            } @else {
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="rankIcon" /></svg>
                             }
-                        </span>
+                            {{ ranking.rank }}
+                        </button>
                         }
                     </div>
                     }

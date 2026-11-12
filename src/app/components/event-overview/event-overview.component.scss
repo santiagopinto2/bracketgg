@@ -123,21 +123,22 @@
     opacity: 0.9;
 }
 
-// Standings read down the first column, then the second; the two cards in a row are the same height
+// Standings read across each row, then down
 .standings-list {
     display: grid;
-    grid-auto-flow: column;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(var(--rows, 4), auto);
     gap: 8px 12px;
 }
 
+// Every card is as tall as the fullest one (name, lost to, socials, rankings), and each starts at the top
 .standing {
     display: flex;
-    align-items: center;
     gap: 12px;
+    box-sizing: border-box;
+    height: 108px;
     padding: 10px 14px;
     border-radius: 8px;
+    line-height: 24px;
 }
 
 // These cards are dark in both color schemes, so their text is always light
@@ -165,6 +166,7 @@
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
+    margin-top: 6px;
 
     img {
         position: absolute;
@@ -211,7 +213,8 @@
 }
 
 .standing-sponsor,
-.standing-tag {
+.standing-tag,
+.standing-lost-to {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -220,7 +223,7 @@
 .standing-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
     flex: 1 1 auto;
 }
@@ -228,16 +231,15 @@
 .standing-lost-to {
     color: rgb(197, 197, 197);
     font-size: 0.8rem;
-    line-height: 1.3;
-    overflow-wrap: anywhere;
+    line-height: 17px;
 }
 
+// The socials on one line and the rankings on the next
 .standing-extras {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 4px 8px;
-    margin-top: 3px;
+    gap: 8px;
+    height: 18px;
 }
 
 .standing-social {
@@ -267,16 +269,6 @@ a.standing-social:hover {
 }
 
 // A ranking is its series' logo (or a trophy) and the rank, as on start.gg; its name is the tooltip
-.standing-rankings {
-    display: inline-flex;
-    gap: 8px;
-
-    &.divided {
-        padding-left: 8px;
-        border-left: 1px solid rgba(255, 255, 255, 0.25);
-    }
-}
-
 .standing-ranking {
     display: inline-flex;
     align-items: center;
@@ -396,9 +388,7 @@ a.standing-social:hover {
     }
 
     .standings-list {
-        grid-auto-flow: row;
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: none;
     }
 
     // Room for a thumb on the social links and the rankings
