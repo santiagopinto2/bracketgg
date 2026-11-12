@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from './auth.service';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
+import { MAX_SET_SCORES, SETS_PER_STANDING, entrantsQuery, eventOverviewQuery, phaseQuery, setScoresQuery, setsQuery, tournamentQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -28,7 +28,7 @@ export class StartggService {
     private setsPerPage = 95;
     // Sets asked for per entrant in the landing page's top 8, to find who they lost to. An entrant
     // with this many may have more, and then shows no losses.
-    readonly setsPerStanding = 50;
+    readonly setsPerStanding = SETS_PER_STANDING;
 
     // Tournament info and entrant lists rarely change during an event, so they are reused for
     // a few minutes. Sets are never cached, so brackets stay live.
@@ -43,41 +43,33 @@ export class StartggService {
 
     constructor(
         private http: HttpClient,
-        private authService: AuthService,
         private loadingService: LoadingService
     ) { }
 
-    getHeaders() {
-        const token = this.authService.getAccessToken();
-
-        if (!token) {
-            this.authService.redirectToOAuthWithReturn();
-            return new HttpHeaders({ 'Content-Type': 'application/json' });
-        }
-
-        return new HttpHeaders({
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        });
-    }
-
-    // Sends a query and returns its `data`. Identical queries already on their way share one request.
-    private query(query: string): Promise<any> {
-        let pending = this.inFlight.get(query);
+    // Sends a query (one of startgg-queries.ts's texts) and returns its `data`. Identical requests already
+    // on their way share one request. The server adds the start.gg token: the visitor's own if they
+    // logged in, otherwise the site's.
+    private query(query: string, variables: Record<string, any>): Promise<any> {
+        const key = query + JSON.stringify(variables);
+        let pending = this.inFlight.get(key);
         if (!pending) {
-            pending = this.send(query).finally(() => this.inFlight.delete(query));
-            this.inFlight.set(query, pending);
+            pending = this.send(query, variables).finally(() => this.inFlight.delete(key));
+            this.inFlight.set(key, pending);
         }
         return pending;
     }
 
-    private async send(query: string): Promise<any> {
+    private async send(query: string, variables: Record<string, any>): Promise<any> {
         for (let attempt = 0; ; attempt++) {
             let res: any;
             try {
-                res = await this.gate.run(() => firstValueFrom(this.http.post<any>(this.baseUrl, { query }, { headers: this.getHeaders() })));
+                res = await this.gate.run(() => firstValueFrom(this.http.post<any>(this.baseUrl, { query, variables })));
             } catch (error) {
                 if (!(error instanceof HttpErrorResponse)) throw error;
+                if (this.isSiteBusy(error.status, error.error)) {
+                    this.waitOutSiteBusy(attempt, error.headers?.get('Retry-After'));
+                    continue;
+                }
                 if (!this.isRateLimited(error.status, error.error)) throw new StartggError(this.describeHttpError(error));
                 this.waitOutRateLimit(attempt, error.headers?.get('Retry-After'));
                 continue;
@@ -97,6 +89,18 @@ export class StartggService {
         }
     }
 
+    // The site's own start.gg token, which visitors who aren't logged in share, is at its limit (server/site-gate.js)
+    private isSiteBusy(status: number, body: any): boolean {
+        return status === 503 && body?.errors?.[0]?.extensions?.code === 'SITE_BUSY';
+    }
+
+    private waitOutSiteBusy(attempt: number, retryAfter: string | null) {
+        if (attempt >= this.maxRateLimitRetries) throw new StartggError('BracketGG is busy. Try again in a few seconds, or log in with start.gg to skip the wait.');
+        const delayMs = Math.min(30, Math.max(1, Number(retryAfter) || 5)) * 1000 + Math.random() * 1000;
+        this.gate.pause(delayMs);
+        this.loadingService.notice(`BracketGG is busy, retrying in ${Math.ceil(delayMs / 1000)} s. Log in with start.gg to skip the wait.`);
+    }
+
     private isRateLimited(status: number, body: any): boolean {
         if (status === 429) return true;
         const messages = [body?.message, ...(body?.errors ?? []).map((e: any) => e?.message)];
@@ -114,7 +118,7 @@ export class StartggService {
 
     private describeHttpError(error: HttpErrorResponse): string {
         if (error.status === 0) return 'Could not reach start.gg. Check your connection and reload.';
-        if (error.status === 401) return 'Your start.gg login expired. Log in again.';
+        if (error.status === 401) return 'Log in with start.gg to load this page.';
         return `start.gg returned an error (${error.status}). Try again in a moment.`;
     }
 
@@ -151,66 +155,8 @@ export class StartggService {
     }
 
     getTournamentEvents(tourneySlug): Promise<any> {
-        const query = `query {
-                tournament(slug: "${tourneySlug}") {
-                    images {
-                        url
-                        type
-                        width
-                        height
-                    }
-                    rules
-                    id
-                    name
-                    slug
-                    venueAddress
-                    startAt
-                    primaryContact
-                    primaryContactType
-                    events {
-                        name
-                        slug
-                        numEntrants
-                        startAt
-                        type
-                        videogame {
-                            id
-                            name
-                            images {
-                                url
-                                type
-                                width
-                                height
-                            }
-                        }
-                        standings(query: {
-                            page: 1
-                            perPage: 3
-                        }) {
-                            nodes {
-                                placement
-                                entrant {
-                                    name
-                                    participants {
-                                        id
-                                        user {
-                                            images {
-                                                url
-                                                type
-                                                width
-                                                height
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }`;
-
         return this.cached(`tournament:${tourneySlug}`, async () => {
-            const data = await this.query(query);
+            const data = await this.query(tournamentQuery, { slug: String(tourneySlug) });
             if (!data?.tournament) throw new StartggError('Tournament not found on start.gg.');
             return data.tournament;
         });
@@ -233,39 +179,7 @@ export class StartggService {
     }
 
     getEventBySlugPaginated(eventSlug, page, entrantsPerPage): Promise<any> {
-        const query = `query {
-                event(slug: "${eventSlug}") {
-                    id
-                    name
-                    phases {
-                        id
-                        name
-                    }
-                    entrants(query : {
-                        page: ${page}
-                        perPage: ${entrantsPerPage}
-                    }) {
-                        nodes {
-                            id
-                            name
-                            initialSeedNum
-                            participants {
-                                gamerTag
-                                user {
-                                    images {
-                                        url
-                                        type
-                                        width
-                                        height
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }`;
-
-        return this.query(query);
+        return this.query(entrantsQuery, { slug: String(eventSlug), page, perPage: entrantsPerPage });
     }
 
     // What the event's landing page shows, in one request: the header, every phase with its pool count,
@@ -275,18 +189,20 @@ export class StartggService {
     // socials and rankings, then also without the sets that tell the losses.
     getEventOverview(eventSlug, videogameId: any = null, singles = true): Promise<any> {
         return this.cached(`overview:${eventSlug}`, async () => {
-            const queries = [
-                this.getEventOverviewQuery(eventSlug, { lostTo: true, videogameId: singles ? videogameId : null, socials: singles }),
-                this.getEventOverviewQuery(eventSlug, { lostTo: true }),
-                this.getEventOverviewQuery(eventSlug, {}),
-            ].filter((query, i, all) => all.indexOf(query) === i);
+            const slug = String(eventSlug);
+            const rankings = singles && Number(videogameId) > 0;
+            const variants = [
+                { lostTo: true, rankings, socials: singles },
+                { lostTo: true, rankings: false, socials: false },
+                { lostTo: false, rankings: false, socials: false },
+            ].filter((v, i, all) => all.findIndex(w => JSON.stringify(w) === JSON.stringify(v)) === i);
             let data;
-            for (const [i, query] of queries.entries()) {
+            for (const [i, variant] of variants.entries()) {
                 try {
-                    data = await this.query(query);
+                    data = await this.query(eventOverviewQuery(variant), variant.rankings ? { slug, videogameId: Number(videogameId) } : { slug });
                     break;
                 } catch (error) {
-                    if (!(error instanceof TooComplexError) || i == queries.length - 1) throw error;
+                    if (!(error instanceof TooComplexError) || i == variants.length - 1) throw error;
                 }
             }
             if (!data?.event) throw new StartggError('Event not found on start.gg.');
@@ -294,121 +210,8 @@ export class StartggService {
         });
     }
 
-    // start.gg counted 261 objects for all of this on a 1544-entrant singles event with 82 pools, and
-    // 155 on its doubles event (measured 2026-11-09). Of that, a set costs 1 with these three fields.
-    private getEventOverviewQuery(eventSlug, { lostTo = false, videogameId = null as any, socials = false }) {
-        const rankingsQuery = `player {
-                                        rankings(limit: 3, videogameId: ${Number(videogameId)}) {
-                                            rank
-                                            title
-                                        }
-                                    }`;
-        const socialsQuery = `authorizations(types: [TWITTER, TWITCH, DISCORD]) {
-                                            type
-                                            externalUsername
-                                            url
-                                        }`;
-        // Every set the entrant played in the event: a loss on the winners side can be many sets back
-        const setsQuery = `paginatedSets(page: 1, perPage: ${this.setsPerStanding}) {
-                                    nodes {
-                                        winnerId
-                                        displayScore
-                                        completedAt
-                                    }
-                                }`;
-
-        return `query {
-                event(slug: "${eventSlug}") {
-                    id
-                    name
-                    slug
-                    startAt
-                    state
-                    numEntrants
-                    type
-                    videogame {
-                        name
-                        images {
-                            url
-                            type
-                        }
-                    }
-                    phases {
-                        id
-                        name
-                        bracketType
-                        numSeeds
-                        groupCount
-                        state
-                    }
-                    standings(query: {
-                        page: 1
-                        perPage: 8
-                    }) {
-                        nodes {
-                            placement
-                            entrant {
-                                id
-                                name
-                                participants {
-                                    id
-                                    ${Number(videogameId) ? rankingsQuery : ''}
-                                    user {
-                                        images {
-                                            url
-                                            type
-                                            width
-                                            height
-                                        }
-                                        ${socials ? socialsQuery : ''}
-                                    }
-                                }
-                                ${lostTo ? setsQuery : ''}
-                            }
-                        }
-                    }
-                    prizingInfo
-                    rulesMarkdown
-                    matchRulesMarkdown
-                }
-            }`;
-    }
-
     async getPhase(phaseId): Promise<any> {
-        const query = `query {
-                phase(id: ${phaseId}) {
-                    id
-                    bracketType
-                    sets(page: 1, perPage: 1, sortType: ROUND) {
-                        pageInfo {
-                            total
-                        }
-                    }
-                    phaseGroups(query : {
-                        page: 1
-                        perPage: 100
-                    }) {
-                        pageInfo {
-                            total
-                        }
-                        nodes {
-                            id
-                            displayIdentifier
-                            sets(
-                                page: 1
-                                perPage: 1
-                                sortType: ROUND
-                            ) {
-                                pageInfo {
-                                    total
-                                }
-                            }
-                        }
-                    }
-                }
-            }`;
-
-        const data = await this.query(query);
+        const data = await this.query(phaseQuery, { phaseId: Number(phaseId) });
         if (!data?.phase) throw new StartggError('Bracket phase not found on start.gg.');
         return data.phase;
     }
@@ -427,7 +230,7 @@ export class StartggService {
     // draws the same; a phase with many small pools takes far fewer requests.
     async getPhaseSetsByPool(phaseId, totalSets): Promise<Map<any, any[]>> {
         const nodes = await this.loadPages(`phase-sets:${phaseId}`, totalSets, this.setsPerPage, async (page, perPage) => {
-            const data = await this.getSetsPaginated(`phase(id: ${phaseId})`, page, perPage, 'phaseGroup { id }');
+            const data = await this.getSetsPaginated('phase', phaseId, page, perPage);
             return data?.phase?.sets?.nodes ?? [];
         });
         await this.fillScores(nodes);
@@ -450,79 +253,21 @@ export class StartggService {
             else if (set.displayScore == null && !set.winnerId) set.slots.forEach(slot => slot.standing = null); // not played yet
             else unread.push(set);
         }
-        for (let i = 0; i < unread.length; i += 100) {
-            const chunk = unread.slice(i, i + 100);
-            const query = `query {
-                ${chunk.map((set, k) => `s${k}: set(id: ${JSON.stringify(String(set.id))}) { slots { standing { stats { score { value } } } } }`).join('\n')}
-            }`;
+        for (let i = 0; i < unread.length; i += MAX_SET_SCORES) {
+            const chunk = unread.slice(i, i + MAX_SET_SCORES);
+            const variables = Object.fromEntries(chunk.map((set, k) => [`id${k}`, String(set.id)]));
             // A failure here only costs those sets their numbers; the winner still shows
-            const data = await this.query(query).catch(error => { console.warn('Could not load scores', error); return null; });
+            const data = await this.query(setScoresQuery(chunk.length), variables).catch(error => { console.warn('Could not load scores', error); return null; });
             chunk.forEach((set, k) => set.slots.forEach((slot, j) => slot.standing = data?.[`s${k}`]?.slots?.[j]?.standing ?? null));
         }
     }
 
     getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Promise<any> {
-        return this.getSetsPaginated(`phaseGroup(id: ${phaseGroupId})`, page, setsPerPage);
+        return this.getSetsPaginated('phaseGroup', phaseGroupId, page, setsPerPage);
     }
 
-    // One page of sets from a pool (`phaseGroup(id: …)`) or a whole phase (`phase(id: …)`)
-    // Always asks for games: where no characters were reported they come back empty and cost little.
-    private getSetsPaginated(parent, page, setsPerPage, extraFields = ''): Promise<any> {
-        let setGamesQuery = this.getSetGamesQuery();
-
-        const query = `query {
-                ${parent} {
-                    sets(
-                        page: ${page}
-                        perPage: ${setsPerPage}
-                        sortType: ROUND
-                    ) {
-                        nodes {
-                            ${extraFields}
-                            id
-                            round
-                            fullRoundText
-                            winnerId
-                            displayScore
-                            ${setGamesQuery}
-                            slots {
-                                prereqId
-                                prereqType
-                                prereqPlacement
-                                entrant {
-                                    id
-                                    name
-                                    initialSeedNum
-                                }
-                            }
-                        }
-                    }
-                  }
-            }`;
-
-        return this.query(query);
-    }
-
-    getSetGamesQuery() {
-        return `games {
-            winnerId
-                stage {
-                name
-            }
-                selections {
-                    entrant {
-                    id
-                }
-                    character {
-                    name
-                        images {
-                        url
-                        type
-                        width
-                        height
-                    }
-                }
-            }
-        }`
+    // One page of sets from a pool or a whole phase
+    private getSetsPaginated(parent: 'phase' | 'phaseGroup', id, page, setsPerPage): Promise<any> {
+        return this.query(setsQuery(parent), { id: Number(id), page, perPage: setsPerPage });
     }
 }

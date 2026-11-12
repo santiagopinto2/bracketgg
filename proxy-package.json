@@ -1,15 +1,16 @@
 {
   "name": "startgg-oauth-proxy",
   "version": "1.0.0",
-  "description": "Simple proxy server for start.gg OAuth to avoid CORS issues",
+  "description": "BracketGG's server: start.gg API cache, login and the built app",
   "main": "proxy-server.js",
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "start": "node proxy-server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "axios": "^1.6.0",
-    "dotenv": "^16.0.0"
+    "express": "^5.2.1",
+    "dotenv": "^17.3.1"
   }
 }

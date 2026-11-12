@@ -41,14 +41,8 @@ export class CallbackComponent implements OnInit {
     }
 
     try {
-      await this.authService.handleOAuthCallback(code);
-      const returnUrl = localStorage.getItem('oauth_return_url');
-      if (returnUrl) {
-        localStorage.removeItem('oauth_return_url');
-        this.router.navigateByUrl(returnUrl);
-      } else {
-        this.router.navigate(['/']);
-      }
+      const returnUrl = await this.authService.handleOAuthCallback(code, this.route.snapshot.queryParamMap.get('state'));
+      this.router.navigateByUrl(returnUrl, { replaceUrl: true });
     } catch (err: any) {
       this.error.set(err.message || 'Authentication failed');
       this.loading.set(false);

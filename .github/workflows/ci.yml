@@ -54,7 +54,6 @@ jobs:
         env:
           STARTGG_CLIENT_ID: ${{ vars.STARTGG_CLIENT_ID }}
           STARTGG_REDIRECT_URI: ${{ vars.STARTGG_REDIRECT_URI }}
-          STARTGG_CLIENT_SECRET: ${{ env.SECRET_PLACEHOLDER }}
       - run: npx ng build
       - name: Check the bundle for the client secret
         run: node scripts/check-bundle.js dist/bracketgg/browser "$SECRET_PLACEHOLDER"

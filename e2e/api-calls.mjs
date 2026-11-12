@@ -217,16 +217,26 @@ function answer(query) {
     }
 }
 
+// The query text with its GraphQL variables written in, so the fake can read slugs, ids and pages
+// the same way whether the app sends variables (this branch) or writes them into the text (older builds)
+function withVariables(query, variables) {
+    if (!variables) return query;
+    return query.replace(/^\s*query\s*\w*\s*\([^)]*\)/, 'query')
+        .replace(/\$(\w+)/g, (all, name) => name in variables ? JSON.stringify(variables[name]) : all);
+}
+
 // Opens a page against the fake start.gg. `respond(query, n)` may return { status, body } to override
 // the n-th request (counting from 1); otherwise the normal answer goes back. `fonts` lets the icon and
-// text fonts load, for screenshots that look like the real page.
-async function openPage(browser, respond = () => null, contextOptions = {}, { fonts = false } = {}) {
+// text fonts load, for screenshots that look like the real page. `loggedIn: false` opens it as a visitor.
+async function openPage(browser, respond = () => null, contextOptions = {}, { fonts = false, loggedIn = true } = {}) {
     const context = await browser.newContext(contextOptions);
-    await context.addInitScript(() => {
+    // Older builds keep the login in localStorage; this branch asks the server
+    if (loggedIn) await context.addInitScript(() => {
         localStorage.setItem('oauth_access_token', 'test-token');
         localStorage.setItem('oauth_refresh_token', 'test-refresh');
         localStorage.setItem('oauth_token_expiry', String(Date.now() + 7 * 86400000));
     });
+    await context.route(/\/api\/auth\/session$/, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ loggedIn }) }));
     const page = await context.newPage();
     const log = [];
     let pending = 0;
@@ -236,7 +246,8 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
     await page.route(/api\.start\.gg\/gql\/alpha|\/api\/gql$/, async route => {
         if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
         pending++;
-        const query = route.request().postDataJSON().query;
+        const { query: text, variables } = route.request().postDataJSON();
+        const query = withVariables(text, variables);
         const n = log.length + 1;
         const override = respond(query, n);
         log.push({ n, at: Date.now(), kind: kindOf(query), status: override?.status ?? 200, query });
