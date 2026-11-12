@@ -281,11 +281,37 @@ const standingsShown = page => page.evaluate(() => [...document.querySelectorAll
             const box = image.getBoundingClientRect();
             return `${image.alt} ${Math.round(box.width)}x${Math.round(box.height)} ${image.complete && image.naturalWidth ? image.currentSrc.split('/').pop() : 'not loaded'}`;
         }),
-        extrasRow: !!card.querySelector('.standing-extras'),
+        socialsRow: !!card.querySelector('.standing-socials'),
+        rankingsRow: !!card.querySelector('.standing-rankings'),
+        titles: [...card.querySelectorAll('.standing-name, .standing-lost-to')].map(el => el.getAttribute('title')),
         discordText: text('.standing-social-name'),
         iconsDrawn: [...card.querySelectorAll('.standing-social svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
     };
 }));
+// Where each standing card is and how its lines sit: the grid order, the card sizes, the name's place in
+// its card, whether the rankings are on a line below the socials, and whether a long line is cut short
+const standingsLayout = page => page.evaluate(() => [...document.querySelectorAll('.standing')].map(card => {
+    const box = card.getBoundingClientRect();
+    const rect = selector => card.querySelector(selector)?.getBoundingClientRect();
+    const round = value => Math.round(value * 10) / 10;
+    // The lines themselves: on a phone each icon's tap area reaches 6 px past its line
+    const name = rect('.standing-name'), social = rect('.standing-socials'), ranking = rect('.standing-rankings');
+    const lostTo = card.querySelector('.standing-lost-to');
+    return {
+        left: round(box.left), top: round(box.top), width: round(box.width), height: round(box.height),
+        nameLeft: name && round(name.left - box.left), nameTop: name && round(name.top - box.top),
+        rankingsBelowSocials: social && ranking ? ranking.top >= social.bottom && Math.abs(ranking.left - social.left) < 1 : null,
+        inside: [...card.querySelectorAll('.standing-info *')].every(el => el.getBoundingClientRect().bottom <= box.bottom && el.getBoundingClientRect().right <= box.right + 0.5),
+        lostToLines: lostTo ? Math.round(lostTo.getBoundingClientRect().height / parseFloat(getComputedStyle(lostTo).lineHeight)) : 0,
+        lostToCut: !!lostTo && lostTo.scrollWidth > lostTo.clientWidth,
+    };
+}));
+const within = (values, px = 1) => Math.max(...values) - Math.min(...values) <= px;
+// Every card the same size, with the name at the same place in each and nothing spilling out of a card
+const sameCards = cards => cards.length === 8 && within(cards.map(c => c.height)) && within(cards.map(c => c.width)) && within(cards.map(c => c.nameTop)) && within(cards.map(c => c.nameLeft))
+    && cards.every(c => c.inside && c.lostToLines <= 1);
+// The rankings sit on their own line under the socials in each card that has both (Alpha, Bravo and Player 5)
+const rankingsOwnLine = cards => JSON.stringify(cards.map(c => c.rankingsBelowSocials)) === JSON.stringify([true, true, null, null, true, null, null, null]);
 // Waits until every ranking logo has loaded
 const rankImagesSettled = page => page.waitForFunction(() => [...document.querySelectorAll('.standing-ranking img')].every(image => image.complete && image.naturalWidth), null, { timeout: 5000 }).catch(() => { });
 // Which of the landing page's optional parts an overview query asks for
@@ -776,7 +802,18 @@ try {
                 JSON.stringify(landing.standings.map(s => s.rankIcons)) === JSON.stringify(rankIconsShown), landing.standings.map(s => s.rankIcons));
             check('event landing: socials are icon links (Discord a username), rankings are a logo or a trophy and the rank, and empty ones are hidden',
                 JSON.stringify(landing.standings.map(s => s.socials)) === JSON.stringify(socialsShown) && JSON.stringify(landing.standings.map(s => s.rankings)) === JSON.stringify(rankingsShown)
-                && landing.standings.filter(s => s.extrasRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
+                && landing.standings.filter(s => s.socialsRow).length === 3 && landing.standings.filter(s => s.rankingsRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
+            const cards = await standingsLayout(page);
+            report.eventLanding.cards = cards;
+            // 1st | 2nd, 3rd | 4th, 5th | 5th, 7th | 7th
+            check('event landing: the top 8 read across each row and then down, two to a row',
+                cards.length === 8 && cards.every((c, i) => Math.abs(c.left - cards[i % 2].left) <= 1 && Math.abs(c.top - cards[i - i % 2].top) <= 1)
+                && cards[1].left > cards[0].left + cards[0].width && [2, 4, 6].every(i => cards[i].top >= cards[i - 2].top + cards[i - 2].height), cards.map(c => [c.left, c.top]));
+            check('event landing: all 8 cards are the same size within 1 px, whatever they hold, with the name at the same place in each',
+                sameCards(cards), cards);
+            check('event landing: the rankings are on their own line below the socials', rankingsOwnLine(cards), cards.map(c => c.rankingsBelowSocials));
+            check('event landing: a name and a lost-to line carry their full text as a title',
+                JSON.stringify(landing.standings.map(s => s.titles)) === JSON.stringify(standingNames.map((name, i) => [name.replace('SPN | ', 'SPN '), ...(lostToShown[i] ? ['Lost to: ' + lostToShown[i]] : [])])), landing.standings.map(s => s.titles));
             // A ranking's name shows on hover, and on keyboard focus
             const rankingButtons = page.locator('.standing-ranking');
             const tooltip = async () => (await texts(page, '.mat-mdc-tooltip')).join('|');
@@ -936,6 +973,10 @@ try {
                 const rankIcons = [...document.querySelectorAll('.standing-ranking')].map(el => el.querySelector('img') ? 'logo' : 'trophy').join(' ');
                 return { cardsFit, rankIcons, oneColumn: lefts.length === 8 && lefts.every(left => left === lefts[0]), fits: content.scrollWidth <= content.clientWidth, sidebarOpen: !!document.querySelector('mat-sidenav.mat-drawer-opened') };
             });
+            const cards = await standingsLayout(page);
+            report.eventLandingPhone = { layout, cards };
+            check('phone: the 8 cards run 1st to 8th down one column, all the same size within 1 px, with the rankings on their own line below the socials',
+                cards.every((c, i) => !i || c.top >= cards[i - 1].top + cards[i - 1].height) && sameCards(cards) && rankingsOwnLine(cards), cards);
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'e2e-out/event-landing-phone.png' }).catch(() => { });
             await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-phone.png' }).catch(() => { });
@@ -960,7 +1001,7 @@ try {
             await page.waitForTimeout(500);
             const menuItems = await page.locator('.phase-menu-item').count();
             await page.screenshot({ path: 'e2e-out/phase-menu-phone.png' }).catch(() => { });
-            report.eventLandingPhone = { ...layout, tapped, tappedAway, opened, menuItems };
+            report.eventLandingPhone = { ...layout, cards, tapped, tappedAway, opened, menuItems };
             check('phone: the landing page is one column that fits the screen, rankings show their logo or the trophy, a tap on a ranking shows its name, a phase opens on tap, and the phase menu opens',
                 layout.rankIcons === 'trophy logo trophy logo trophy' && tapped === rankingsOf[1][2].title && tappedAway === '' && layout.oneColumn && layout.fits && layout.cardsFit && !layout.sidebarOpen && opened && menuItems === 8, report.eventLandingPhone);
         } catch (e) {
