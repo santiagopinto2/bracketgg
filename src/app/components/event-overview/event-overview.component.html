@@ -73,10 +73,9 @@
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg>
                         </a>
                         } @else {
-                        <span class="standing-social" [title]="social.label">
+                        <button type="button" class="standing-social" #tip="matTooltip" [matTooltip]="copied() === social ? 'Copied ' + social.username : social.label" [attr.aria-label]="social.label + ', copy'" (click)="copy(social); tip.show()">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg>
-                            <span class="standing-social-name">{{ social.username }}</span>
-                        </span>
+                        </button>
                         }
                         }
                     </div>

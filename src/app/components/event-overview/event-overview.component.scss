@@ -130,9 +130,10 @@
     gap: 8px 12px;
 }
 
-// Every card is as tall as the fullest one (name, lost to, socials, rankings), and each starts at the top
+// Every card is as tall as the fullest one (name, lost to, socials, rankings), with its parts centered top to bottom
 .standing {
     display: flex;
+    align-items: center;
     gap: 12px;
     box-sizing: border-box;
     height: 108px;
@@ -159,14 +160,18 @@
     &.placement-3 { color: #cd7f32; }
 }
 
+.standing .standing-placement {
+    min-width: 52px;
+    font-size: 1.5rem;
+}
+
 .standing-profile-image {
     position: relative;
-    width: 32px;
-    height: 32px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    margin-top: 6px;
 
     img {
         position: absolute;
@@ -188,7 +193,7 @@
     height: 100%;
     border-radius: 50%;
     color: #fff;
-    font-size: 16px;
+    font-size: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -245,10 +250,11 @@
 .standing-social {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
     color: rgb(197, 197, 197);
-    font-size: 0.75rem;
+    cursor: pointer;
 
     svg {
         width: 15px;
@@ -258,14 +264,8 @@
     }
 }
 
-a.standing-social:hover {
+.standing-social:hover {
     color: #fff;
-}
-
-.standing-social-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 // A ranking is its series' logo (or a trophy) and the rank, as on start.gg; its name is the tooltip
@@ -392,7 +392,7 @@ a.standing-social:hover {
     }
 
     // Room for a thumb on the social links and the rankings
-    a.standing-social,
+    .standing-social,
     .standing-ranking {
         margin: -6px;
         padding: 6px;

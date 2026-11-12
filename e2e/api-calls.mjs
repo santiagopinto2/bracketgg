@@ -107,7 +107,7 @@ const rankingsOf = {
     5: [{ rank: 7, title: 'Plain Rank: 2026' }],
     6: null,
 };
-const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg|'], ['Discord: bravo#1234|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
+const socialsShown = [['X: AlphaSSB|https://twitter.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV', 'Discord: alpha.gg, copy|'], ['Discord: bravo#1234, copy|'], [], [], ['X: player five|https://x.com/player%20five'], [], [], []];
 const rankingsShown = [['2', '1', '2'], ['23'], [], [], ['7'], [], [], []];
 // Each ranking's logo as "alt text, drawn size, file", or the trophy
 const rankIconsShown = [['trophy', 'Lucky Rank: Active Season 16x16 lucky-rank.webp', 'trophy'], ['SSBMRANK: 2025 16x16 ssbmrank.webp'], [], [], ['trophy'], [], [], []];
@@ -273,7 +273,7 @@ const standingsShown = page => page.evaluate(() => [...document.querySelectorAll
     return {
         name: text('.standing-placement') + ' ' + text('.standing-name'),
         lostTo: text('.standing-lost-to'),
-        socials: [...card.querySelectorAll('.standing-social')].map(el => `${el.getAttribute('title')}|${el.getAttribute('href') ?? ''}`),
+        socials: [...card.querySelectorAll('.standing-social')].map(el => `${el.getAttribute('title') ?? el.getAttribute('aria-label')}|${el.getAttribute('href') ?? ''}`),
         rankings: [...card.querySelectorAll('.standing-ranking')].map(el => el.textContent.trim()),
         rankIconsDrawn: [...card.querySelectorAll('.standing-ranking svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
         rankIcons: [...card.querySelectorAll('.standing-ranking')].map(el => {
@@ -285,7 +285,7 @@ const standingsShown = page => page.evaluate(() => [...document.querySelectorAll
         socialsRow: !!card.querySelector('.standing-socials'),
         rankingsRow: !!card.querySelector('.standing-rankings'),
         titles: [...card.querySelectorAll('.standing-name, .standing-lost-to')].map(el => el.getAttribute('title')),
-        discordText: text('.standing-social-name'),
+        discordText: [...card.querySelectorAll('button.standing-social')].map(el => el.innerText.trim() + el.getBoundingClientRect().width).join(),
         iconsDrawn: [...card.querySelectorAll('.standing-social svg')].every(icon => icon.getBoundingClientRect().width >= 12 && icon.querySelector('path').getBBox().width > 15),
     };
 }));
@@ -298,7 +298,13 @@ const standingsLayout = page => page.evaluate(() => [...document.querySelectorAl
     // The lines themselves: on a phone each icon's tap area reaches 6 px past its line
     const name = rect('.standing-name'), social = rect('.standing-socials'), ranking = rect('.standing-rankings');
     const lostTo = card.querySelector('.standing-lost-to');
+    const placement = card.querySelector('.standing-placement'), avatar = rect('.standing-profile-image');
+    // How far below the card's middle each part's middle is
+    const offCenter = r => r && round((r.top + r.bottom) / 2 - (box.top + box.bottom) / 2);
     return {
+        centers: [offCenter(placement?.getBoundingClientRect()), offCenter(avatar), offCenter(rect('.standing-info'))],
+        placementSize: placement && parseFloat(getComputedStyle(placement).fontSize), avatarSize: avatar && [round(avatar.width), round(avatar.height)],
+        infoLeft: round(rect('.standing-info').left - box.left), lineLefts: [...card.querySelectorAll('.standing-info > *')].map(el => round(el.getBoundingClientRect().left - box.left)),
         left: round(box.left), top: round(box.top), width: round(box.width), height: round(box.height),
         nameLeft: name && round(name.left - box.left), nameTop: name && round(name.top - box.top),
         rankingsBelowSocials: social && ranking ? ranking.top >= social.bottom && Math.abs(ranking.left - social.left) < 1 : null,
@@ -308,9 +314,13 @@ const standingsLayout = page => page.evaluate(() => [...document.querySelectorAl
     };
 }));
 const within = (values, px = 1) => Math.max(...values) - Math.min(...values) <= px;
-// Every card the same size, with the name at the same place in each and nothing spilling out of a card
-const sameCards = cards => cards.length === 8 && within(cards.map(c => c.height)) && within(cards.map(c => c.width)) && within(cards.map(c => c.nameTop)) && within(cards.map(c => c.nameLeft))
+// Every card the same size, with the name starting at the same place across in each and nothing spilling out of a card
+const sameCards = cards => cards.length === 8 && within(cards.map(c => c.height)) && within(cards.map(c => c.width)) && within(cards.map(c => c.nameLeft))
     && cards.every(c => c.inside && c.lostToLines <= 1);
+// The placement, the picture and the text block each sit in the middle of the card's height, within 2 px; the placement
+// is 24 px and the picture 52 px; and the lines of text start at the same place across
+const centeredCards = cards => cards.length === 8 && cards.every(c => c.centers.every(off => off !== undefined && Math.abs(off) <= 2)
+    && c.placementSize === 24 && c.avatarSize[0] === 52 && c.avatarSize[1] === 52 && within(c.lineLefts.map(left => left - c.infoLeft), 0.5));
 // The rankings sit on their own line under the socials in each card that has both (Alpha, Bravo and Player 5)
 const rankingsOwnLine = cards => JSON.stringify(cards.map(c => c.rankingsBelowSocials)) === JSON.stringify([true, true, null, null, true, null, null, null]);
 // Waits until every ranking logo has loaded
@@ -809,17 +819,19 @@ try {
                 JSON.stringify(landing.standings.map(s => s.lostTo)) === JSON.stringify(lostToShown.map(names => names && 'Lost to: ' + names)), landing.standings.map(s => s.lostTo));
             check('event landing: a ranking of a built-in series shows its logo at 16 px with the ranking\'s name as alt text, and any other shows the trophy',
                 JSON.stringify(landing.standings.map(s => s.rankIcons)) === JSON.stringify(rankIconsShown), landing.standings.map(s => s.rankIcons));
-            check('event landing: socials are icon links (Discord a username), rankings are a logo or a trophy and the rank, and empty ones are hidden',
+            check('event landing: socials are icons alone (X and Twitch links, Discord a 15 px button), rankings are a logo or a trophy and the rank, and empty ones are hidden',
                 JSON.stringify(landing.standings.map(s => s.socials)) === JSON.stringify(socialsShown) && JSON.stringify(landing.standings.map(s => s.rankings)) === JSON.stringify(rankingsShown)
-                && landing.standings.filter(s => s.socialsRow).length === 3 && landing.standings.filter(s => s.rankingsRow).length === 3 && landing.standings[0].discordText === 'alpha.gg' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
+                && landing.standings.filter(s => s.socialsRow).length === 3 && landing.standings.filter(s => s.rankingsRow).length === 3 && landing.standings[0].discordText === '15' && landing.standings[0].iconsDrawn && landing.standings[0].rankIconsDrawn, landing.standings);
             const cards = await standingsLayout(page);
             report.eventLanding.cards = cards;
             // 1st | 2nd, 3rd | 4th, 5th | 5th, 7th | 7th
             check('event landing: the top 8 read across each row and then down, two to a row',
                 cards.length === 8 && cards.every((c, i) => Math.abs(c.left - cards[i % 2].left) <= 1 && Math.abs(c.top - cards[i - i % 2].top) <= 1)
                 && cards[1].left > cards[0].left + cards[0].width && [2, 4, 6].every(i => cards[i].top >= cards[i - 2].top + cards[i - 2].height), cards.map(c => [c.left, c.top]));
-            check('event landing: all 8 cards are the same size within 1 px, whatever they hold, with the name at the same place in each',
+            check('event landing: all 8 cards are the same size within 1 px, whatever they hold',
                 sameCards(cards), cards);
+            check('event landing: in each card the 24 px placement, the 52 px picture and the text block are centered top to bottom within 2 px',
+                centeredCards(cards), cards.map(c => [c.centers, c.placementSize, c.avatarSize, c.lineLefts]));
             check('event landing: the rankings are on their own line below the socials', rankingsOwnLine(cards), cards.map(c => c.rankingsBelowSocials));
             check('event landing: a name and a lost-to line carry their full text as a title',
                 JSON.stringify(landing.standings.map(s => s.titles)) === JSON.stringify(standingNames.map((name, i) => [name.replace('SPN | ', 'SPN '), ...(lostToShown[i] ? ['Lost to: ' + lostToShown[i]] : [])])), landing.standings.map(s => s.titles));
@@ -838,12 +850,33 @@ try {
             await page.locator('a.standing-social').nth(1).focus();
             await page.keyboard.press('Tab');
             await page.waitForTimeout(400);
+            tooltips.discordFocus = await tooltip();
+            await page.keyboard.press('Tab');
+            await page.waitForTimeout(400);
             tooltips.focus = await tooltip();
             const card = await page.locator('.standing').first().boundingBox();
             await page.screenshot({ path: 'e2e-out/ranking-tooltip-desktop.png', clip: { x: card.x - 10, y: card.y - 10, width: card.width + 20, height: card.height + 70 } }).catch(() => { });
             await page.keyboard.press('Escape');
             await page.evaluate(() => document.activeElement?.blur());
+            // The Discord icon shows the username on hover, and a click copies it and says so for a moment
+            await page.evaluate(() => { window.copiedTexts = []; navigator.clipboard.writeText = async text => { window.copiedTexts.push(text); }; });
+            const discord = page.locator('button.standing-social').first();
+            await discord.hover();
+            await page.waitForTimeout(400);
+            tooltips.discordHover = await tooltip();
+            await discord.click();
+            await page.waitForTimeout(400);
+            tooltips.discordClicked = await tooltip();
+            await page.screenshot({ path: 'e2e-out/discord-copied-desktop.png', clip: { x: card.x - 10, y: card.y - 10, width: card.width + 20, height: card.height + 70 } }).catch(() => { });
+            await page.waitForTimeout(2200);
+            tooltips.discordLater = await tooltip();
+            tooltips.copiedTexts = await page.evaluate(() => window.copiedTexts);
+            await page.mouse.move(5, 5);
+            await page.waitForTimeout(400);
             report.eventLanding.rankingTooltips = tooltips;
+            check('event landing: the Discord icon shows the username in a tooltip on hover and on keyboard focus, and a click copies it and says "Copied" for 2 seconds',
+                tooltips.discordHover === 'Discord: alpha.gg' && tooltips.discordFocus === 'Discord: alpha.gg' && tooltips.discordClicked === 'Copied alpha.gg'
+                && tooltips.discordLater === 'Discord: alpha.gg' && JSON.stringify(tooltips.copiedTexts) === '["alpha.gg"]', tooltips);
             check('event landing: a ranking shows its full name in a tooltip on hover and on keyboard focus',
                 JSON.stringify(tooltips.hover) === JSON.stringify([...rankingsOf[1], ...rankingsOf[2]].map(r => r.title)) && tooltips.afterLeaving === '' && tooltips.focus === 'TestRank: 2025', tooltips);
             check('event landing: the one overview request asks for the sets, socials and rankings but no pools, and there is no Show more',
@@ -986,6 +1019,8 @@ try {
             report.eventLandingPhone = { layout, cards };
             check('phone: the 8 cards run 1st to 8th down one column, all the same size within 1 px, with the rankings on their own line below the socials',
                 cards.every((c, i) => !i || c.top >= cards[i - 1].top + cards[i - 1].height) && sameCards(cards) && rankingsOwnLine(cards), cards);
+            check('phone: in each card the 24 px placement, the 52 px picture and the text block are centered top to bottom within 2 px',
+                centeredCards(cards), cards.map(c => [c.centers, c.placementSize, c.avatarSize, c.lineLefts]));
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'e2e-out/event-landing-phone.png' }).catch(() => { });
             await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-phone.png' }).catch(() => { });
@@ -999,6 +1034,15 @@ try {
             await page.locator('.section-heading').first().tap();
             await page.waitForTimeout(500);
             const tappedAway = await tooltip();
+            // A tap on the Discord icon copies the username and says which
+            await page.evaluate(() => { window.copiedTexts = []; navigator.clipboard.writeText = async text => { window.copiedTexts.push(text); }; });
+            await page.locator('button.standing-social').first().tap();
+            await page.waitForTimeout(500);
+            const discordTapped = [await tooltip(), ...await page.evaluate(() => window.copiedTexts)];
+            await page.screenshot({ path: 'e2e-out/discord-copied-phone.png' }).catch(() => { });
+            await page.locator('.section-heading').first().tap();
+            await page.waitForTimeout(500);
+            check('phone: a tap on the Discord icon copies the username and shows "Copied" with the name', JSON.stringify(discordTapped) === '["Copied alpha.gg","alpha.gg"]', discordTapped);
             await page.setViewportSize({ width: size.width, height: 2600 });
             await page.waitForTimeout(300);
             await page.screenshot({ path: 'e2e-out/event-landing-phone-full.png' }).catch(() => { });
