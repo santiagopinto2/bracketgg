@@ -294,12 +294,13 @@ const standingsLayout = page => page.evaluate(() => [...document.querySelectorAl
     const box = card.getBoundingClientRect();
     const rect = selector => card.querySelector(selector)?.getBoundingClientRect();
     const round = value => Math.round(value * 10) / 10;
-    const name = rect('.standing-name'), social = rect('.standing-social'), ranking = rect('.standing-ranking');
+    // The lines themselves: on a phone each icon's tap area reaches 6 px past its line
+    const name = rect('.standing-name'), social = rect('.standing-socials'), ranking = rect('.standing-rankings');
     const lostTo = card.querySelector('.standing-lost-to');
     return {
         left: round(box.left), top: round(box.top), width: round(box.width), height: round(box.height),
         nameLeft: name && round(name.left - box.left), nameTop: name && round(name.top - box.top),
-        rankingsBelowSocials: social && ranking ? ranking.top >= social.bottom - 1 && Math.abs(ranking.left - social.left) < 8 : null,
+        rankingsBelowSocials: social && ranking ? ranking.top >= social.bottom && Math.abs(ranking.left - social.left) < 1 : null,
         inside: [...card.querySelectorAll('.standing-info *')].every(el => el.getBoundingClientRect().bottom <= box.bottom && el.getBoundingClientRect().right <= box.right + 0.5),
         lostToLines: lostTo ? Math.round(lostTo.getBoundingClientRect().height / parseFloat(getComputedStyle(lostTo).lineHeight)) : 0,
         lostToCut: !!lostTo && lostTo.scrollWidth > lostTo.clientWidth,
