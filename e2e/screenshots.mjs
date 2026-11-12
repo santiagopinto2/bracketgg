@@ -43,6 +43,16 @@ export async function takeScreenshots({ appUrl, eventPath, openPage, outDir }) {
                     const file = `${name}-${size}-${scheme}`;
                     const { context, page, quiet } = await openPage(browser, () => null, { ...device, colorScheme: scheme, reducedMotion: 'reduce' }, { fonts: true });
                     try {
+                        // The colored initials pick a random color: the same seed gives both builds the same colors
+                        await page.addInitScript(() => {
+                            let seed = 12345;
+                            Math.random = () => {
+                                seed = (seed + 0x6D2B79F5) | 0;
+                                let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+                                t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                            };
+                        });
                         await page.goto(appUrl + shot.path);
                         await page.addStyleTag({ content: still });
                         await quiet();
