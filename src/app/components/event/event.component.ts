@@ -218,20 +218,23 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 throw new StartggError(`This phase is a ${phase.bracketType.toLowerCase().replace(/_/g, ' ')}. Only single and double elimination brackets can be drawn.`);
             }
 
-            // With several pools, fetch the whole phase's sets at once and sort them by pool
+            // With several pools, fetch the whole phase's sets at once and draw each pool as soon as all of
+            // its sets are in. A pool drawn early goes in its own slot, so the pools keep their order.
             const groups = phase.phaseGroups.nodes;
-            const setsByPool = groups.length > 1 && phase.sets?.pageInfo?.total
-                ? await this.startggService.getPhaseSetsByPool(phaseId, phase.sets.pageInfo.total)
-                : null;
-            if (loadId !== this.loadId) return;
-
-            // Get all phase groups within the phase
-            let phaseGroupPromises = [];
-            for (let i = 0; i < groups.length; i++) {
-                this.maxRounds.push([]);
-                const phaseGroupPromise = this.getPhaseGroup(groups[i], i, loadId, setsByPool ? setsByPool.get(groups[i].id) ?? [] : null);
-                phaseGroupPromises.push(phaseGroupPromise);
+            const phaseGroupPromises = [];
+            for (let i = 0; i < groups.length; i++) this.maxRounds.push([]);
+            if (groups.length > 1 && phase.sets?.pageInfo?.total) {
+                const indexOf = new Map<any, number>(groups.map((group, i): [any, number] => [group.id, i]));
+                const expected = new Map<any, number>(groups.map((group): [any, number] => [group.id, group.sets?.pageInfo?.total ?? 0]));
+                await this.startggService.getPhaseSetsByPool(phaseId, phase.sets.pageInfo.total, expected, (poolId, sets) => {
+                    if (loadId !== this.loadId) return;
+                    const i = indexOf.get(poolId);
+                    phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId, sets));
+                });
+            } else {
+                for (let i = 0; i < groups.length; i++) phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId));
             }
+            if (loadId !== this.loadId) return;
 
             await Promise.all(phaseGroupPromises);
             if (loadId !== this.loadId) return;

@@ -226,7 +226,8 @@ function withVariables(query, variables) {
 }
 
 // Opens a page against the fake start.gg. `respond(query, n)` may return { status, body } to override
-// the n-th request (counting from 1); otherwise the normal answer goes back. `fonts` lets the icon and
+// the n-th request (counting from 1); otherwise the normal answer goes back. With `wait` (a promise) in
+// what it returns, the answer is held until that promise settles. `fonts` lets the icon and
 // text fonts load, for screenshots that look like the real page. `loggedIn: false` opens it as a visitor.
 async function openPage(browser, respond = () => null, contextOptions = {}, { fonts = false, loggedIn = true } = {}) {
     const context = await browser.newContext(contextOptions);
@@ -252,6 +253,7 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
         const override = respond(query, n);
         log.push({ n, at: Date.now(), kind: kindOf(query), status: override?.status ?? 200, query });
         await new Promise(r => setTimeout(r, 50));
+        if (override?.wait) await override.wait;
         await route.fulfill({ status: override?.status ?? 200, headers: { ...cors, 'content-type': 'application/json' },
             body: JSON.stringify(override?.body ?? answer(query)) });
         pending--;
@@ -700,6 +702,67 @@ try {
         check('three-pool phase: fetched as one phase (smaller pages after a refusal), every pool drawn the same',
             report.phaseSets.sameOrder && want.length > 0 && pools === 3 && (requests.phaseSets ?? 0) >= 1 && !requests.sets && !errors.length, report.phaseSets);
         await page.screenshot({ path: 'e2e-out/three-pools.png', fullPage: true }).catch(() => { });
+        await context.close();
+    }
+
+    // 14b. The same phase, drawn pool by pool as the pages come in. Here start.gg lists the sets pool by pool,
+    // so pool A's sets are all on the first pages. Pages of 11 or more are refused (page 2 of 11 after page 1
+    // already finished pool A), so the pages are 5 sets each: A on pages 1-2, B on 2-3, C on 3-4. Page 4 is
+    // held back: A and B must be drawn while it waits, and all three, in order, once it lands.
+    {
+        const byPool = poolsOf[1005].flatMap(id => setsOf[id].map(set => ({ ...set, phaseGroup: { id } })));
+        let release;
+        const held = new Promise(r => release = r);
+        const { context, page, log, quiet } = await openPage(browser, q => {
+            if (kindOf(q) !== 'phaseSets') return null;
+            const pageNumber = Number(q.match(/page: (\d+)/)[1]);
+            const perPage = Number(q.match(/perPage: (\d+)/)[1]);
+            if (perPage > 11 || (perPage === 11 && pageNumber === 2)) return { body: { errors: [{ message: 'Your query complexity is too high.' }] } };
+            const nodes = structuredClone(byPool).slice((pageNumber - 1) * perPage, pageNumber * perPage).map(set => asQueried(set, q));
+            return { body: { data: { phase: { sets: { nodes } } } }, wait: perPage === 5 && pageNumber === 4 ? held : null };
+        });
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        const single = await openPage(browser);
+        await single.page.goto(appUrl + eventPath + '/1001');
+        await single.quiet();
+        await single.page.waitForTimeout(1000);
+        const one = await tags(single.page);
+        await single.context.close();
+
+        await page.goto(appUrl + eventPath + '/1005');
+        // Up to 15 s for pools A and B, while page 4 is held
+        const start = Date.now();
+        let early = [];
+        while (Date.now() - start < 15000) {
+            early = await tags(page);
+            if (early.length >= 2 * one.length) break;
+            await page.waitForTimeout(200);
+        }
+        await page.waitForTimeout(500);
+        early = await tags(page);
+        const whileHeld = {
+            tags: early.length,
+            pools: await page.getByText(/^\s*Pool [A-C]\s*$/).allInnerTexts().then(t => t.map(s => s.trim())).catch(() => []),
+            spinner: await spinnerShown(page),
+        };
+        release();
+        await quiet();
+        await page.waitForTimeout(1000);
+        const drawn = await tags(page);
+        const pools = await page.getByText(/^\s*Pool [A-C]\s*$/).allInnerTexts().then(t => t.map(s => s.trim())).catch(() => []);
+        const requests = count(log);
+        report.progressivePools = {
+            requests, whileHeld, drawn: drawn.length, pools, spinner: await spinnerShown(page), errors,
+            earlyIsAB: JSON.stringify(early) === JSON.stringify([...one, ...one]),
+            sameOrder: JSON.stringify(drawn) === JSON.stringify([...one, ...one, ...one]),
+        };
+        check('three-pool phase: pools whose sets are all in are drawn before the last page lands',
+            one.length > 0 && report.progressivePools.earlyIsAB && JSON.stringify(whileHeld.pools) === '["Pool A","Pool B"]' && whileHeld.spinner, report.progressivePools);
+        // Refused: 95, 47, 23, then page 2 of 11. Answered: page 1 of 11, then four pages of 5.
+        check('three-pool phase: once the last page lands, every pool is drawn in order, with the same requests as before',
+            report.progressivePools.sameOrder && JSON.stringify(pools) === '["Pool A","Pool B","Pool C"]' && !report.progressivePools.spinner
+            && requests.phaseSets === 9 && !requests.sets && !requests.setScores && !errors.length, report.progressivePools);
         await context.close();
     }
 
