@@ -36,8 +36,6 @@ const shots = eventPath => ({
     menu: { path: '/tournament/test-tourney', phoneOnly: true, act: openMenu },
 });
 const openMenu = page => page.locator('mat-toolbar button:has(mat-icon:text("menu"))').click();
-// The light theme for a few of them
-const lightOnly = ['event-landing', 'double-elim', 'set-popup', 'privacy', 'home-visitor'];
 
 export async function takeScreenshots({ appUrl, eventPath, openPage, outDir }) {
     mkdirSync(outDir, { recursive: true });
@@ -46,12 +44,14 @@ export async function takeScreenshots({ appUrl, eventPath, openPage, outDir }) {
     try {
         for (const [name, shot] of Object.entries(shots(eventPath))) {
             for (const [size, device] of Object.entries(sizes)) {
+                // Every page in both themes
                 for (const scheme of ['dark', 'light']) {
-                    if (scheme === 'light' && (size !== 'desktop' || !lightOnly.includes(name))) continue;
                     if (shot.phoneOnly && size !== 'phone') continue;
                     const file = `${name}-${size}-${scheme}`;
                     const { context, page, quiet } = await openPage(browser, () => null, { ...device, colorScheme: scheme, reducedMotion: 'reduce' }, { fonts: true, loggedIn: !shot.visitor });
                     try {
+                        // The visitor's chosen theme (builds before the theme button followed colorScheme instead)
+                        if (scheme === 'light') await page.addInitScript(() => localStorage.setItem('bgg-theme', 'light'));
                         // The colored initials pick a random color: the same seed gives both builds the same colors
                         await page.addInitScript(() => {
                             let seed = 12345;

@@ -1,0 +1,70 @@
+// Angular Material's colors for both themes. Dark is the whole theme (colors, type, sizes); light
+// only replaces the colors.
+@use '@angular/material' as mat;
+
+// Dark: Material's pink and blue-gray dark theme...
+$dark: mat.m2-define-dark-theme((
+    color: (
+        primary: mat.m2-define-palette(mat.$m2-pink-palette, 700, 500, 900),
+        accent: mat.m2-define-palette(mat.$m2-blue-grey-palette, A200, A100, A400),
+    ),
+    typography: mat.m2-define-typography-config(),
+    density: 0,
+));
+// ...with buttons, icons, lists, the sidebar, the header and cards on these two shades instead
+$dark-controls: mat.m2-define-dark-theme((
+    color: (
+        primary: mat.m2-define-palette(mat.$m2-pink-palette),
+        accent: mat.m2-define-palette(mat.$m2-blue-gray-palette),
+    ),
+));
+
+// Light: the header's red for focused fields and primary buttons, a dark blue-gray for checkboxes
+// and the back-to-top button
+$light: mat.m2-define-light-theme((
+    color: (
+        primary: mat.m2-define-palette(mat.$m2-red-palette, 700, 500, 900),
+        accent: mat.m2-define-palette(mat.$m2-blue-grey-palette, 700, 500, 900),
+    ),
+));
+
+// The second and third themes below repeat parts of the first on purpose
+mat.$theme-ignore-duplication-warnings: true;
+
+@include mat.elevation-classes();
+@include mat.app-background();
+// Text sizes for headings, paragraphs and the body (<body class="mat-typography">)
+@include mat.typography-hierarchy($dark);
+
+html {
+    @include mat.all-component-themes($dark);
+    @include mat.button-color($dark-controls);
+    @include mat.icon-color($dark-controls);
+    @include mat.list-color($dark-controls);
+    @include mat.sidenav-color($dark-controls);
+    @include mat.toolbar-color($dark-controls);
+    @include mat.card-color($dark-controls);
+}
+
+html[data-theme='light'] {
+    @include mat.all-component-colors($light);
+    // Text fields a shade darker than Material's, which disappear on the light gray page, with labels
+    // that keep 4.5 to 1 on that shade
+    @include mat.form-field-overrides((
+        filled-container-color: #e9ebef,
+        filled-label-text-color: #5f6672,
+        filled-hover-label-text-color: #5f6672,
+        filled-focus-label-text-color: #b71c1c,
+    ));
+}
+
+// Material parts that take the site's own colors (_tokens.scss) in both themes. After the themes,
+// and as specific as the light one, so these win.
+html[data-theme] {
+    @include mat.progress-spinner-overrides((active-indicator-color: var(--spinner)));
+    @include mat.sidenav-overrides((content-background-color: var(--page-bg)));
+
+    .mat-mdc-snack-bar-container {
+        @include mat.progress-spinner-overrides((active-indicator-color: var(--snackbar-spinner)));
+    }
+}

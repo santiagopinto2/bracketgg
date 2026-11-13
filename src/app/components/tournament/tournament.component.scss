@@ -2,7 +2,7 @@
     width: 100%;
     height: clamp(180px, 25vw, 420px);
     overflow: hidden;
-    background: #111;
+    background: var(--banner-bg);
 }
 
 .banner-img {
@@ -60,7 +60,7 @@
     }
 
     a {
-        color: #4a9eff;
+        color: var(--link);
         text-decoration: none;
 
         &:hover {
@@ -98,8 +98,9 @@
     gap: 16px;
     padding: 16px;
     border-radius: 10px;
-    border: 1px solid rgba(128, 128, 128, 0.2);
-    background: rgb(63, 63, 63);
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    box-shadow: var(--surface-shadow);
 }
 
 .event-game-img-wrap {
@@ -167,9 +168,9 @@
     font-weight: 700;
     flex-shrink: 0;
 
-    &.placement-1 { color: #ffd700; }
-    &.placement-2 { color: #c0c0c0; }
-    &.placement-3 { color: #cd7f32; }
+    &.placement-1 { color: var(--place-1); }
+    &.placement-2 { color: var(--place-2); }
+    &.placement-3 { color: var(--place-3); }
 }
 
 .standing-profile-image {
@@ -199,8 +200,8 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background-color: #555;
-    color: #fff;
+    background-color: var(--avatar-bg);
+    color: var(--avatar-text);
     font-size: 11px;
     display: flex;
     align-items: center;

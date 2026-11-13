@@ -1,5 +1,6 @@
 mat-card {
-    background-color: rgb(87, 87, 87);
+    background-color: var(--dialog-card-bg);
+    color: inherit;
 }
 
 .entrant-name {
@@ -9,7 +10,7 @@ mat-card {
 }
 
 .entrant-sponsor {
-    color: rgb(197, 197, 197);
+    color: var(--dialog-text-muted);
 }
 
 .entrant-score {
@@ -43,7 +44,7 @@ mat-card {
 
 .entrant-image-default {
     border-radius: 50%;
-    color: #fff;
+    color: var(--avatar-text);
     text-align: center;
 }
 
@@ -67,4 +68,17 @@ mat-card {
     font-size: 18px;
     font-weight: bold;
     line-height: 34px;
+}
+
+.game-win {
+    color: var(--game-win);
+}
+
+.game-loss {
+    color: var(--game-loss);
+}
+
+.set-dialog-content {
+    padding: 16px 24px 32px;
+    color: var(--dialog-text);
 }

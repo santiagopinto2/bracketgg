@@ -52,6 +52,7 @@ async function main() {
   app.get('/api/auth/session', auth.session);
   app.post('/api/auth/token', sameOrigin, rateLimit({ max: 10 }), auth.token);
   app.post('/api/auth/logout', sameOrigin, auth.logout);
+  app.post('/api/auth/theme', sameOrigin, auth.theme);
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

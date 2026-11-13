@@ -1,5 +1,5 @@
 .mat-toolbar.mat-primary {
-    background: #f21a1a;
+    background: var(--brand);
 }
 
 .header-name {
@@ -16,17 +16,17 @@
     flex: 1 1 auto;
 }
 
-// Log in / Log out in the header: white on the red toolbar in both color schemes
+// Log in / Log out in the header: white on the red toolbar in both themes
 .header-auth {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     height: 36px;
     padding: 0 14px;
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    border: 1px solid var(--on-brand-border);
     border-radius: 18px;
     background: transparent;
-    color: #fff;
+    color: var(--on-brand);
     font: inherit;
     font-size: 14px;
     font-weight: 500;
@@ -41,14 +41,18 @@
     }
 
     &:hover {
-        background: rgba(255, 255, 255, 0.14);
-        border-color: #fff;
+        background: var(--on-brand-hover);
+        border-color: var(--on-brand);
     }
 
     &:focus-visible {
-        outline: 2px solid #fff;
+        outline: 2px solid var(--on-brand);
         outline-offset: 2px;
     }
+}
+
+.theme-toggle {
+    margin-left: 8px;
 }
 
 .sidenav-container {
@@ -68,6 +72,11 @@
     overflow: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+
+.events-label {
+    padding: 0 16px;
+    color: var(--text-muted);
 }
 
 .home-section {
@@ -98,7 +107,7 @@ mat-sidenav-content {
     flex-shrink: 0;
     width: 250px;
     padding: 4px 0 8px;
-    border-top: 1px solid rgba(128, 128, 128, 0.3);
+    border-top: 1px solid var(--divider);
 }
 
 // A list item that is a button: without the browser's own button look

@@ -19,6 +19,12 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 - Logged-in visitors' start.gg tokens stay on the server (`server/sessions.js`, saved to `SESSIONS_FILE`); the browser holds only the HttpOnly `bgg_session` cookie. `server/auth.js` refreshes tokens and ends a session only when start.gg refuses its refresh token.
 - Environment: `STARTGG_CLIENT_ID`, `STARTGG_CLIENT_SECRET`, `STARTGG_REDIRECT_URI`, `STARTGG_SITE_TOKEN`, `SESSIONS_FILE` (on a writable volume); the full list is at the top of `proxy-server.js`. Needs Node 22.18+.
 
+## Themes
+
+- Dark is the default; `<html data-theme="light">` is the light theme. `src/index.html` sets it from localStorage (`bgg-theme`) before the first paint, `src/app/services/theme.service.ts` after that.
+- Every color is a token in `src/styles/_tokens.scss`, with a dark and a light value. Components use `var(--name)`, never a color of their own. Material's colors for both themes are in `src/styles/_material.scss`.
+- `e2e/screenshots.mjs` takes every page in both themes.
+
 ## Building and testing
 
 CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and push to main. `e2e/api-calls.mjs` runs the app against a fake start.gg. `e2e/gql-cache.mjs` tests the cache, allowlist and site gate; `e2e/auth.mjs` runs the real server against a fake start.gg for login, sessions and security headers.

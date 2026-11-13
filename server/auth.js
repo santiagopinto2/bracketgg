@@ -7,9 +7,10 @@
 // shared by every request and tab of the same session. A session ends only when start.gg refuses its
 // refresh token; a network error or a start.gg outage keeps it for the next try.
 //
-//   GET  /api/auth/session   { loggedIn }   (refreshes first if needed)
+//   GET  /api/auth/session   { loggedIn, theme? }   (refreshes first if needed; theme if they chose one)
 //   POST /api/auth/token     { code }  ->  { loggedIn: true } and the cookie
 //   POST /api/auth/logout    deletes the session and the cookie
+//   POST /api/auth/theme     { theme: 'light' | 'dark' }   keeps a logged-in visitor's theme with their session
 
 const COOKIE = 'bgg_session';
 const REFRESH_EARLY_MS = 5 * 60_000; // refresh a token this close to expiring
@@ -138,7 +139,7 @@ function createAuth({
     async function session(req, res) {
         res.set('cache-control', 'no-store');
         const found = await freshSession(req, res);
-        res.json({ loggedIn: !!found });
+        res.json({ loggedIn: !!found, ...(found?.session.theme ? { theme: found.session.theme } : {}) });
     }
 
     async function token(req, res) {
@@ -167,7 +168,19 @@ function createAuth({
         res.json({ loggedIn: false });
     }
 
-    return { tokenFor, session, token, logout };
+    // The light or dark theme a logged-in visitor chose. The browser remembers it too; this copy
+    // gives it back when the browser forgot.
+    function theme(req, res) {
+        res.set('cache-control', 'no-store');
+        const chosen = req.body?.theme;
+        if (chosen !== 'light' && chosen !== 'dark') return res.status(400).json({ error: 'Send theme: "light" or "dark".' });
+        const id = sessionId(req);
+        if (!id || !sessions.get(id)) return res.status(401).json({ error: 'Not logged in.' });
+        sessions.update(id, { theme: chosen });
+        res.json({ theme: chosen });
+    }
+
+    return { tokenFor, session, token, logout, theme };
 }
 
 module.exports = { createAuth, parseCookies };
