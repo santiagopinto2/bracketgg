@@ -941,16 +941,23 @@ try {
             await page.locator('.phase-menu-button').click();
             await page.waitForTimeout(500);
             const items = await texts(page, '.phase-menu-item');
+            // The check is drawn to the right of the current phase's name, and every name starts at the same place
+            const checkPlace = await page.locator('.phase-menu-item').evaluateAll(all => all.map(item => {
+                const name = item.querySelector('.phase-menu-name').getBoundingClientRect();
+                const mark = item.querySelector('.phase-menu-check');
+                return { nameLeft: Math.round(name.left), checked: mark.textContent.trim() === 'check', after: mark.getBoundingClientRect().left >= name.right };
+            }));
             await page.screenshot({ path: 'e2e-out/phase-menu.png' }).catch(() => { });
             await page.locator('.phase-menu-item').nth(5).click();
             await quiet();
             const menu = {
-                items, url: new URL(page.url()).pathname, phase: await phaseShown(page), rounds: (await texts(page, '.full-round-text')).slice(0, 2),
+                items, checkPlace, url: new URL(page.url()).pathname, phase: await phaseShown(page), rounds: (await texts(page, '.full-round-text')).slice(0, 2),
                 arrows: await page.locator('button:has(mat-icon[fonticon="arrow_back"]), button:has(mat-icon[fonticon="arrow_forward"])').count(), requests: count(log, mark),
             };
             report.eventLanding.phaseMenu = menu;
-            check('phase menu: lists every phase, marks the current one, and jumps to a phase that is not next door',
-                JSON.stringify(items) === JSON.stringify(Object.values(phaseNames).map(name => name === 'Top 4' ? 'check Top 4' : name))
+            check('phase menu: lists every phase, marks the current one with a check after its name, and jumps to a phase that is not next door',
+                JSON.stringify(items) === JSON.stringify(Object.values(phaseNames).map(name => name === 'Top 4' ? 'Top 4 check' : name))
+                && checkPlace.filter(item => item.checked).length === 1 && checkPlace.every(item => item.after && item.nameLeft === checkPlace[0].nameLeft)
                 && menu.url === eventPath + '/1006' && menu.phase === 'Single Elim' && menu.rounds.join() === 'Semi-Final,Final' && menu.arrows === 2
                 && !menu.requests.tournament && !menu.requests.entrants, menu);
 
