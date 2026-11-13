@@ -207,8 +207,12 @@
     font-weight: 600;
 }
 
+// The font's arrow is small at the tag's text size, so it is drawn larger
 .progression-arrow {
-    opacity: 0.75;
+    font-size: 15px;
+    line-height: 1;
+    margin-top: -2px;
+    opacity: 0.85;
 }
 
 .progression-to {
