@@ -57,7 +57,7 @@ const post = async (query, variables, as = 'user:viewer-a') => {
 };
 // A phase's players (any string works as the id here)
 const players = id => [Q.phaseEntrantsQuery, { phaseId: id, page: 1, perPage: 300 }];
-const sets = id => [Q.poolSetsQuery, { id, page: 1, perPage: 55 }];
+const sets = id => [Q.poolSetsQuery, { id, page: 1, perPage: 55, progression: false }];
 
 try {
     // 1. The second viewer of the same thing gets the cached answer

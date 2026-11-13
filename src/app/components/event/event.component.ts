@@ -1,10 +1,10 @@
-import { AfterViewInit, Component, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { picksBySide } from '../set/character-picks';
-import { NgStyle, NgClass } from '@angular/common';
+import { Location, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -38,8 +38,22 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     // The event's name and slug, for the link back to its landing page
     eventName = '';
     eventSlug = '';
+    // The shown phase's id, also for a phase the event's list doesn't have
+    phaseId = null;
     // The pool to scroll to once the phase is drawn, from a /brackets/<phase id>/<pool id> link
     poolId = null;
+    // Where the link that opened this phase points: its pool, and the player (?player=, from a set's
+    // progression tag) or the set (?set=, the history entry a followed tag leaves behind) to center.
+    // `done` once the bracket has scrolled there, so each visit scrolls at most once.
+    private arrival: { poolId: any, playerId: any, setId: any, done: boolean } | null = null;
+    // The visitor scrolled, dragged or pressed a key since the phase began to load: the bracket no longer scrolls for them
+    private userMoved = false;
+    // What the bracket scrolled to for the link: a set, centered, or a pool, at the top of the view
+    private arrivedAt: HTMLElement | null = null;
+    // The set the bracket scrolled to, outlined for a few seconds
+    highlightedSetId: string | null = null;
+    private highlightTimer: any;
+    private hoverTimer: any;
     // The shown phase's players by entrant id, with their pictures, loading alongside its sets
     playersById: Promise<Map<any, any>> = Promise.resolve(new Map());
     // The color of each player without a picture, kept while the event stays the same
@@ -79,6 +93,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         private deviceService: DeviceDetectorService,
         private dialog: MatDialog,
         private router: Router,
+        private location: Location,
+        private cdr: ChangeDetectorRef,
         private zone: NgZone
     ) {
         this.isDesktop = this.deviceService.isDesktop();
@@ -97,12 +113,18 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             this.maxRoundsPhase = -1;
             this.entrants.set([]);
             this.playerHovered = -1;
+            this.arrival = null;
+            this.arrivedAt = null;
+            this.userMoved = false;
+            this.highlightedSetId = null;
+            clearTimeout(this.highlightTimer);
 
             // Clear this data only if there is no event
             if (!event || !event.phaseId) {
                 this.eventId = -1;
                 this.eventName = '';
                 this.eventSlug = '';
+                this.phaseId = null;
                 this.playersById = Promise.resolve(new Map());
                 this.colorsById = new Map();
                 this.loadId++;
@@ -116,7 +138,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
                 this.eventName = event.event.name;
                 this.eventSlug = event.slug;
+                this.phaseId = event.phaseId;
                 this.poolId = event.poolId ?? null;
+                if (event.poolId || event.playerId || event.setId) {
+                    this.arrival = { poolId: event.poolId ?? null, playerId: event.playerId ?? null, setId: event.setId ?? null, done: false };
+                }
 
                 // Get all phase and phase group data
                 this.phases = event.event.phases;
@@ -143,6 +169,14 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             content.addEventListener('scroll', () => {
                 this.showScrollToTop.set(content.scrollTop > 200 || content.scrollLeft > 200);
             }, { passive: true, signal: this.listeners.signal });
+
+            // A visitor who has started moving around is not scrolled to where a link pointed (arrive)
+            const moved = () => this.userMoved = true;
+            for (const type of ['wheel', 'touchstart', 'mousedown']) content.addEventListener(type, moved, { passive: true, signal: this.listeners.signal });
+            window.addEventListener('keydown', moved, { passive: true, signal: this.listeners.signal });
+            // Pools can be drawn above the one being looked at. drawPool keeps the view in place itself, so
+            // the browser's own scroll anchoring, which only some browsers have, must not do it too.
+            content.style.overflowAnchor = 'none';
         });
 
         // Horizontal and vertical drag
@@ -243,25 +277,32 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
             // With several pools, fetch them in runs of pool slices and draw each pool, in order, as soon as
             // all of its sets are in. Each pool goes in its own slot, so the pools keep their order.
+            // The pool a link names loads first and is scrolled to as soon as it is drawn (arrive), without
+            // waiting for the others.
             const groups = phase.phaseGroups.nodes;
             const phaseGroupPromises = [];
+            const progression = this.sendsPlayersOn(phaseId);
             for (let i = 0; i < groups.length; i++) this.maxRounds.push([]);
             if (groups.length > 1) {
                 const indexOf = new Map<any, number>(groups.map((group, i): [any, number] => [group.id, i]));
-                const expected = new Map<any, number>(groups.map((group): [any, number] => [group.id, group.sets?.pageInfo?.total ?? 0]));
+                const first = groups.find(group => group.id == this.arrival?.poolId);
+                const order = first ? [first, ...groups.filter(group => group !== first)] : groups;
+                const expected = new Map<any, number>(order.map((group): [any, number] => [group.id, group.sets?.pageInfo?.total ?? 0]));
                 await this.startggService.getPhaseSetsByPool(phaseId, expected, (poolId, sets) => {
                     if (loadId !== this.loadId) return;
                     const i = indexOf.get(poolId);
                     phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId, sets));
-                });
+                }, progression);
             } else {
-                for (let i = 0; i < groups.length; i++) phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId));
+                for (let i = 0; i < groups.length; i++) phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId, null, progression));
             }
             if (loadId !== this.loadId) return;
 
             await Promise.all(phaseGroupPromises);
             if (loadId !== this.loadId) return;
             this.loadingService.updateValue(false);
+            // A link with no pool, or to a pool that isn't here: look for its player or set in the whole phase
+            this.arrive();
         } catch (error) {
             if (loadId !== this.loadId) return;
             console.error(error);
@@ -269,11 +310,12 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         }
     }
 
-    // `prefetched` is this pool's sets from the phase's pool slices, or null to fetch the pool alone
-    async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId, prefetched = null) {
+    // `prefetched` is this pool's sets from the phase's pool slices, or null to fetch the pool alone,
+    // with where its sets send their players if `progression`
+    async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId, prefetched = null, progression = false) {
         let phaseGroupSetsRes = prefetched
             ? { nodes: prefetched }
-            : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total);
+            : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, progression);
         if (loadId !== this.loadId || phaseGroupSetsRes.nodes.length == 0) return;
 
         phaseGroup.sets = phaseGroupSetsRes;
@@ -356,6 +398,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             }
         });
 
+        // The tags beside the sets that send a player to a later phase
+        phaseGroupSets.forEach(set => set.progression = this.progressionTags(set));
+
         // Calculate the number of players per phase group
         phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
 
@@ -369,11 +414,144 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         // Finally set the phase group
-        this.phaseGroups[phaseGroupIndex] = phaseGroup;
+        this.drawPool(phaseGroupIndex, phaseGroup);
+        if (phaseGroup.id == this.arrival?.poolId) this.arrive();
 
         setTimeout(() => {
             this.getScrollToTopOffset();
         });
+    }
+
+    // Whether the phase's sets can send players to a later phase: some phase of the event names it as
+    // where its players come from. Only then are the sets asked where their players go, which costs 2
+    // of start.gg's objects per set. A phase the event's list doesn't have is asked, to be safe.
+    sendsPlayersOn(phaseId): boolean {
+        if (!this.phases.some(phase => phase.id == phaseId)) return true;
+        return this.phases.some(phase => phase.progressingInData?.some(source => source?.origin == phaseId));
+    }
+
+    // The tags of a set that sends its winner, its loser or both to a later phase: where each goes and
+    // the link there. Once the set is played the link carries the player (?player=<entrant id>, the
+    // same id in every phase of an event), for the next phase to scroll to them.
+    progressionTags(set) {
+        const seeds = [['Winner', set.winnerProgressionSeed], ['Loser', set.loserProgressionSeed]].filter(([, seed]) => seed?.phase?.id != null && seed.phase.id != this.phaseId);
+        return seeds.map(([who, seed]) => {
+            const listed = this.phases.find(phase => phase.id == seed.phase.id);
+            const phaseName = seed.phase.name || listed?.name || 'Next phase';
+            // A phase with one pool needs no pool name
+            const poolName = seed.phaseGroup?.displayIdentifier && listed?.groupCount != 1 ? `Pool ${seed.phaseGroup.displayIdentifier}` : '';
+            let entrantId = null;
+            if (set.winnerId && set.slots.every(slot => slot?.entrant)) {
+                entrantId = set.slots.find(slot => (slot.entrant.id == set.winnerId) == (who == 'Winner'))?.entrant.id ?? null;
+            }
+            return {
+                who,
+                // "W" and "L" tell the two tags apart when both players go on
+                short: seeds.length > 1 ? who[0] : '',
+                label: poolName ? `${phaseName} · ${poolName}` : phaseName,
+                title: `${who} goes to ${phaseName}${poolName ? ', ' + poolName : ''}`,
+                entrantId,
+                href: `/${this.eventSlug}/brackets/${seed.phase.id}${seed.phaseGroup?.id != null ? '/' + seed.phaseGroup.id : ''}${entrantId != null ? '?player=' + entrantId : ''}`,
+            };
+        });
+    }
+
+    // A click on a progression tag opens the phase it names. The history entry left behind names this
+    // pool and set, so Back returns to the set the tag was on instead of the top of the phase.
+    followProgression(event: MouseEvent, phaseGroup, set, tag) {
+        // Not a click on the set, which would open its dialog
+        event.stopPropagation();
+        // The browser opens a new tab or window itself
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        if (this.phaseId != null && phaseGroup?.id != null) {
+            this.location.replaceState(`/${this.eventSlug}/brackets/${this.phaseId}/${phaseGroup.id}`, `set=${encodeURIComponent(set.id)}`);
+        }
+        this.router.navigateByUrl(tag.href);
+    }
+
+    // Draws a pool whose sets are in. Pools can come out of order (the one a link names loads first), and
+    // a pool drawn above what the visitor is looking at would push it down the page. So the bracket goes
+    // back to where the link pointed, or, once the visitor has moved, scrolls by as much as a pool above
+    // the top of the view grew. Both happen in the same frame as the drawing.
+    private drawPool(phaseGroupIndex, phaseGroup) {
+        const content = document.querySelector<HTMLElement>('mat-sidenav-content');
+        const row = document.querySelector<HTMLElement>(`[data-pool-index="${phaseGroupIndex}"]`);
+        const follow = !!this.arrivedAt && !this.userMoved;
+        const above = !follow && !!content && !!row && row.getBoundingClientRect().top < content.getBoundingClientRect().top;
+        const heightBefore = above ? row.getBoundingClientRect().height : 0;
+        this.phaseGroups[phaseGroupIndex] = phaseGroup;
+        if (!follow && !above) return;
+        this.cdr.detectChanges();
+        if (follow) this.showArrival();
+        else content.scrollTop += row.getBoundingClientRect().height - heightBefore;
+    }
+
+    // Takes the visitor where the link pointed, once per visit: the set named in the link, or the
+    // player's first set, centered and outlined for a few seconds; without either (the player isn't
+    // placed in this phase yet, say), the top of the pool. Called when the link's pool is drawn and
+    // again when the whole phase is. A visitor who has already started moving around is left alone.
+    private arrive() {
+        const arrival = this.arrival;
+        if (!arrival || arrival.done) return;
+        arrival.done = true;
+        if (this.userMoved) return;
+        this.cdr.detectChanges();
+
+        const content = document.querySelector<HTMLElement>('mat-sidenav-content');
+        const pool = arrival.poolId ? document.getElementById('pool-' + arrival.poolId) : null;
+        const setId = arrival.setId ?? this.firstSetOf(arrival.playerId, arrival.poolId);
+        const set = setId == null ? null
+            : Array.from((pool ?? content).querySelectorAll<HTMLElement>('[data-set-id]')).find(element => element.getAttribute('data-set-id') == String(setId));
+        this.arrivedAt = set ?? pool;
+        this.showArrival();
+        if (!set) return;
+        this.highlightedSetId = String(setId);
+        if (arrival.playerId != null && !arrival.setId) this.playerHovered = arrival.playerId;
+        clearTimeout(this.highlightTimer);
+        this.highlightTimer = setTimeout(() => this.highlightedSetId = null, 3500);
+    }
+
+    // Scrolls, at once, to what the link pointed at: a set to the middle of the view, a pool to its top.
+    // A short page can't scroll that far yet, so this runs again as more pools are drawn (drawPool).
+    private showArrival() {
+        const target = this.arrivedAt;
+        if (!target?.isConnected) return;
+        // After a scroll the browser tells whatever is now under a resting mouse that it is hovered.
+        // That must not move the highlight from the link's player to someone else.
+        this.canHover = false;
+        clearTimeout(this.hoverTimer);
+        this.hoverTimer = setTimeout(() => this.canHover = true, 600);
+        if (!target.hasAttribute('data-set-id')) {
+            target.scrollIntoView({ block: 'start', behavior: 'instant' });
+            return;
+        }
+        const content = document.querySelector<HTMLElement>('mat-sidenav-content');
+        const box = content.getBoundingClientRect();
+        const place = target.getBoundingClientRect();
+        content.scrollTo({
+            left: content.scrollLeft + place.left - box.left - (box.width - place.width) / 2,
+            top: content.scrollTop + place.top - box.top - (box.height - place.height) / 2,
+            behavior: 'instant'
+        });
+    }
+
+    // The first set a player plays in the phase: the one they don't reach from another of their sets
+    // (a player who comes in on the losers side and reaches the grand final has sets on both sides).
+    // Looks in the named pool if it is drawn, otherwise in every pool.
+    private firstSetOf(playerId, poolId) {
+        if (playerId == null) return null;
+        const drawn = this.phaseGroups.filter(phaseGroup => phaseGroup);
+        const named = drawn.filter(phaseGroup => phaseGroup.id == poolId);
+        for (const phaseGroup of named.length ? named : drawn) {
+            const slotOf = set => set.slots.find(slot => slot?.entrant?.id == playerId);
+            // Winners rounds, then losers rounds, each from its first round
+            const sets = phaseGroup.sets.nodes.flat(2).filter(set => slotOf(set));
+            const ids = new Set(sets.map(set => String(set.id)));
+            const first = sets.find(set => !(slotOf(set).prereqType === 'set' && ids.has(String(slotOf(set).prereqId)))) ?? sets[0];
+            if (first) return first.id;
+        }
+        return null;
     }
 
     // Fills every empty slot with who would get there if the higher seed won each set from here on.
@@ -932,6 +1110,10 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.listeners.abort();
+        clearTimeout(this.highlightTimer);
+        clearTimeout(this.hoverTimer);
+        const content = document.querySelector<HTMLElement>('mat-sidenav-content');
+        if (content) content.style.overflowAnchor = '';
     }
 
     scrollToTop() {

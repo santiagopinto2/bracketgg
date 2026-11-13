@@ -46,6 +46,9 @@ echo "live displayScore: ok"
 # With the token: a phase's players, profile pictures only, and the top 8's losses, from the real start.gg
 node --experimental-strip-types e2e/live-players.mjs > $out/live-players.json 2> $out/live-players.err || { cat $out/live-players.json $out/live-players.err; echo "live players check failed"; exit 1; }
 echo "live players: ok"
+# With the token: where a real pool's sets send their players, what asking costs, and that a player keeps their entrant id in the next phase
+node --experimental-strip-types e2e/live-progression.mjs > $out/live-progression.json 2> $out/live-progression.err || { cat $out/live-progression.json $out/live-progression.err; echo "live progression check failed"; exit 1; }
+echo "live progression: ok"
 
 npm install --no-save --no-audit --no-fund --loglevel=error playwright pixelmatch pngjs > /dev/null || exit 1
 npx playwright install --with-deps chromium webkit > $out/playwright-install.log 2>&1 || { tail -30 $out/playwright-install.log; exit 1; }

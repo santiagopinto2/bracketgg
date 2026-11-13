@@ -27,8 +27,10 @@ export class StartggService {
     private teamsPerPage = 190;
     // A single pool's page size. Measured on a whole phase, whose sets also named their pool: about 10
     // objects per set with no characters reported (95 sets 951, 100 sets 1001, cap 1000; 2026-11-09).
-    // A pool's own sets cost 9. Sets with characters cost more, and a refused page shrinks to fit.
+    // A pool's own sets cost 9, or about 12 when asked where their players go next (`progression`), so
+    // those pages are smaller. Sets with characters cost more, and a refused page shrinks to fit.
     private setsPerPage = 95;
+    private progressionSetsPerPage = 80;
     // Sets asked for per entrant in the landing page's top 8, to find who they lost to. An entrant
     // with this many may have more, and then shows no losses.
     readonly setsPerStanding = SETS_PER_STANDING;
@@ -48,8 +50,11 @@ export class StartggService {
     // reported and 1 per slice (Genesis X Melee R1 Pools: 40 sets in one slice cost 361, in eight
     // slices of 5 cost 368; measured 2026-11-13). Sets with characters cost more: a refused request
     // raises the cost per set, remembered by phase in `sliceCosts`.
+    // Asking where each set's winner and loser go next (`progression`) adds 2 objects per set and 2 per
+    // seed there is: the same 40 sets cost 453 with their 6 seeds, 11.3 a set, counted here as 12.
     private sliceSize = 5;
     private objectsPerPoolSet = 9;
+    private objectsPerProgressionSet = 12;
     private requestCost = 980;
     private sliceCosts = new Map<string, { perSet: number, size: number }>();
 
@@ -232,9 +237,11 @@ export class StartggService {
         return data.phase;
     }
 
-    async getPhaseGroupSets(phaseGroupId, totalSets): Promise<any> {
-        const nodes = await this.loadPages(`sets:${phaseGroupId}`, totalSets, this.setsPerPage, async (page, perPage) => {
-            const data = await this.getPhaseGroupSetsPaginated(phaseGroupId, page, perPage);
+    // Every set of one pool. `progression` also asks where each set's winner and loser go in a later phase.
+    async getPhaseGroupSets(phaseGroupId, totalSets, progression = false): Promise<any> {
+        const setsPerPage = progression ? this.progressionSetsPerPage : this.setsPerPage;
+        const nodes = await this.loadPages(`sets:${phaseGroupId}`, totalSets, setsPerPage, async (page, perPage) => {
+            const data = await this.getPhaseGroupSetsPaginated(phaseGroupId, page, perPage, progression);
             return data?.phaseGroup?.sets?.nodes ?? [];
         });
         await this.fillScores(nodes);
@@ -242,7 +249,9 @@ export class StartggService {
     }
 
     // Every set of a multi-pool phase, pool after pool, for drawing each pool as soon as its sets are in.
-    // `expected` is each pool's set count (from the phase query), in the order the pools are shown.
+    // `expected` is each pool's set count (from the phase query), in the order the pools should load:
+    // the order they are shown in, or with the pool the visitor asked for moved to the front.
+    // `progression` also asks where each set's winner and loser go in a later phase.
     //
     // Each request carries a run of pool slices (poolSlicesQuery): pages of `sliceSize` sets from one
     // pool, filled up to about `requestCost` of start.gg's objects. So a request holds, say, the end of
@@ -255,9 +264,9 @@ export class StartggService {
     // The first request goes alone and tests the cost. A request start.gg refuses for its size raises
     // the cost per set to what start.gg counted, and its slices are asked for again in smaller requests;
     // slices that already arrived are kept, so no pool is passed on twice.
-    async getPhaseSetsByPool(phaseId, expected: Map<any, number>, onPool: (poolId: any, sets: any[]) => void): Promise<void> {
+    async getPhaseSetsByPool(phaseId, expected: Map<any, number>, onPool: (poolId: any, sets: any[]) => void, progression = false): Promise<void> {
         const key = `pool-slices:${phaseId}`;
-        let { perSet, size } = this.sliceCosts.get(key) ?? { perSet: this.objectsPerPoolSet, size: this.sliceSize };
+        let { perSet, size } = this.sliceCosts.get(key) ?? { perSet: progression ? this.objectsPerProgressionSet : this.objectsPerPoolSet, size: this.sliceSize };
         const pools = [...expected.keys()];
         const total = (pool: any) => Math.max(0, Number(expected.get(pool)) || 0);
         // Each pool's slices that came in, by page, and how many pages it needs
@@ -298,7 +307,7 @@ export class StartggService {
             }
             const requests = this.packSlices(missing, perSet);
             const send = async (request: { pool: any, page: number, sets: number }[]) => {
-                const variables: Record<string, any> = { perPage: size };
+                const variables: Record<string, any> = { perPage: size, progression };
                 request.forEach((slice, k) => {
                     variables[`g${k}`] = Number(slice.pool);
                     variables[`p${k}`] = slice.page;
@@ -372,7 +381,7 @@ export class StartggService {
     }
 
     // One page of sets from a pool
-    getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Promise<any> {
-        return this.query(poolSetsQuery, { id: Number(phaseGroupId), page, perPage: setsPerPage });
+    getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage, progression = false): Promise<any> {
+        return this.query(poolSetsQuery, { id: Number(phaseGroupId), page, perPage: setsPerPage, progression });
     }
 }
