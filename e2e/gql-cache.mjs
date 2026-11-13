@@ -4,7 +4,7 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const express = require('express');
-const { createGqlCache } = require('../server/gql-cache.js');
+const { createGqlCache, ttlMs } = require('../server/gql-cache.js');
 const { loadAllowlist } = require('../server/gql-allowlist.js');
 const { createSiteGate, SiteBusyError } = require('../server/site-gate.js');
 const Q = await import('../src/app/services/startgg-queries.ts');
@@ -13,7 +13,10 @@ const report = { checks: [] };
 const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail });
 
 const allowed = await loadAllowlist();
-check('the allowlist holds every query the app can send', allowed.size === 2 + 8 + 1 + 2 + Q.MAX_SET_SCORES && allowed.has(Q.tournamentQuery) && allowed.has(Q.setScoresQuery(37)), allowed.size);
+check('the allowlist holds every query the app can send', allowed.size === 2 + 8 + 1 + 1 + Q.MAX_POOL_SLICES + Q.MAX_SET_SCORES && allowed.has(Q.tournamentQuery) && allowed.has(Q.setScoresQuery(37)) && allowed.has(Q.poolSlicesQuery(Q.MAX_POOL_SLICES)), allowed.size);
+// Pool slices are set results, which stay fresh for 15 s like any other
+const sliceTtls = Array.from({ length: Q.MAX_POOL_SLICES }, (_, i) => ttlMs(Q.poolSlicesQuery(i + 1)));
+check('pool slices get the 15 s set results TTL', sliceTtls.every(ttl => ttl === 15_000) && ttlMs(Q.poolSetsQuery) === 15_000, [...new Set(sliceTtls)]);
 
 // A fake start.gg: answers per query, counts calls and the tokens they came with, can be slow
 let upstreamCalls = 0;
@@ -53,7 +56,7 @@ const post = async (query, variables, as = 'user:viewer-a') => {
     return { status: res.status, cache: res.headers.get('x-cache'), retryAfter: res.headers.get('retry-after'), body: await res.json() };
 };
 const event = slug => [Q.entrantsQuery, { slug, page: 1, perPage: 100 }];
-const sets = id => [Q.setsQuery('phaseGroup'), { id, page: 1, perPage: 55 }];
+const sets = id => [Q.poolSetsQuery, { id, page: 1, perPage: 55 }];
 
 try {
     // 1. The second viewer of the same thing gets the cached answer

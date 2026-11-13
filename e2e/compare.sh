@@ -37,7 +37,7 @@ for f in 'main-*.js' 'styles-*.css' '*.js'; do
   echo "$f: main $(size_of /tmp/app-main "$f"), branch $(size_of /tmp/app-branch "$f")"
 done | tee $out/bundle-sizes.txt
 
-# With Santi's start.gg token: a real multi-pool phase fetched whole must match each pool fetched alone
+# With Santi's start.gg token: a real multi-pool phase fetched in pool slices must match each pool fetched alone
 node e2e/live-phase-sets.mjs > $out/live-phase-sets.json 2>&1 || { cat $out/live-phase-sets.json; echo "live phase sets check failed"; exit 1; }
 echo "live phase sets: $(head -c 80 $out/live-phase-sets.json | tr -d '\n')"
 # With the token: scores read from displayScore must equal start.gg's own score fields on real sets

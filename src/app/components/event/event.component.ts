@@ -218,15 +218,15 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 throw new StartggError(`This phase is a ${phase.bracketType.toLowerCase().replace(/_/g, ' ')}. Only single and double elimination brackets can be drawn.`);
             }
 
-            // With several pools, fetch the whole phase's sets at once and draw each pool as soon as all of
-            // its sets are in. A pool drawn early goes in its own slot, so the pools keep their order.
+            // With several pools, fetch them in runs of pool slices and draw each pool, in order, as soon as
+            // all of its sets are in. Each pool goes in its own slot, so the pools keep their order.
             const groups = phase.phaseGroups.nodes;
             const phaseGroupPromises = [];
             for (let i = 0; i < groups.length; i++) this.maxRounds.push([]);
-            if (groups.length > 1 && phase.sets?.pageInfo?.total) {
+            if (groups.length > 1) {
                 const indexOf = new Map<any, number>(groups.map((group, i): [any, number] => [group.id, i]));
                 const expected = new Map<any, number>(groups.map((group): [any, number] => [group.id, group.sets?.pageInfo?.total ?? 0]));
-                await this.startggService.getPhaseSetsByPool(phaseId, phase.sets.pageInfo.total, expected, (poolId, sets) => {
+                await this.startggService.getPhaseSetsByPool(phaseId, expected, (poolId, sets) => {
                     if (loadId !== this.loadId) return;
                     const i = indexOf.get(poolId);
                     phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId, sets));
@@ -247,7 +247,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         }
     }
 
-    // `prefetched` is this pool's sets from a whole-phase fetch, or null to fetch the pool alone
+    // `prefetched` is this pool's sets from the phase's pool slices, or null to fetch the pool alone
     async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId, prefetched = null) {
         let phaseGroupSetsRes = prefetched
             ? { nodes: prefetched }

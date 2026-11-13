@@ -156,6 +156,7 @@ const overview = query => ({
 });
 
 function kindOf(query) {
+    if (query.includes('...PoolSet')) return 'poolSlices';
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
     if (query.includes('event(slug') && query.includes('phases')) return 'overview';
@@ -179,6 +180,10 @@ function asQueried(set, query) {
     return set;
 }
 const allSets = () => Object.values(setsOf).flat();
+
+// The pool slices a poolSlices query asks for, in order
+const slicesAsked = query => [...query.matchAll(/(\w+): phaseGroup\(id: "?(\d+)"?\) \{ sets\(page: (\d+), perPage: (\d+)/g)]
+    .map(([, alias, groupId, page, perPage]) => ({ alias, groupId: Number(groupId), page: Number(page), perPage: Number(perPage) }));
 
 function answer(query) {
     switch (kindOf(query)) {
@@ -210,6 +215,14 @@ function answer(query) {
             const order = r => r < 0 ? r : 1000 + r;
             const nodes = all.map((set, i) => ({ set, i })).sort((a, b) => order(a.set.round) - order(b.set.round) || a.i - b.i).map(x => x.set);
             return { data: { phase: { sets: { nodes: nodes.slice((page - 1) * perPage, page * perPage).map(set => asQueried(set, query)) } } } };
+        }
+        case 'poolSlices': {
+            // Aliased pages of pools: s0: phaseGroup(id: 2005) { sets(page: 1, perPage: 5, ...) }
+            const data = {};
+            for (const { alias, groupId, page, perPage } of slicesAsked(query))
+                data[alias] = { sets: { nodes: structuredClone(setsOf[groupId] ?? []).slice((page - 1) * perPage, page * perPage)
+                    .map(({ bye, unreachable, ...set }) => asQueried(set, query)) } };
+            return { data };
         }
         case 'sets': {
             const groupId = Number(query.match(/phaseGroup\(id: (\d+)\)/)[1]);
@@ -694,10 +707,10 @@ try {
         await context.close();
     }
 
-    // 14. A phase with three pools: one whole-phase fetch, every pool drawn like a pool fetched alone
+    // 14. A phase with three pools: one request of pool slices (as many requests as the old whole-phase
+    // fetch, which took one), every pool drawn like a pool fetched alone
     {
-        const { context, page, log, quiet } = await openPage(browser, q =>
-            kindOf(q) === 'phaseSets' && Number(q.match(/perPage: (\d+)/)[1]) > 7 ? { body: { errors: [{ message: 'Your query complexity is too high.' }] } } : null);
+        const { context, page, log, quiet } = await openPage(browser);
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
         await page.goto(appUrl + eventPath + '/1005');
@@ -714,28 +727,37 @@ try {
         await single.context.close();
         const requests = count(log);
         const want = [...one, ...one, ...one];
-        report.phaseSets = { requests, drawn: drawn.length, want: want.length, sameOrder: JSON.stringify(drawn) === JSON.stringify(want), pools, errors };
-        check('three-pool phase: fetched as one phase (smaller pages after a refusal), every pool drawn the same',
-            report.phaseSets.sameOrder && want.length > 0 && pools === 3 && (requests.phaseSets ?? 0) >= 1 && !requests.sets && !errors.length, report.phaseSets);
+        // Every slice of every pool, each asked for once: pages 1 and 2 of 5 sets (the 6th set, then room for one more)
+        const asked = log.filter(r => r.kind === 'poolSlices').flatMap(r => slicesAsked(r.query).map(s => `${s.groupId}:${s.page}:${s.perPage}`));
+        report.phaseSets = { requests, asked, drawn: drawn.length, want: want.length, sameOrder: JSON.stringify(drawn) === JSON.stringify(want), pools, errors };
+        check('three-pool phase: one request of pool slices, every pool drawn the same as alone',
+            report.phaseSets.sameOrder && want.length > 0 && pools === 3 && requests.poolSlices === 1 && !requests.phaseSets && !requests.sets
+            && JSON.stringify(asked) === JSON.stringify(poolsOf[1005].flatMap(id => [`${id}:1:5`, `${id}:2:5`])) && !errors.length, report.phaseSets);
         await page.screenshot({ path: 'e2e-out/three-pools.png', fullPage: true }).catch(() => { });
         await context.close();
     }
 
-    // 14b. The same phase, drawn pool by pool as the pages come in. Here start.gg lists the sets pool by pool,
-    // so pool A's sets are all on the first pages. Pages of 11 or more are refused (page 2 of 11 after page 1
-    // already finished pool A), so the pages are 5 sets each: A on pages 1-2, B on 2-3, C on 3-4. Page 4 is
-    // held back: A and B must be drawn while it waits, and all three, in order, once it lands.
+    // 14b. The same phase, drawn pool by pool as the requests come in. Here start.gg counts 100 objects
+    // per set of pools A and B and 200 per set of pool C (as with characters reported), plus one per
+    // slice, and refuses a request past 1000 with the count. The first request (all 18 sets) is refused
+    // at 2406, so sets cost 134 and each request holds one pool. Pool C's request is refused at 1202:
+    // sets cost 200, slices shrink to 4 sets, and C comes in two requests. The last of those is held
+    // back: A and B must be drawn while it waits, and all three, in order and each once, after it lands.
     {
-        const byPool = poolsOf[1005].flatMap(id => setsOf[id].map(set => ({ ...set, phaseGroup: { id } })));
+        const costOf = { 2005: 100, 2006: 100, 2007: 200 };
         let release;
         const held = new Promise(r => release = r);
-        const { context, page, log, quiet } = await openPage(browser, q => {
-            if (kindOf(q) !== 'phaseSets') return null;
-            const pageNumber = Number(q.match(/page: (\d+)/)[1]);
-            const perPage = Number(q.match(/perPage: (\d+)/)[1]);
-            if (perPage > 11 || (perPage === 11 && pageNumber === 2)) return { body: { errors: [{ message: 'Your query complexity is too high.' }] } };
-            const nodes = structuredClone(byPool).slice((pageNumber - 1) * perPage, pageNumber * perPage).map(set => asQueried(set, q));
-            return { body: { data: { phase: { sets: { nodes } } } }, wait: perPage === 5 && pageNumber === 4 ? held : null };
+        const refused = [];
+        const { context, page, log, quiet } = await openPage(browser, (q, n) => {
+            if (kindOf(q) !== 'poolSlices') return null;
+            const slices = slicesAsked(q);
+            const body = answer(q);
+            const actual = slices.reduce((sum, s) => sum + 1 + body.data[s.alias].sets.nodes.length * costOf[s.groupId], 0);
+            if (actual > 1000) {
+                refused.push({ n, actual });
+                return { body: { errors: [{ message: `Your query complexity is too high. A maximum of 1000 objects may be returned by each request. (actual: ${actual})` }] } };
+            }
+            return { body, wait: slices.some(s => s.groupId === 2007 && s.perPage === 4 && s.page === 2) ? held : null };
         });
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
@@ -747,7 +769,7 @@ try {
         await single.context.close();
 
         await page.goto(appUrl + eventPath + '/1005');
-        // Up to 15 s for pools A and B, while page 4 is held
+        // Up to 15 s for pools A and B, while the last request is held
         const start = Date.now();
         let early = [];
         while (Date.now() - start < 15000) {
@@ -769,16 +791,18 @@ try {
         const pools = await page.getByText(/^\s*Pool [A-C]\s*$/).allInnerTexts().then(t => t.map(s => s.trim())).catch(() => []);
         const requests = count(log);
         report.progressivePools = {
-            requests, whileHeld, drawn: drawn.length, pools, spinner: await spinnerShown(page), errors,
+            requests, refused, whileHeld, drawn: drawn.length, pools, spinner: await spinnerShown(page), errors,
+            asked: log.filter(r => r.kind === 'poolSlices').map(r => slicesAsked(r.query).map(s => `${s.groupId}:${s.page}:${s.perPage}`).join(' ')),
             earlyIsAB: JSON.stringify(early) === JSON.stringify([...one, ...one]),
             sameOrder: JSON.stringify(drawn) === JSON.stringify([...one, ...one, ...one]),
         };
-        check('three-pool phase: pools whose sets are all in are drawn before the last page lands',
+        check('three-pool phase: pools whose sets are all in are drawn, in order, before the last request lands',
             one.length > 0 && report.progressivePools.earlyIsAB && JSON.stringify(whileHeld.pools) === '["Pool A","Pool B"]' && whileHeld.spinner, report.progressivePools);
-        // Refused: 95, 47, 23, then page 2 of 11. Answered: page 1 of 11, then four pages of 5.
-        check('three-pool phase: once the last page lands, every pool is drawn in order, with the same requests as before',
+        // Refused: all 18 sets, then pool C at 5 a slice. Answered: A, B, then C in slices of 4 (4 sets, then 2).
+        check('three-pool phase: refused requests shrink, and once the last request lands every pool is drawn once, in order',
             report.progressivePools.sameOrder && JSON.stringify(pools) === '["Pool A","Pool B","Pool C"]' && !report.progressivePools.spinner
-            && requests.phaseSets === 9 && !requests.sets && !requests.setScores && !errors.length, report.progressivePools);
+            && requests.poolSlices === 6 && JSON.stringify(refused.map(r => r.actual)) === '[2406,1202]'
+            && !requests.phaseSets && !requests.sets && !requests.setScores && !errors.length, report.progressivePools);
         await context.close();
     }
 
@@ -881,7 +905,7 @@ try {
     report.byePools = {};
     for (const projected of [false, true]) {
         const key = projected ? 'projected' : 'plain';
-        const { context, page, quiet } = await openPage(browser);
+        const { context, page, log, quiet } = await openPage(browser);
         try {
             if (projected) await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
             const errors = [];
@@ -929,7 +953,10 @@ try {
                 }
             });
             const total = byePools.reduce((n, pool) => n + pool.sets.length, 0);
-            report.byePools[key] = { drawn: Object.keys(drawn.sets).length, total, checked, misplaced, errors };
+            // The old whole-phase fetch took 2 requests (106 sets, 95 a page); pool slices fit in 1
+            const requests = count(log);
+            report.byePools[key] = { drawn: Object.keys(drawn.sets).length, total, checked, misplaced, requests, errors };
+            if (!projected) check('pools with byes: no more requests than the whole-phase fetch took', requests.poolSlices >= 1 && requests.poolSlices <= 2 && !requests.phaseSets && !requests.sets, requests);
             check(`pools with byes${projected ? ', projected' : ''}: every set of a round with byes sits level with the set it feeds, with its line, on both sides`,
                 Object.keys(drawn.sets).length === total && checked.winners >= 10 && checked.losers >= 8 && !misplaced.length && !errors.length, report.byePools[key]);
             await page.screenshot({ path: `e2e-out/bye-pools${projected ? '-projected' : ''}.png`, fullPage: true }).catch(() => { });

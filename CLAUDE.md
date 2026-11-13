@@ -8,8 +8,8 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 - Things start.gg's website shows that the public API doesn't have: ranking series logos (`RankingSeries` isn't in the schema; `PlayerRank.images` is a different, often empty, image) and the event description.
 - Query complexity counts the objects actually returned, about 1000 per request at most. A refusal message includes "(actual: N)".
 - Measured costs: a slimmed set is about 10 objects (with the phase id and games, no characters), games where none were reported cost 1 per set, full best of 5 character data is about 50 per set.
-- Phase-level `sets` returns each pool's sets in the same order as asking per pool.
-- Phase-level `sets` (any sortType: ROUND and NONE both measured) interleaves pools, sorted by round across all of them, so its pages aren't grouped by pool: every pool spans every page.
+- Phase-level `sets` (any sortType: ROUND and NONE both measured) returns each pool's sets in the same order as asking per pool, but interleaves the pools (sorted by round across all of them), so every pool spans every page. Multi-pool phases therefore load as pool slices: aliased `phaseGroup(id) { sets(page, perPage) }` pages, several pools per request (`poolSlicesQuery`).
+- From a pool, a set costs 9 objects (no characters reported) and each aliased `phaseGroup` 1, even when its page is empty (measured 2026-11-13).
 - All queries go through the site's own cache, `POST /api/gql` (`server/gql-cache.js`), via `src/app/services/startgg.service.ts`.
 - Query texts live in `src/app/services/startgg-queries.ts`, with GraphQL variables for slugs, ids and pages. The server runs only those exact texts (`server/gql-allowlist.js` loads the same file), so a new or changed query goes there and nowhere else.
 
