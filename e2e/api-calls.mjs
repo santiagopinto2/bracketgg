@@ -89,6 +89,12 @@ const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVarian
 const phaseNames = { 1001: 'Pools', 1002: 'Top 4', 1003: 'Unstarted Pool', 1004: 'Later Phase', 1005: 'Three Pools', 1006: 'Single Elim', 1007: 'Single Elim, No 3rd Place', 1008: 'Round Robin' };
 const phaseStateOf = { 1003: 'CREATED', 1004: 'ACTIVE' };
 const svg = (width, height, color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${color}"/></svg>`)}`;
+// A user's pictures as start.gg answers: with images(type: "profile") only the profile picture, without its type
+const imagesAsQueried = (images, query) => query.includes('images(type: "profile")') ? images.filter(i => i.type === 'profile').map(({ type, ...rest }) => rest) : images;
+// Bravo has a profile picture (portrait) and a banner, the banner first, so taking the first picture of all of them would show the banner
+const bravoImages = [{ url: svg(120, 30, '#c33'), type: 'banner', width: 120, height: 30 }, { url: svg(30, 45, '#2a7'), type: 'profile', width: 30, height: 45 }];
+entrants[1].participants[0].user = { images: bravoImages };
+const userAsQueried = (user, query) => user && { ...user, images: imagesAsQueried(user.images, query) };
 const placements = [1, 2, 3, 4, 5, 7];
 const numEntrants = 60;
 const videogameId = 7;
@@ -132,7 +138,7 @@ const standingNames = ['SPN | Alpha', 'Bravo', 'Charlie', 'Delta', 'Player 5', '
 const standingsPage = query => ({
     nodes: standingNames.map((name, i) => {
         const id = i + 1;
-        const user = i == 2 ? null : { images: i == 1 ? [{ url: svg(40, 40, '#2a7'), type: 'profile', width: 40, height: 40 }] : [] };
+        const user = i == 2 ? null : { images: imagesAsQueried(i == 1 ? [{ url: svg(80, 20, '#c33'), type: 'banner', width: 80, height: 20 }, { url: svg(40, 40, '#2a7'), type: 'profile', width: 40, height: 40 }] : [], query) };
         if (user && query.includes('authorizations(types: [TWITTER, TWITCH, DISCORD])')) user.authorizations = socialsOf[id] ?? [];
         const participant = { id: 100 + i, user };
         if (query.includes(`rankings(limit: 3, videogameId: ${videogameId})`)) participant.player = { rankings: id in rankingsOf ? rankingsOf[id] : [] };
@@ -196,7 +202,7 @@ function answer(query) {
             } } };
         case 'entrants':
             return { data: { event: { id: 10, name: 'Test Event', phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name })),
-                entrants: { nodes: structuredClone(entrants) } } } };
+                entrants: { nodes: structuredClone(entrants).map(e => ({ ...e, participants: e.participants.map(p => ({ ...p, user: userAsQueried(p.user, query) })) })) } } } };
         case 'overview':
             return { data: { event: overview(query) } };
         case 'phase': {
@@ -405,6 +411,38 @@ try {
         await page.locator('button:has(mat-icon[fonticon="arrow_back"])').click();
         await quiet();
         report.phaseSwitchBack = count(log, mark);
+        await context.close();
+    }
+
+    // 1b. Avatars: Bravo's profile picture (a portrait), never the banner, in the bracket, the search and the set dialog
+    {
+        const { context, page, quiet } = await openPage(browser);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        const profile = bravoImages.find(i => i.type === 'profile').url;
+        const avatars = selector => page.locator(selector).evaluateAll(images => images.map(img => ({ src: img.getAttribute('src'), portrait: img.classList.contains('portrait') })));
+        const allBravo = (shown, n) => shown.length === n && shown.every(a => a.src === profile && a.portrait);
+        try {
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            const bracket = await avatars('#entrant-images img');
+            await page.locator('.search-entrant-form input').click();
+            await page.locator('.search-entrant-form input').fill('Bra');
+            await page.waitForTimeout(500);
+            const search = { options: (await page.locator('mat-option').allInnerTexts()).map(t => t.trim()), avatars: await avatars('mat-option img') };
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+            await page.locator('.set', { hasText: 'Bravo' }).filter({ hasText: 'Charlie' }).first().click();
+            await page.waitForTimeout(800);
+            const dialog = await avatars('mat-dialog-container .entrant-set-image img');
+            report.avatars = { bracket: bracket.length, search, dialog, errors };
+            check('avatars: Bravo\'s profile picture, as a portrait, in each of their 4 sets, and no other picture', allBravo(bracket, 4), bracket);
+            check('search: typing finds the player, with their picture', JSON.stringify(search.options) === JSON.stringify(['Bravo']) && allBravo(search.avatars, 1), search);
+            check('set dialog: Bravo\'s profile picture, and the colored initial for the other player', allBravo(dialog, 1) && !errors.length, report.avatars);
+        } catch (e) {
+            report.avatars = { crashed: String(e.message).slice(0, 300), errors };
+            check('avatars in the bracket, the search and the set dialog', false, report.avatars);
+        }
         await context.close();
     }
 
@@ -1152,6 +1190,10 @@ try {
                 && backByLink && backToBracket && backToLanding && forwardToBracket, report.eventLanding.navigation);
 
             // The phase menu jumps from Top 4 to Single Elim, four phases on; the arrows stay
+            const standingAvatars = await page.locator('.standing .standing-profile-image img').evaluateAll(images => images.map(img => img.getAttribute('src')));
+            report.eventLanding.avatars = standingAvatars.length;
+            check('event landing: Bravo\'s card shows the profile picture, not the banner, and nobody else has one',
+                standingAvatars.length === 1 && standingAvatars[0] === svg(40, 40, '#2a7'), standingAvatars);
             mark = log.length;
             await page.locator('.phase-menu-button').click();
             await page.waitForTimeout(500);

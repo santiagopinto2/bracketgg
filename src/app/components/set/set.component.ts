@@ -35,10 +35,10 @@ export class SetComponent implements OnInit {
         return profile && profile.height > profile.width ? 'portrait' : '';
     }
 
+    // The profile picture: the only image asked for (images(type: "profile"))
     getEntrantProfile(entrant) {
         if (!entrant) return null;
-        let images = entrant.participants[0].user.images;
-        return images.length > 0 ? images.find(image => image.type === 'profile') : null;
+        return entrant.participants[0].user.images?.[0] ?? null;
     }
 
     // A disqualified entrant's score is -1: show it as DQ, like the bracket does

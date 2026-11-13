@@ -15,8 +15,6 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                     images {
                         url
                         type
-                        width
-                        height
                     }
                     rules
                     id
@@ -38,8 +36,6 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                             images {
                                 url
                                 type
-                                width
-                                height
                             }
                         }
                         standings(query: {
@@ -53,9 +49,8 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                                     participants {
                                         id
                                         user {
-                                            images {
+                                            images(type: "profile") {
                                                 url
-                                                type
                                                 width
                                                 height
                                             }
@@ -87,9 +82,8 @@ export const entrantsQuery = `query Entrants($slug: String!, $page: Int!, $perPa
                             participants {
                                 gamerTag
                                 user {
-                                    images {
+                                    images(type: "profile") {
                                         url
-                                        type
                                         width
                                         height
                                     }
@@ -160,9 +154,8 @@ export function eventOverviewQuery({ lostTo = false, rankings = false, socials =
                                     id
                                     ${rankings ? rankingsQuery : ''}
                                     user {
-                                        images {
+                                        images(type: "profile") {
                                             url
-                                            type
                                             width
                                             height
                                         }
@@ -222,8 +215,6 @@ const setGamesQuery = `games {
                         images {
                         url
                         type
-                        width
-                        height
                     }
                 }
             }
