@@ -1171,9 +1171,9 @@ try {
                 { set: '2205', tags: [['→ Top 4', eventPath + '/1002/2002', 'Winner goes to Top 4', 'right', 20]] },
             ];
             const asked = log.filter(r => r.kind === 'poolSlices').map(r => r.query.includes('@include(if: true)'));
-            report.progression = { shown, sets: await page.locator('.set').count(), asked, colorScheme: await page.evaluate(() => document.body.className) };
+            report.progression = { shown, sets: await page.locator('.set').count(), asked, theme: await page.evaluate(() => document.documentElement.getAttribute('data-theme')) };
             check('progression tags: only the sets that send a player on have one, right of a last-round set and under any other, with where the player goes, a link there that carries a played set\'s player, and no pool name for a one-pool phase',
-                JSON.stringify(shown) === JSON.stringify(want) && report.progression.sets === 16 && asked.length > 0 && asked.every(Boolean) && report.progression.colorScheme.includes('color-scheme-dark'), report.progression);
+                JSON.stringify(shown) === JSON.stringify(want) && report.progression.sets === 16 && asked.length > 0 && asked.every(Boolean) && report.progression.theme === 'dark', report.progression);
             await page.screenshot({ path: 'e2e-out/progression-tags.png' }).catch(() => { });
 
             // Follow the winner's tag while every pool but the player's is held back
@@ -1257,6 +1257,37 @@ try {
         }
         release();
         await context.close();
+
+        // Both themes: the tag takes the tag colors and the outline the highlight color (src/styles/_tokens.scss)
+        report.progressionThemes = {};
+        for (const theme of ['dark', 'light']) {
+            const themed = await openPage(browser, () => null, { viewport: { width: 1280, height: 700 } }, { fonts: true });
+            try {
+                if (theme === 'light') await themed.page.addInitScript(() => localStorage.setItem('bgg-theme', 'light'));
+                await themed.page.goto(appUrl + eventPath + '/1010');
+                await themed.quiet();
+                await themed.page.waitForFunction(() => document.fonts.status === 'loaded', null, { timeout: 15000 }).catch(() => { });
+                const tag = await themed.page.evaluate(() => {
+                    const style = getComputedStyle(document.querySelector('.progression-tag'));
+                    return { theme: document.documentElement.getAttribute('data-theme'), background: style.backgroundColor, text: style.color, border: style.borderTopColor };
+                });
+                if (theme === 'light') await themed.page.screenshot({ path: 'e2e-out/progression-tags-light.png' }).catch(() => { });
+                await themed.page.goto(appUrl + eventPath + '/1011/2019?player=1');
+                await themed.page.locator('.set-arrived').waitFor({ timeout: 15000 });
+                const outline = await themed.page.evaluate(() => getComputedStyle(document.querySelector('.set-arrived')).boxShadow);
+                if (theme === 'light') await themed.page.screenshot({ path: 'e2e-out/progression-arrival-light.png' }).catch(() => { });
+                await themed.quiet();
+                report.progressionThemes[theme] = { ...tag, outline };
+            } catch (e) {
+                report.progressionThemes[theme] = { crashed: String(e.message).slice(0, 300) };
+            }
+            await themed.context.close();
+        }
+        const themes = report.progressionThemes;
+        check('progression tags and the outline of the set a link scrolled to take their colors from the theme, dark and light',
+            themes.dark.theme === 'dark' && themes.dark.background === 'rgb(66, 66, 66)' && themes.dark.text === 'rgb(255, 255, 255)' && themes.dark.outline?.includes('rgb(255, 213, 79)')
+            && themes.light.theme === 'light' && themes.light.background === 'rgb(228, 231, 235)' && themes.light.text === 'rgb(28, 30, 33)' && themes.light.border === 'rgb(201, 206, 214)'
+            && themes.light.outline?.includes('rgb(217, 119, 6)'), themes);
 
         // On a phone: the tags are there, the page is no wider than the screen, and a tap follows the tag
         const phone = await openPage(browser, () => null, { ...devices['Pixel 7'], colorScheme: 'dark' }, { fonts: true });

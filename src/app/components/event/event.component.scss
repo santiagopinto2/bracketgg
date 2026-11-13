@@ -129,7 +129,7 @@
     cursor: pointer;
 }
 
-// The set a link scrolled to: a gold outline that stays for two seconds, then fades
+// The set a link scrolled to: an outline and a glow in the highlight color that stay for two seconds, then fade
 .set-arrived {
     animation: set-arrived 3.5s ease-out forwards;
 }
@@ -137,11 +137,11 @@
 @keyframes set-arrived {
     0%,
     60% {
-        box-shadow: 0 0 0 2px #ffca28, 0 0 14px 3px rgba(255, 202, 40, 0.6);
+        box-shadow: 0 0 0 2px var(--highlight), 0 0 14px 3px var(--highlight-bg);
     }
 
     100% {
-        box-shadow: 0 0 0 2px rgba(255, 202, 40, 0), 0 0 14px 3px rgba(255, 202, 40, 0);
+        box-shadow: 0 0 0 2px transparent, 0 0 14px 3px transparent;
     }
 }
 
@@ -179,26 +179,25 @@
     max-width: 100%;
     height: 20px;
     padding: 0 8px 0 6px;
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    border: 1px solid var(--tag-border);
     border-radius: 10px;
-    background-color: #424242;
-    color: #e6e6e6;
+    background-color: var(--tag-bg);
+    color: var(--tag-text);
     font-size: 11.5px;
     line-height: 18px;
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    transition: background-color 0.15s;
 
     &:hover,
     &:focus-visible {
-        background-color: #5a5a5a;
-        border-color: rgba(255, 255, 255, 0.6);
-        color: #fff;
+        background-color: var(--tag-hover-bg);
+        color: var(--tag-text);
     }
 
     &:focus-visible {
-        outline: 2px solid #ffca28;
+        outline: 2px solid var(--highlight);
         outline-offset: 1px;
     }
 }
@@ -218,23 +217,6 @@
 .progression-to {
     min-width: 0;
     @extend .text-overflow;
-}
-
-:host-context(.color-scheme-light) .progression-tag {
-    border-color: rgba(0, 0, 0, 0.22);
-    background-color: #ececec;
-    color: #2b2b2b;
-
-    &:hover,
-    &:focus-visible {
-        background-color: #dcdcdc;
-        border-color: rgba(0, 0, 0, 0.5);
-        color: #000;
-    }
-
-    &:focus-visible {
-        outline-color: #3f51b5;
-    }
 }
 
 .set-row:first-child {

@@ -1,5 +1,5 @@
-// A walk through the real Genesis X Melee Singles brackets in a browser, in dark mode, for the
-// progression tags: screenshots and a JSON report of what happened. It asks the real start.gg (about
+// A walk through the real Genesis X Melee Singles brackets in a browser, for the progression tags:
+// screenshots in the dark theme (two in light too) and a JSON report of what happened. It asks the real start.gg (about
 // 30 requests) through the app's own server, which needs the site token:
 //
 //   PORT=4304 STATIC_DIR=<build> STARTGG_SITE_TOKEN=<token> node proxy-server.js
@@ -32,8 +32,14 @@ const arrival = async (page, timeout = 120000) => {
             tags: [...set.querySelectorAll('.progression-tag')].map(tag => [[...tag.children].map(part => part.textContent.trim()).join(' '), tag.getAttribute('href')]),
             pool: set.closest('[data-pool-index]')?.id, poolsDrawn: [...document.querySelectorAll('[data-pool-index]')].filter(row => row.querySelector('.set')).length,
             offCenter: [Math.round((r.left + r.right) / 2 - (box.left + box.right) / 2), Math.round((r.top + r.bottom) / 2 - (box.top + box.bottom) / 2)],
-            url: location.pathname + location.search, dark: document.body.classList.contains('color-scheme-dark') };
+            url: location.pathname + location.search, dark: document.documentElement.getAttribute('data-theme') === 'dark' };
     });
+};
+// Runs `act` with the page in the light theme, then puts the dark theme back
+const inLight = async (page, act) => {
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+    await act();
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
 };
 const loaded = page => page.locator('app-snack-bar mat-spinner').waitFor({ state: 'hidden', timeout: 180000 });
 
@@ -74,11 +80,13 @@ try {
             report.steps.r2Tags = tagged;
             await page.waitForTimeout(300);
             await page.screenshot({ path: `${outDir}/tags-r2-pools.png` });
+            await inLight(page, () => page.screenshot({ path: `${outDir}/tags-r2-pools-light.png` }));
 
             await tag.click();
             await page.mouse.move(5, 5);
             report.steps.top64 = { ...await arrival(page), errors };
             await page.screenshot({ path: `${outDir}/arrival-top-64.png` });
+            await inLight(page, () => page.screenshot({ path: `${outDir}/arrival-top-64-light.png` }));
 
             await loaded(page);
             await page.goBack();
