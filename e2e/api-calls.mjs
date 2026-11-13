@@ -1301,9 +1301,9 @@ try {
                 });
                 const said = ['Last updated November 12, 2026', 'Message Fable on Discord', 'Logging in is optional', 'user.identity', 'session cookie', 'Logging out deletes', 'a few seconds to a few minutes', 'No analytics and no ads'].filter(t => !privacy.text.includes(t));
                 report.loginUi[`privacy, ${size}`] = { url: privacy.url, heading: privacy.heading, links: privacy.links, missing: said };
-                check(`${size}: the footer's Privacy link opens /privacy, which says what the site keeps and links to start.gg and the GitHub issues`,
+                check(`${size}: the footer's Privacy link opens /privacy, which says what the site keeps and links to start.gg`,
                     privacy.url === '/privacy' && privacy.heading === 'Privacy' && !said.length
-                    && JSON.stringify(privacy.links) === '["https://www.start.gg","https://github.com/santiagopinto2/bracketgg/issues"]', report.loginUi[`privacy, ${size}`]);
+                    && JSON.stringify(privacy.links) === '["https://www.start.gg"]', report.loginUi[`privacy, ${size}`]);
             } catch (e) {
                 check(`${size}: privacy page`, false, String(e.message).slice(0, 300));
             }
