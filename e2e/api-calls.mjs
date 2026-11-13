@@ -60,13 +60,17 @@ const unstartedVariants = {
 };
 // A later-phase pool whose losers bracket starts with players from phase 1, seeded but not played
 const laterPhase = JSON.parse(readFileSync(new URL('./fixtures/later-phase-pool.json', import.meta.url)));
+// Three real pools with byes (20, 19 and 21 players), where start.gg's set ids skip the hidden bye sets
+const byePools = JSON.parse(readFileSync(new URL('./fixtures/bye-pools.json', import.meta.url))).pools;
 const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004, 1006: 2008, 1007: 2009, 1008: 2010 };
-// Phase 1005 has three pools, which the app fetches as one phase
-const poolsOf = { 1005: [2005, 2006, 2007] };
+// Phase 1005 has three pools, which the app fetches as one phase. Phase 1009 (the pools with byes) is
+// opened by its URL only: it isn't in the event's phase list, so the landing page and phase menu stay the same.
+const poolsOf = { 1005: [2005, 2006, 2007], 1009: [2011, 2012, 2013] };
 // Phases are double elimination unless listed here. 1008's sets are never asked for: the type is refused first.
 const bracketTypeOf = { 1006: 'SINGLE_ELIMINATION', 1007: 'SINGLE_ELIMINATION', 1008: 'ROUND_ROBIN' };
 const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700),
-    2008: singleElimSets(800, true), 2009: singleElimSets(900, false), 2010: singleElimSets(1000, false) };
+    2008: singleElimSets(800, true), 2009: singleElimSets(900, false), 2010: singleElimSets(1000, false),
+    2011: byePools[0].sets, 2012: byePools[1].sets, 2013: byePools[2].sets };
 
 // The event's landing page: the top 8 of a 60-entrant event, with start.gg's tied placements (5th, 5th, 7th, 7th).
 // Alpha has a sponsor and Bravo an avatar; everyone else gets a colored initial.
@@ -855,6 +859,71 @@ try {
         await page.waitForTimeout(1000);
         report.doubleElimSides = { sides: await sidesOf(page), sets: await page.locator('.set').count() };
         check('double elim: still draws both sides and every set', report.doubleElimSides.sides === 2 && report.doubleElimSides.sets === 6, report.doubleElimSides);
+        await context.close();
+    }
+    // 16b. Pools with byes: a round with fewer sets than a full one (winners round 1, losers round 1) has
+    //      each set drawn level with the set it feeds, or two sets feeding one set evenly above and below
+    //      it, and a line at each set's height runs to the right. start.gg numbers the hidden bye sets too,
+    //      so set ids don't say where a set goes; the next round's links (prereqId) do. With and without
+    //      Show Projected.
+    report.byePools = {};
+    for (const projected of [false, true]) {
+        const key = projected ? 'projected' : 'plain';
+        const { context, page, quiet } = await openPage(browser);
+        try {
+            if (projected) await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            await page.goto(appUrl + eventPath + '/1009');
+            await quiet();
+            await page.waitForTimeout(1000);
+            const drawn = await page.evaluate(() => {
+                const sets = {};
+                for (const el of document.querySelectorAll('.set[data-set-id]')) {
+                    const r = el.getBoundingClientRect();
+                    sets[el.dataset.setId] = { y: r.top + r.height / 2, left: r.left, right: r.right };
+                }
+                // Each line in the block columns, at its height: a fork's upper arm is a top border, the rest bottom borders
+                const lines = [...document.querySelectorAll('.straight-block, .first-block-column-first-row, .first-block-column-second-row')].map(el => {
+                    const r = el.getBoundingClientRect();
+                    return { y: el.classList.contains('first-block-column-first-row') ? r.top : r.bottom, left: r.left };
+                });
+                return { sets, lines };
+            });
+            const misplaced = [];
+            const checked = { winners: 0, losers: 0 };
+            byePools.forEach((pool, p) => {
+                for (const side of ['winners', 'losers']) {
+                    const sign = side === 'winners' ? 1 : -1;
+                    const rounds = [...new Set(pool.sets.map(s => s.round).filter(r => Math.sign(r) === sign))].sort((a, b) => sign * (a - b));
+                    for (let i = 0; i + 1 < rounds.length; i++) {
+                        const left = pool.sets.filter(s => s.round === rounds[i]);
+                        const right = pool.sets.filter(s => s.round === rounds[i + 1]);
+                        if (left.length === right.length || left.length === right.length * 2) continue;
+                        const leftIds = new Set(left.map(s => String(s.id)));
+                        for (const set of left) {
+                            const at = drawn.sets[set.id];
+                            const fed = right.find(r => r.slots.some(slot => slot.prereqType === 'set' && slot.prereqId === String(set.id)));
+                            const feeders = fed ? fed.slots.filter(slot => slot.prereqType === 'set' && leftIds.has(slot.prereqId)).map(slot => drawn.sets[slot.prereqId]) : [];
+                            const fedAt = fed && drawn.sets[fed.id];
+                            const level = !at || !fedAt || feeders.some(f => !f) ? false
+                                : feeders.length === 1 ? Math.abs(at.y - fedAt.y) <= 1
+                                : Math.abs((feeders[0].y + feeders[1].y) / 2 - fedAt.y) <= 1 && Math.abs(feeders[0].y - feeders[1].y) > 20;
+                            const line = at && drawn.lines.some(l => Math.abs(l.y - at.y) <= 1.5 && l.left >= at.right - 2 && l.left <= at.right + 30);
+                            checked[side]++;
+                            if (!level || !line) misplaced.push({ pool: 'ABC'[p], side, set: set.id, feeds: fed?.id, y: at?.y, fedY: fedAt?.y, line });
+                        }
+                    }
+                }
+            });
+            const total = byePools.reduce((n, pool) => n + pool.sets.length, 0);
+            report.byePools[key] = { drawn: Object.keys(drawn.sets).length, total, checked, misplaced, errors };
+            check(`pools with byes${projected ? ', projected' : ''}: every set of a round with byes sits level with the set it feeds, with its line, on both sides`,
+                Object.keys(drawn.sets).length === total && checked.winners >= 10 && checked.losers >= 8 && !misplaced.length && !errors.length, report.byePools[key]);
+            await page.screenshot({ path: `e2e-out/bye-pools${projected ? '-projected' : ''}.png`, fullPage: true }).catch(() => { });
+        } catch (e) {
+            check(`pools with byes${projected ? ', projected' : ''}`, false, String(e.message).slice(0, 300));
+        }
         await context.close();
     }
     // 17. The event's landing page: header, standings and phases in two requests; a phase, a pool, the

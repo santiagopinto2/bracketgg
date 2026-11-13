@@ -1,0 +1,4472 @@
+{
+"source": "start.gg GraphQL phaseGroup.sets (sortType ROUND), fetched 2026-11-13. Ids, rounds and links between sets are real; entrants are renamed \"P<pool><seed>\" and every played set is scored 2-1.",
+"pools": [
+{
+"description": "The Cashbox 48 pool BOX4 (phase group 3524870), 20 players: winners round 1 set ids step by 9, not 2",
+"sets": [
+{
+"id": 110007204,
+"round": -8,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": 10077,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007091",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10077,
+"name": "PA77",
+"initialSeedNum": 77
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007202",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10061,
+"name": "PA61",
+"initialSeedNum": 61
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007205,
+"round": -8,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": 10029,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007089",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10029,
+"name": "PA29",
+"initialSeedNum": 29
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007203",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10084,
+"name": "PA84",
+"initialSeedNum": 84
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007202,
+"round": -7,
+"fullRoundText": "Losers Round 4",
+"winnerId": 10061,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007198",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10125,
+"name": "PA125",
+"initialSeedNum": 125
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007199",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10061,
+"name": "PA61",
+"initialSeedNum": 61
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007203,
+"round": -7,
+"fullRoundText": "Losers Round 4",
+"winnerId": 10084,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007200",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10084,
+"name": "PA84",
+"initialSeedNum": 84
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007201",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10132,
+"name": "PA132",
+"initialSeedNum": 132
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007198,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 10125,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007083",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10093,
+"name": "PA93",
+"initialSeedNum": 93
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007194",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10125,
+"name": "PA125",
+"initialSeedNum": 125
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007199,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 10061,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007081",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10061,
+"name": "PA61",
+"initialSeedNum": 61
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007195",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10100,
+"name": "PA100",
+"initialSeedNum": 100
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007200,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 10084,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007087",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10084,
+"name": "PA84",
+"initialSeedNum": 84
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007196",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10157,
+"name": "PA157",
+"initialSeedNum": 157
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007201,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 10132,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007085",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10141,
+"name": "PA141",
+"initialSeedNum": 141
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007197",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10132,
+"name": "PA132",
+"initialSeedNum": 132
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007195,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 10100,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007188",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10100,
+"name": "PA100",
+"initialSeedNum": 100
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007189",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10013,
+"name": "PA13",
+"initialSeedNum": 13
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007196,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 10157,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007190",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10116,
+"name": "PA116",
+"initialSeedNum": 116
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007191",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10157,
+"name": "PA157",
+"initialSeedNum": 157
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007197,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 10132,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007192",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10068,
+"name": "PA68",
+"initialSeedNum": 68
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007193",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10132,
+"name": "PA132",
+"initialSeedNum": 132
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007194,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 10125,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007184",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10125,
+"name": "PA125",
+"initialSeedNum": 125
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007186",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10109,
+"name": "PA109",
+"initialSeedNum": 109
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007184,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 10125,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007078",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10045,
+"name": "PA45",
+"initialSeedNum": 45
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007168",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10125,
+"name": "PA125",
+"initialSeedNum": 125
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007188,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 10100,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007074",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10052,
+"name": "PA52",
+"initialSeedNum": 52
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007172",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10100,
+"name": "PA100",
+"initialSeedNum": 100
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007190,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 10116,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007070",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10036,
+"name": "PA36",
+"initialSeedNum": 36
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007176",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10116,
+"name": "PA116",
+"initialSeedNum": 116
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007192,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 10068,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007067",
+"prereqPlacement": 2,
+"entrant": {
+"id": 10068,
+"name": "PA68",
+"initialSeedNum": 68
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007180",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10148,
+"name": "PA148",
+"initialSeedNum": 148
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007031,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 10132,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42620913",
+"prereqPlacement": null,
+"entrant": {
+"id": 10125,
+"name": "PA125",
+"initialSeedNum": 125
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42629948",
+"prereqPlacement": null,
+"entrant": {
+"id": 10132,
+"name": "PA132",
+"initialSeedNum": 132
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007040,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 10157,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42629454",
+"prereqPlacement": null,
+"entrant": {
+"id": 10100,
+"name": "PA100",
+"initialSeedNum": 100
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42633921",
+"prereqPlacement": null,
+"entrant": {
+"id": 10157,
+"name": "PA157",
+"initialSeedNum": 157
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007049,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 10141,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42608106",
+"prereqPlacement": null,
+"entrant": {
+"id": 10116,
+"name": "PA116",
+"initialSeedNum": 116
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42633110",
+"prereqPlacement": null,
+"entrant": {
+"id": 10141,
+"name": "PA141",
+"initialSeedNum": 141
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007058,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 10109,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42630540",
+"prereqPlacement": null,
+"entrant": {
+"id": 10109,
+"name": "PA109",
+"initialSeedNum": 109
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42633495",
+"prereqPlacement": null,
+"entrant": {
+"id": 10148,
+"name": "PA148",
+"initialSeedNum": 148
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007065,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10004,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007029",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10004,
+"name": "PA4",
+"initialSeedNum": 4
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007031",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10132,
+"name": "PA132",
+"initialSeedNum": 132
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007067,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10061,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007033",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10061,
+"name": "PA61",
+"initialSeedNum": 61
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007035",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10068,
+"name": "PA68",
+"initialSeedNum": 68
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007069,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10029,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007038",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10029,
+"name": "PA29",
+"initialSeedNum": 29
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007040",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10157,
+"name": "PA157",
+"initialSeedNum": 157
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007070,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10093,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007043",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10036,
+"name": "PA36",
+"initialSeedNum": 36
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007045",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10093,
+"name": "PA93",
+"initialSeedNum": 93
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007072,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10141,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007047",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10013,
+"name": "PA13",
+"initialSeedNum": 13
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007049",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10141,
+"name": "PA141",
+"initialSeedNum": 141
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007074,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10077,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007051",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10052,
+"name": "PA52",
+"initialSeedNum": 52
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007053",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10077,
+"name": "PA77",
+"initialSeedNum": 77
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007076,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007056",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10020,
+"name": "PA20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007058",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10109,
+"name": "PA109",
+"initialSeedNum": 109
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007078,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 10084,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007060",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10045,
+"name": "PA45",
+"initialSeedNum": 45
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007062",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10084,
+"name": "PA84",
+"initialSeedNum": 84
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007081,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 10004,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007065",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10004,
+"name": "PA4",
+"initialSeedNum": 4
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007067",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10061,
+"name": "PA61",
+"initialSeedNum": 61
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007083,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 10029,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007069",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10029,
+"name": "PA29",
+"initialSeedNum": 29
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007070",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10093,
+"name": "PA93",
+"initialSeedNum": 93
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007085,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 10077,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007072",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10141,
+"name": "PA141",
+"initialSeedNum": 141
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007074",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10077,
+"name": "PA77",
+"initialSeedNum": 77
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110007087,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 10020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007076",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10020,
+"name": "PA20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007078",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10084,
+"name": "PA84",
+"initialSeedNum": 84
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007089,
+"round": 4,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": 10004,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007081",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10004,
+"name": "PA4",
+"initialSeedNum": 4
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007083",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10029,
+"name": "PA29",
+"initialSeedNum": 29
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110007091,
+"round": 4,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": 10020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110007085",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10077,
+"name": "PA77",
+"initialSeedNum": 77
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110007087",
+"prereqPlacement": 1,
+"entrant": {
+"id": 10020,
+"name": "PA20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+}
+]
+},
+{
+"description": "The Cashbox 48 pool BOX1 (phase group 3524867), 19 players: 3 sets in winners and losers round 1",
+"sets": [
+{
+"id": 110006919,
+"round": -8,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": 20016,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006857",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20016,
+"name": "PB16",
+"initialSeedNum": 16
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006917",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20065,
+"name": "PB65",
+"initialSeedNum": 65
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006920,
+"round": -8,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": 20049,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006856",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20032,
+"name": "PB32",
+"initialSeedNum": 32
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006918",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20049,
+"name": "PB49",
+"initialSeedNum": 49
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006917,
+"round": -7,
+"fullRoundText": "Losers Round 4",
+"winnerId": 20065,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006913",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20081,
+"name": "PB81",
+"initialSeedNum": 81
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006914",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20065,
+"name": "PB65",
+"initialSeedNum": 65
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006918,
+"round": -7,
+"fullRoundText": "Losers Round 4",
+"winnerId": 20049,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006915",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20048,
+"name": "PB48",
+"initialSeedNum": 48
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006916",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20049,
+"name": "PB49",
+"initialSeedNum": 49
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006913,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 20081,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006853",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20096,
+"name": "PB96",
+"initialSeedNum": 96
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006909",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20081,
+"name": "PB81",
+"initialSeedNum": 81
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006914,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 20065,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006852",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20065,
+"name": "PB65",
+"initialSeedNum": 65
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006910",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20144,
+"name": "PB144",
+"initialSeedNum": 144
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006915,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 20048,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006855",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20048,
+"name": "PB48",
+"initialSeedNum": 48
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006911",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20113,
+"name": "PB113",
+"initialSeedNum": 113
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006916,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 20049,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006854",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20049,
+"name": "PB49",
+"initialSeedNum": 49
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006912",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20064,
+"name": "PB64",
+"initialSeedNum": 64
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006912,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 20064,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006907",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20064,
+"name": "PB64",
+"initialSeedNum": 64
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006908",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20128,
+"name": "PB128",
+"initialSeedNum": 128
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006909,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 20081,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006901",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20081,
+"name": "PB81",
+"initialSeedNum": 81
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006902",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20112,
+"name": "PB112",
+"initialSeedNum": 112
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006910,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 20144,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006903",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20080,
+"name": "PB80",
+"initialSeedNum": 80
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006904",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20144,
+"name": "PB144",
+"initialSeedNum": 144
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006911,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 20113,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006905",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20113,
+"name": "PB113",
+"initialSeedNum": 113
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006906",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20097,
+"name": "PB97",
+"initialSeedNum": 97
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006901,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 20081,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006851",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20081,
+"name": "PB81",
+"initialSeedNum": 81
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006893",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20129,
+"name": "PB129",
+"initialSeedNum": 129
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006905,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 20113,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006847",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20033,
+"name": "PB33",
+"initialSeedNum": 33
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006897",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20113,
+"name": "PB113",
+"initialSeedNum": 113
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006907,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 20064,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006845",
+"prereqPlacement": 2,
+"entrant": {
+"id": 20064,
+"name": "PB64",
+"initialSeedNum": 64
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006899",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20145,
+"name": "PB145",
+"initialSeedNum": 145
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006829,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 20128,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42625484",
+"prereqPlacement": null,
+"entrant": {
+"id": 20128,
+"name": "PB128",
+"initialSeedNum": 128
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42596879",
+"prereqPlacement": null,
+"entrant": {
+"id": 20129,
+"name": "PB129",
+"initialSeedNum": 129
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006837,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 20144,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42619448",
+"prereqPlacement": null,
+"entrant": {
+"id": 20113,
+"name": "PB113",
+"initialSeedNum": 113
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42633247",
+"prereqPlacement": null,
+"entrant": {
+"id": 20144,
+"name": "PB144",
+"initialSeedNum": 144
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006841,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 20112,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42620394",
+"prereqPlacement": null,
+"entrant": {
+"id": 20112,
+"name": "PB112",
+"initialSeedNum": 112
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42633314",
+"prereqPlacement": null,
+"entrant": {
+"id": 20145,
+"name": "PB145",
+"initialSeedNum": 145
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006844,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20001,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006828",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20001,
+"name": "PB1",
+"initialSeedNum": 1
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006829",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20128,
+"name": "PB128",
+"initialSeedNum": 128
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006845,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20065,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006830",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20064,
+"name": "PB64",
+"initialSeedNum": 64
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006831",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20065,
+"name": "PB65",
+"initialSeedNum": 65
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006846,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20032,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006832",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20032,
+"name": "PB32",
+"initialSeedNum": 32
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006833",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20097,
+"name": "PB97",
+"initialSeedNum": 97
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006847,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20096,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006834",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20033,
+"name": "PB33",
+"initialSeedNum": 33
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006835",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20096,
+"name": "PB96",
+"initialSeedNum": 96
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 110006848,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20016,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006836",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20016,
+"name": "PB16",
+"initialSeedNum": 16
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006837",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20144,
+"name": "PB144",
+"initialSeedNum": 144
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006849,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20049,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006838",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20049,
+"name": "PB49",
+"initialSeedNum": 49
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006839",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20080,
+"name": "PB80",
+"initialSeedNum": 80
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006850,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20017,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006840",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20017,
+"name": "PB17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006841",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20112,
+"name": "PB112",
+"initialSeedNum": 112
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006851,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 20048,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006842",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20048,
+"name": "PB48",
+"initialSeedNum": 48
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006843",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20081,
+"name": "PB81",
+"initialSeedNum": 81
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006852,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 20001,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006844",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20001,
+"name": "PB1",
+"initialSeedNum": 1
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006845",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20065,
+"name": "PB65",
+"initialSeedNum": 65
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006853,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 20032,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006846",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20032,
+"name": "PB32",
+"initialSeedNum": 32
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006847",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20096,
+"name": "PB96",
+"initialSeedNum": 96
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006854,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 20016,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006848",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20016,
+"name": "PB16",
+"initialSeedNum": 16
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006849",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20049,
+"name": "PB49",
+"initialSeedNum": 49
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006855,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 20017,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006850",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20017,
+"name": "PB17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006851",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20048,
+"name": "PB48",
+"initialSeedNum": 48
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006856,
+"round": 4,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": 20001,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006852",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20001,
+"name": "PB1",
+"initialSeedNum": 1
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006853",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20032,
+"name": "PB32",
+"initialSeedNum": 32
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 110006857,
+"round": 4,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": 20017,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "110006854",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20016,
+"name": "PB16",
+"initialSeedNum": 16
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "110006855",
+"prereqPlacement": 1,
+"entrant": {
+"id": 20017,
+"name": "PB17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+}
+]
+},
+{
+"description": "smash-club-uw-11-10-2026 amateur bracket (phase group 3522234), 21 players: losers round 1 has 5 sets feeding 4",
+"sets": [
+{
+"id": 109994888,
+"round": -10,
+"fullRoundText": "Losers Final",
+"winnerId": 30006,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994824",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30006,
+"name": "PC6",
+"initialSeedNum": 6
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994887",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994887,
+"round": -9,
+"fullRoundText": "Losers Semi-Final",
+"winnerId": 30011,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994885",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994886",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30010,
+"name": "PC10",
+"initialSeedNum": 10
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994885,
+"round": -8,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": 30011,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994823",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30002,
+"name": "PC2",
+"initialSeedNum": 2
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994883",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994886,
+"round": -8,
+"fullRoundText": "Losers Quarter-Final",
+"winnerId": 30010,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994822",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30017,
+"name": "PC17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994884",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30010,
+"name": "PC10",
+"initialSeedNum": 10
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994883,
+"round": -7,
+"fullRoundText": "Losers Round 4",
+"winnerId": 30011,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994879",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994880",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30007,
+"name": "PC7",
+"initialSeedNum": 7
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994884,
+"round": -7,
+"fullRoundText": "Losers Round 4",
+"winnerId": 30010,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994881",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30003,
+"name": "PC3",
+"initialSeedNum": 3
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994882",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30010,
+"name": "PC10",
+"initialSeedNum": 10
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994879,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 30011,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994819",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30012,
+"name": "PC12",
+"initialSeedNum": 12
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994875",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994880,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 30007,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994818",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30009,
+"name": "PC9",
+"initialSeedNum": 9
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994876",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30007,
+"name": "PC7",
+"initialSeedNum": 7
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994881,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 30003,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994821",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30003,
+"name": "PC3",
+"initialSeedNum": 3
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994877",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30018,
+"name": "PC18",
+"initialSeedNum": 18
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994882,
+"round": -6,
+"fullRoundText": "Losers Round 3",
+"winnerId": 30010,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994820",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30010,
+"name": "PC10",
+"initialSeedNum": 10
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994878",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30019,
+"name": "PC19",
+"initialSeedNum": 19
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994875,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 30011,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994867",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994868",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30014,
+"name": "PC14",
+"initialSeedNum": 14
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994876,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 30007,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994869",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30007,
+"name": "PC7",
+"initialSeedNum": 7
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994870",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30015,
+"name": "PC15",
+"initialSeedNum": 15
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994877,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 30018,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994871",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30018,
+"name": "PC18",
+"initialSeedNum": 18
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994872",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30004,
+"name": "PC4",
+"initialSeedNum": 4
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994878,
+"round": -5,
+"fullRoundText": "Losers Round 2",
+"winnerId": 30019,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994873",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30019,
+"name": "PC19",
+"initialSeedNum": 19
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994874",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30001,
+"name": "PC1",
+"initialSeedNum": 1
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994873,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 30019,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994811",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30008,
+"name": "PC8",
+"initialSeedNum": 8
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994865",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30019,
+"name": "PC19",
+"initialSeedNum": 19
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994867,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 30011,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994817",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994859",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30016,
+"name": "PC16",
+"initialSeedNum": 16
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994869,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 30007,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994815",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30007,
+"name": "PC7",
+"initialSeedNum": 7
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994861",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30013,
+"name": "PC13",
+"initialSeedNum": 13
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994870,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 30015,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994814",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30015,
+"name": "PC15",
+"initialSeedNum": 15
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994862",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30021,
+"name": "PC21",
+"initialSeedNum": 21
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994871,
+"round": -4,
+"fullRoundText": "Losers Round 1",
+"winnerId": 30018,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994813",
+"prereqPlacement": 2,
+"entrant": {
+"id": 30005,
+"name": "PC5",
+"initialSeedNum": 5
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994863",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30018,
+"name": "PC18",
+"initialSeedNum": 18
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994795,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 30017,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42624361",
+"prereqPlacement": null,
+"entrant": {
+"id": 30016,
+"name": "PC16",
+"initialSeedNum": 16
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42624369",
+"prereqPlacement": null,
+"entrant": {
+"id": 30017,
+"name": "PC17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994799,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 30020,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42624362",
+"prereqPlacement": null,
+"entrant": {
+"id": 30013,
+"name": "PC13",
+"initialSeedNum": 13
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42624355",
+"prereqPlacement": null,
+"entrant": {
+"id": 30020,
+"name": "PC20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994801,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 30012,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42624356",
+"prereqPlacement": null,
+"entrant": {
+"id": 30012,
+"name": "PC12",
+"initialSeedNum": 12
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42624354",
+"prereqPlacement": null,
+"entrant": {
+"id": 30021,
+"name": "PC21",
+"initialSeedNum": 21
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994803,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 30015,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42624360",
+"prereqPlacement": null,
+"entrant": {
+"id": 30015,
+"name": "PC15",
+"initialSeedNum": 15
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42624365",
+"prereqPlacement": null,
+"entrant": {
+"id": 30018,
+"name": "PC18",
+"initialSeedNum": 18
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994807,
+"round": 1,
+"fullRoundText": "Winners Round 1",
+"winnerId": 30014,
+"slots": [
+{
+"prereqType": "seed",
+"prereqId": "42624353",
+"prereqPlacement": null,
+"entrant": {
+"id": 30014,
+"name": "PC14",
+"initialSeedNum": 14
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "seed",
+"prereqId": "42624368",
+"prereqPlacement": null,
+"entrant": {
+"id": 30019,
+"name": "PC19",
+"initialSeedNum": 19
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994810,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30017,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994794",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30001,
+"name": "PC1",
+"initialSeedNum": 1
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994795",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30017,
+"name": "PC17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994811,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30009,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994796",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30008,
+"name": "PC8",
+"initialSeedNum": 8
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994797",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30009,
+"name": "PC9",
+"initialSeedNum": 9
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994812,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994798",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30004,
+"name": "PC4",
+"initialSeedNum": 4
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994799",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30020,
+"name": "PC20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994813,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30012,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994800",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30005,
+"name": "PC5",
+"initialSeedNum": 5
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994801",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30012,
+"name": "PC12",
+"initialSeedNum": 12
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994814,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30002,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994802",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30002,
+"name": "PC2",
+"initialSeedNum": 2
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994803",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30015,
+"name": "PC15",
+"initialSeedNum": 15
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994815,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30010,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994804",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30007,
+"name": "PC7",
+"initialSeedNum": 7
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994805",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30010,
+"name": "PC10",
+"initialSeedNum": 10
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994816,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30003,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994806",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30003,
+"name": "PC3",
+"initialSeedNum": 3
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994807",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30014,
+"name": "PC14",
+"initialSeedNum": 14
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994817,
+"round": 2,
+"fullRoundText": "Winners Round 2",
+"winnerId": 30006,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994808",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30006,
+"name": "PC6",
+"initialSeedNum": 6
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994809",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30011,
+"name": "PC11",
+"initialSeedNum": 11
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994818,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 30017,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994810",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30017,
+"name": "PC17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994811",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30009,
+"name": "PC9",
+"initialSeedNum": 9
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994819,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 30020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994812",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30020,
+"name": "PC20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994813",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30012,
+"name": "PC12",
+"initialSeedNum": 12
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994820,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 30002,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994814",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30002,
+"name": "PC2",
+"initialSeedNum": 2
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994815",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30010,
+"name": "PC10",
+"initialSeedNum": 10
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994821,
+"round": 3,
+"fullRoundText": "Winners Quarter-Final",
+"winnerId": 30006,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994816",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30003,
+"name": "PC3",
+"initialSeedNum": 3
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994817",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30006,
+"name": "PC6",
+"initialSeedNum": 6
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994822,
+"round": 4,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": 30020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994818",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30017,
+"name": "PC17",
+"initialSeedNum": 17
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994819",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30020,
+"name": "PC20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994823,
+"round": 4,
+"fullRoundText": "Winners Semi-Final",
+"winnerId": 30006,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994820",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30002,
+"name": "PC2",
+"initialSeedNum": 2
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994821",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30006,
+"name": "PC6",
+"initialSeedNum": 6
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+}
+]
+},
+{
+"id": 109994824,
+"round": 5,
+"fullRoundText": "Winners Final",
+"winnerId": 30020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994822",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30020,
+"name": "PC20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994823",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30006,
+"name": "PC6",
+"initialSeedNum": 6
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+},
+{
+"id": 109994825,
+"round": 6,
+"fullRoundText": "Grand Final",
+"winnerId": 30020,
+"slots": [
+{
+"prereqType": "set",
+"prereqId": "109994824",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30020,
+"name": "PC20",
+"initialSeedNum": 20
+},
+"standing": {
+"stats": {
+"score": {
+"value": 2
+}
+}
+}
+},
+{
+"prereqType": "set",
+"prereqId": "109994888",
+"prereqPlacement": 1,
+"entrant": {
+"id": 30006,
+"name": "PC6",
+"initialSeedNum": 6
+},
+"standing": {
+"stats": {
+"score": {
+"value": 1
+}
+}
+}
+}
+]
+}
+]
+}
+]
+}

@@ -319,6 +319,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         for (let i = 0; i < winnersMaxRound; i++) phaseGroup.sets.nodes[0].push(Array.from(phaseGroupSets.filter(set => set.round == i + 1)));
         for (let i = 0; i < losersMaxRound; i++) phaseGroup.sets.nodes[1].push(Array.from(phaseGroupSets.filter(set => set.round == (i + 1) * -1)));
 
+        // Where each set of a round with byes goes, from start.gg's links between sets
+        phaseGroup.byeLayouts = phaseGroup.sets.nodes.map(rounds => this.getByeLayouts(rounds));
+
         // Organize set games data
         phaseGroupSets.forEach(set => {
             if (set.games) {
@@ -413,6 +416,51 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         return phaseGroup.sets.nodes[side][round - 1];
     }
 
+    // One side's rounds with byes, each laid out against the round after it (see getByeLayout), or
+    // null for a round that is full or whose links are missing. A round's sets are put in drawing order.
+    getByeLayouts(rounds) {
+        let layouts = rounds.map(() => null);
+        // From the last round back, so each round is placed against a round that is already in order
+        for (let i = rounds.length - 2; i >= 0; i--) {
+            if (layouts[i + 1]) continue;
+            layouts[i] = this.getByeLayout(rounds[i], rounds[i + 1]);
+            if (layouts[i]) rounds[i].sort((a, b) => layouts[i].spans.get(String(a.id))[0] - layouts[i].spans.get(String(b.id))[0]);
+        }
+        return layouts;
+    }
+
+    // A round with byes has fewer sets than a full one. start.gg numbers the hidden bye sets too, so
+    // the set ids don't say where a set goes; the next round's slots do (prereqId). The round is drawn
+    // on a grid of `full` places: as many as the next round when it has fewer sets than that round, each
+    // set beside the set it feeds, or twice as many when it has more, two sets feeding one set side by
+    // side and a set feeding one alone centered on two places. `spans` has each set's [first, end)
+    // places, `feeders` how many of this round's sets feed each set of the next round.
+    getByeLayout(sets, nextSets) {
+        let setCount = sets.length;
+        let nextSetCount = nextSets?.length ?? 0;
+        if (!nextSetCount || setCount == nextSetCount || setCount == nextSetCount * 2) return null;
+        let full = setCount < nextSetCount ? nextSetCount : nextSetCount * 2;
+        if (setCount > full) return null;
+
+        let indexOf = new Map<string, number>(sets.map((set, i) => [String(set.id), i]));
+        let spans = new Map<string, number[]>();
+        let feeders = [];
+        for (let k = 0; k < nextSetCount; k++) {
+            let ids = [...new Set<string>(nextSets[k].slots
+                .filter(slot => slot?.prereqType === 'set' && indexOf.has(String(slot.prereqId)))
+                .map(slot => String(slot.prereqId)))]
+                .sort((a, b) => indexOf.get(a) - indexOf.get(b));
+            if (ids.length > (full == nextSetCount ? 1 : 2) || ids.some(id => spans.has(id))) return null;
+            feeders.push(ids.length);
+            if (full == nextSetCount && ids.length) spans.set(ids[0], [k, k + 1]);
+            else if (ids.length == 1) spans.set(ids[0], [k * 2, k * 2 + 2]);
+            else ids.forEach((id, j) => spans.set(id, [k * 2 + j, k * 2 + j + 1]));
+        }
+        // Every set must feed the next round, or the old guess is used
+        if (spans.size != setCount) return null;
+        return { full, spans, feeders };
+    }
+
     getSetMargin(phaseGroup, round, side, set) {
         let sets = this.getRoundSets(phaseGroup, side, round);
         let setCount = sets.length;
@@ -426,6 +474,20 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         if (setCount == rightRoundSetCount || setCount / 2 == rightRoundSetCount || rightRoundSetCount == 0) {
             let marginHeight = this.getStandardMarginHeight(phaseGroup, side, setCount);
             return `${marginHeight}px 0`;
+        }
+
+        // A round with byes whose links to the next round are known: each set on its places of the grid,
+        // with the empty places before the first set and after each set added to its margins
+        let layout = phaseGroup.byeLayouts?.[side]?.[Math.abs(round) - 1];
+        let span = layout?.spans.get(String(set.id));
+        if (span) {
+            let placeHeight = this.getPhaseGroupSideHeight(phaseGroup, side) / layout.full;
+            let setIndex = sets.findIndex(s => s.id == set.id);
+            let nextStart = setIndex == setCount - 1 ? layout.full : layout.spans.get(String(sets[setIndex + 1].id))[0];
+            let ownMargin = ((span[1] - span[0]) * placeHeight - this.setHeight) / 2;
+            let marginTop = ownMargin + (setIndex == 0 ? span[0] * placeHeight : 0);
+            let marginBottom = ownMargin + (nextStart - span[1]) * placeHeight;
+            return `${marginTop}px 0 ${marginBottom}px`;
         }
 
         // If it's losers side
@@ -533,6 +595,20 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // The 3rd place match is drawn after the final but isn't fed by it, so no line joins them
         if (rightRoundSets[0] && this.isThirdPlaceMatch(rightRoundSets[0])) return '';
+
+        // A round with byes laid out from its links (getByeLayout): two sets feeding one set get a fork,
+        // a set feeding one alone a straight line, each at the height of the set it feeds
+        let layout = phaseGroup.byeLayouts?.[bracketSide]?.[Math.trunc(columnIndex / 3)];
+        if (layout) {
+            let feeders = layout.feeders[Math.trunc(blockIndex / 4)];
+            if (feeders == 2) {
+                if (blockColumnIndex == 1 && blockIndex % 4 == 1) return 'first-block-column-first-row';
+                if (blockColumnIndex == 1 && blockIndex % 4 == 2) return 'first-block-column-second-row';
+                if (blockColumnIndex == 2 && blockIndex % 4 == 1) return 'straight-block';
+            }
+            if (feeders == 1 && blockIndex % 4 == 1) return 'straight-block';
+            return '';
+        }
 
         if (leftRoundSetCount / 2 == rightRoundSetCount) {
             if (blockColumnIndex == 1) {
