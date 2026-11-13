@@ -129,6 +129,12 @@
     cursor: pointer;
 }
 
+// A set is positioned, for its progression tags, which would draw it over the lines to the next round
+// where its outline touches them. Positioning the lines' column too keeps them drawn in page order.
+#block-column {
+    position: relative;
+}
+
 // The set a link scrolled to: an outline and a glow in the highlight color that stay for two seconds, then fade
 .set-arrived {
     animation: set-arrived 3.5s ease-out forwards;
