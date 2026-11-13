@@ -1299,7 +1299,7 @@ try {
                         links: [...(article?.querySelectorAll('a') ?? [])].map(a => a.getAttribute('href')),
                     };
                 });
-                const said = ['Last updated November 12, 2026', "You don't need an account", 'Logging in is optional', 'user.identity', 'session cookie', 'Logging out deletes', 'a few seconds to a few minutes', 'No analytics and no ads'].filter(t => !privacy.text.includes(t));
+                const said = ['Last updated November 12, 2026', 'Message Fable on Discord', 'Logging in is optional', 'user.identity', 'session cookie', 'Logging out deletes', 'a few seconds to a few minutes', 'No analytics and no ads'].filter(t => !privacy.text.includes(t));
                 report.loginUi[`privacy, ${size}`] = { url: privacy.url, heading: privacy.heading, links: privacy.links, missing: said };
                 check(`${size}: the footer's Privacy link opens /privacy, which says what the site keeps and links to start.gg and the GitHub issues`,
                     privacy.url === '/privacy' && privacy.heading === 'Privacy' && !said.length
