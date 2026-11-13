@@ -1168,6 +1168,7 @@ try {
                 { set: '1405', tags: [['→ Top 4', eventPath + '/1002/2002?player=2', 'Winner goes to Top 4', 'right', 20]] },
                 { set: '1503', tags: [['→ Top Cut · Pool A', eventPath + '/1011/2016?player=1', 'Winner goes to Top Cut, Pool A', 'below', 20]] },
                 { set: '2203', tags: [['W → Top Cut · Pool D', eventPath + '/1011/2019', 'Winner goes to Top Cut, Pool D', 'right', 20], ['L → Top Cut · Pool F', eventPath + '/1011/2021', 'Loser goes to Top Cut, Pool F', 'right', 20]] },
+                { set: '2205', tags: [['→ Top 4', eventPath + '/1002/2002', 'Winner goes to Top 4', 'right', 20]] },
             ];
             const asked = log.filter(r => r.kind === 'poolSlices').map(r => r.query.includes('@include(if: true)'));
             report.progression = { shown, sets: await page.locator('.set').count(), asked, colorScheme: await page.evaluate(() => document.body.className) };
@@ -1288,7 +1289,7 @@ try {
             await phone.quiet();
             report.progressionPhone = { layout, tapped, errors: phoneErrors };
             check('phone: the tags are drawn clear of every set and the page is no wider than the screen; a tap follows the tag to the player\'s set, in view',
-                layout.tags === 6 && layout.pageWidth <= layout.windowWidth && JSON.stringify(layout.heights) === '[20]' && layout.covering === 0
+                layout.tags === 7 && layout.pageWidth <= layout.windowWidth && JSON.stringify(layout.heights) === '[20]' && layout.covering === 0
                 && tapped.path === eventPath + '/1011/2016?player=1' && tapped.set === '3101' && tapped.inView && tapped.dialog === 0 && !phoneErrors.length, report.progressionPhone);
         } catch (e) {
             report.progressionPhone = { crashed: String(e.message).slice(0, 300), errors: phoneErrors };

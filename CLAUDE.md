@@ -29,7 +29,7 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 
 ## Building and testing
 
-CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and push to main. `e2e/api-calls.mjs` runs the app against a fake start.gg. `e2e/gql-cache.mjs` tests the cache, allowlist and site gate; `e2e/auth.mjs` runs the real server against a fake start.gg for login, sessions and security headers.
+CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and push to main. `e2e/api-calls.mjs` runs the app against a fake start.gg. `e2e/gql-cache.mjs` tests the cache, allowlist and site gate; `e2e/auth.mjs` runs the real server against a fake start.gg for login, sessions and security headers. `e2e/live-bracket.mjs` walks real Genesis X brackets in a browser for the progression tags and saves dark-mode screenshots to the `e2e-out` artifact (`live-bracket/`); it reports and never fails a run.
 
 ## Where things live (for whoever picks this up next)
 
