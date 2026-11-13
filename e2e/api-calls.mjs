@@ -790,9 +790,15 @@ try {
         }));
         const want = ['Alpha 2 - Delta 0', 'Bravo 0 - Charlie DQ', 'Alpha 2 - Bravo 0', 'Bravo 2 - Charlie 1', 'Delta 0 - Charlie 2', 'Alpha 3 - Bravo 1'];
         const requests = count(log);
-        report.displayScore = { shown, requests, errors };
-        check('scores read from displayScore; an unreadable one is looked up once; DQ shows',
-            want.every(w => shown.includes(w)) && requests.setScores === 1 && requests.sets === 1 && !errors.length, report.displayScore);
+        // The set's dialog says DQ too, not -1
+        await page.locator('.set', { hasText: 'DQ' }).first().click();
+        const dialogScores = await page.locator('mat-dialog-container .entrant-score').allTextContents()
+            .then(scores => scores.map(score => score.trim()));
+        await page.keyboard.press('Escape');
+        report.displayScore = { shown, requests, errors, dialogScores };
+        check('scores read from displayScore; an unreadable one is looked up once; DQ shows, in the bracket and the set dialog',
+            want.every(w => shown.includes(w)) && requests.setScores === 1 && requests.sets === 1 && !errors.length
+            && JSON.stringify(dialogScores) === '["0","DQ"]', report.displayScore);
         await context.close();
     }
 

@@ -41,6 +41,12 @@ export class SetComponent implements OnInit {
         return images.length > 0 ? images.find(image => image.type === 'profile') : null;
     }
 
+    // A disqualified entrant's score is -1: show it as DQ, like the bracket does
+    scoreText(slot) {
+        const score = slot?.standing?.stats.score.value;
+        return score === -1 ? 'DQ' : score;
+    }
+
     getWinnerArrow(game = null) {
         if (!this.set.winnerId) return '';
         if (!game) return this.set.slots[0].entrant.id == this.set.winnerId ? 'arrow_left' : 'arrow_right';
