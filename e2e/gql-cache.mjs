@@ -13,7 +13,7 @@ const report = { checks: [] };
 const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail });
 
 const allowed = await loadAllowlist();
-check('the allowlist holds every query the app can send', allowed.size === 2 + 8 + 1 + 1 + Q.MAX_POOL_SLICES + Q.MAX_SET_SCORES && allowed.has(Q.tournamentQuery) && allowed.has(Q.setScoresQuery(37)) && allowed.has(Q.poolSlicesQuery(Q.MAX_POOL_SLICES)), allowed.size);
+check('the allowlist holds every query the app can send', allowed.size === 3 + 8 + 1 + 1 + Q.MAX_POOL_SLICES + Q.MAX_SET_SCORES && allowed.has(Q.tournamentQuery) && allowed.has(Q.setScoresQuery(37)) && allowed.has(Q.poolSlicesQuery(Q.MAX_POOL_SLICES)), allowed.size);
 // Pool slices are set results, which stay fresh for 15 s like any other
 const sliceTtls = Array.from({ length: Q.MAX_POOL_SLICES }, (_, i) => ttlMs(Q.poolSlicesQuery(i + 1)));
 check('pool slices get the 15 s set results TTL', sliceTtls.every(ttl => ttl === 15_000) && ttlMs(Q.poolSetsQuery) === 15_000, [...new Set(sliceTtls)]);
@@ -55,44 +55,45 @@ const post = async (query, variables, as = 'user:viewer-a') => {
     const res = await fetch(base, { method: 'POST', headers: { 'content-type': 'application/json', ...(as ? { 'x-test-as': as } : {}) }, body: JSON.stringify({ query, variables }) });
     return { status: res.status, cache: res.headers.get('x-cache'), retryAfter: res.headers.get('retry-after'), body: await res.json() };
 };
-const event = slug => [Q.entrantsQuery, { slug, page: 1, perPage: 100 }];
+// A phase's players (any string works as the id here)
+const players = id => [Q.phaseEntrantsQuery, { phaseId: id, page: 1, perPage: 300 }];
 const sets = id => [Q.poolSetsQuery, { id, page: 1, perPage: 55 }];
 
 try {
     // 1. The second viewer of the same thing gets the cached answer
     upstreamCalls = 0;
-    const first = await post(...event('a'), 'user:viewer-a');
-    const second = await post(...event('a'), 'user:viewer-b');
+    const first = await post(...players('a'), 'user:viewer-a');
+    const second = await post(...players('a'), 'user:viewer-b');
     check('a repeat query is served from the cache', first.cache === 'MISS' && second.cache === 'HIT' && upstreamCalls === 1 && second.body.data?.ok, { first, second, upstreamCalls });
 
     // 2. Identical requests at the same moment share one upstream call
     upstreamCalls = 0;
-    const together = await Promise.all(Array.from({ length: 5 }, () => post(...event('b'))));
+    const together = await Promise.all(Array.from({ length: 5 }, () => post(...players('b'))));
     check('identical requests in flight share one call', upstreamCalls === 1 && together.every(r => r.status === 200), { upstreamCalls });
 
     // 3. GraphQL errors (like the object cap) are passed on, not cached
     upstreamCalls = 0;
     reply = () => ({ status: 200, body: { errors: [{ message: 'Your query complexity is too high.' }] } });
-    const e1 = await post(...event('c'));
-    const e2 = await post(...event('c'));
+    const e1 = await post(...players('c'));
+    const e2 = await post(...players('c'));
     check('errors are passed on and not cached', upstreamCalls === 2 && e1.body.errors && e2.cache === 'MISS', { e1, upstreamCalls });
 
     // 4. Rate limits pass through with Retry-After, not cached
     upstreamCalls = 0;
     reply = () => ({ status: 429, body: { message: 'Rate limit exceeded' }, headers: { 'retry-after': '7' } });
-    const r1 = await post(...event('d'));
-    const r2 = await post(...event('d'));
+    const r1 = await post(...players('d'));
+    const r2 = await post(...players('d'));
     check('429 passes through with Retry-After and is not cached', r1.status === 429 && r1.retryAfter === '7' && upstreamCalls === 2, { r1, r2 });
 
     // 5. Another failure keeps start.gg's status but not its error page
     reply = () => ({ status: 500, body: '<html>secret stack trace</html>' });
-    const r500 = await post(...event('d2'));
+    const r500 = await post(...players('d2'));
     check("a start.gg error page isn't passed on", r500.status === 502 && !JSON.stringify(r500.body).includes('secret'), r500);
     reply = () => ({ status: 200, body: { data: { ok: true } } });
 
     // 6. Only the app's own queries run; no one (no session and no site token) gets anything, not even a cached answer
     upstreamCalls = 0;
-    const noOne = await post(...event('a'), null);
+    const noOne = await post(...players('a'), null);
     const other = await post('query { event(slug: "x") { id name } }', {});
     const otherSite = await post('query { event(slug: "x") { id name } }', {}, 'site');
     const me = await post('query { currentUser { email } }', {}, 'site');
@@ -106,27 +107,27 @@ try {
 
     // 7. Variables are part of the key, in any order
     upstreamCalls = 0;
-    const v1 = await post(Q.entrantsQuery, { slug: 'v', page: 1, perPage: 100 });
-    const v2 = await post(Q.entrantsQuery, { perPage: 100, page: 1, slug: 'v' });
-    const v3 = await post(Q.entrantsQuery, { slug: 'v', page: 2, perPage: 100 });
+    const v1 = await post(Q.phaseEntrantsQuery, { phaseId: 7, page: 1, perPage: 300 });
+    const v2 = await post(Q.phaseEntrantsQuery, { perPage: 300, page: 1, phaseId: 7 });
+    const v3 = await post(Q.phaseEntrantsQuery, { phaseId: 7, page: 2, perPage: 300 });
     check('the cache keys on the query and its variables', v1.cache === 'MISS' && v2.cache === 'HIT' && v3.cache === 'MISS' && upstreamCalls === 2, { v1: v1.cache, v2: v2.cache, v3: v3.cache });
 
-    // 8. Set results go stale after 15 s; entrant lists last 5 minutes
+    // 8. Set results go stale after 15 s; a phase's players last 5 minutes
     upstreamCalls = 0;
     await post(...sets(1));
-    await post(...event('e'));
+    await post(...players('e'));
     clock += 16_000;
     const setsLater = await post(...sets(1));
-    const eventSoon = await post(...event('e'));
+    const eventSoon = await post(...players('e'));
     clock += 5 * 60_000;
-    const eventLater = await post(...event('e'));
-    check('sets refresh after 15 s, entrants after 5 min', setsLater.cache === 'MISS' && eventSoon.cache === 'HIT' && eventLater.cache === 'MISS', { sets: setsLater.cache, event: eventSoon.cache, eventLater: eventLater.cache });
+    const eventLater = await post(...players('e'));
+    check('sets refresh after 15 s, players after 5 min', setsLater.cache === 'MISS' && eventSoon.cache === 'HIT' && eventLater.cache === 'MISS', { sets: setsLater.cache, event: eventSoon.cache, eventLater: eventLater.cache });
 
     // 9. A visitor's token that start.gg refuses (401) is retried once with the new token
     upstreamCalls = 0;
     tokensSeen = [];
     reply = (q, v, auth) => auth === 'Bearer old' ? { status: 401, body: { message: 'Invalid token' } } : { status: 200, body: { data: { ok: true } } };
-    const retried = await post(...event('f'), 'user401:old');
+    const retried = await post(...players('f'), 'user401:old');
     check('after a 401 the retry uses the new token', retried.status === 200 && JSON.stringify(tokensSeen) === JSON.stringify(['Bearer old', 'Bearer old-new']), { status: retried.status, tokensSeen });
     reply = () => ({ status: 200, body: { data: { ok: true } } });
 
@@ -134,10 +135,10 @@ try {
     upstreamCalls = 0;
     tokensSeen = [];
     const siteAnswers = [];
-    for (let i = 0; i < 7; i++) siteAnswers.push(await post(...event(`g${i}`), 'site'));
+    for (let i = 0; i < 7; i++) siteAnswers.push(await post(...players(`g${i}`), 'site'));
     const busy = siteAnswers.filter(r => r.status === 503);
-    const userAfter = await post(...event('h'), 'user:viewer-c');
-    const hitAfter = await post(...event('g0'), 'site');
+    const userAfter = await post(...players('h'), 'user:viewer-c');
+    const hitAfter = await post(...players('g0'), 'site');
     check('the site token stops at its limit with a clear "busy" answer and Retry-After',
         siteAnswers.slice(0, 5).every(r => r.status === 200) && busy.length === 2 && busy.every(r => r.body.errors?.[0]?.extensions?.code === 'SITE_BUSY' && Number(r.retryAfter) > 0 && /log in/i.test(r.body.errors[0].message))
         && tokensSeen.filter(t => t === 'Bearer site-token').length === 5,
@@ -147,10 +148,10 @@ try {
     // 11. The cache stays under its byte cap, dropping the least recently used
     const big = 'x'.repeat(900);
     reply = q => ({ status: 200, body: { data: { big } } });
-    for (let i = 0; i < 10; i++) await post(...event(`big${i}`));
+    for (let i = 0; i < 10; i++) await post(...players(`big${i}`));
     const { bytes, entries } = cache.size();
-    const newest = await post(...event('big9'));
-    const oldest = await post(...event('big0'));
+    const newest = await post(...players('big9'));
+    const oldest = await post(...players('big0'));
     check('cache stays under its byte cap, dropping the oldest', bytes <= 4000 && newest.cache === 'HIT' && oldest.cache === 'MISS', { bytes, entries });
 } finally {
     server.close();

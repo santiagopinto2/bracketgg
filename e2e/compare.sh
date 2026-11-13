@@ -43,6 +43,9 @@ echo "live phase sets: $(head -c 80 $out/live-phase-sets.json | tr -d '\n')"
 # With the token: scores read from displayScore must equal start.gg's own score fields on real sets
 node --experimental-strip-types e2e/live-display-score.mjs > $out/live-display-score.json 2> $out/live-display-score.err || { cat $out/live-display-score.json $out/live-display-score.err; echo "live displayScore check failed"; exit 1; }
 echo "live displayScore: ok"
+# With the token: a phase's players, profile pictures only, and the top 8's losses, from the real start.gg
+node --experimental-strip-types e2e/live-players.mjs > $out/live-players.json 2> $out/live-players.err || { cat $out/live-players.json $out/live-players.err; echo "live players check failed"; exit 1; }
+echo "live players: ok"
 
 npm install --no-save --no-audit --no-fund --loglevel=error playwright pixelmatch pngjs > /dev/null || exit 1
 npx playwright install --with-deps chromium webkit > $out/playwright-install.log 2>&1 || { tail -30 $out/playwright-install.log; exit 1; }

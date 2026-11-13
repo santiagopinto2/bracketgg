@@ -106,10 +106,13 @@ export class AppComponent implements AfterViewInit {
                                 if (Number(poolId)) tournamentData.event.poolId = Number(poolId);
                             }
 
-                            // Also cached, and fetched again when the tournament shows a new entrant count
-                            let eventRes = await this.startggService.getEventBySlug(eventSlug, eventInfo.numEntrants);
+                            // The event's id, name and phases, in one small request. The bracket view then loads
+                            // only the shown phase's players, not the whole event's. Cached, and fetched again
+                            // when the tournament shows a new entrant count.
+                            const eventRes = await this.startggService.getEventPhases(eventSlug, eventInfo.numEntrants);
                             if (loadId !== this.loadId) return;
 
+                            eventRes.phases = eventRes.phases ?? [];
                             if (!tournamentData.event.phaseId) tournamentData.event.phaseId = eventRes.phases[0]?.id;
                             if (!tournamentData.event.phaseId) throw new StartggError('This event has no brackets yet.');
                             tournamentData.event.event = eventRes;

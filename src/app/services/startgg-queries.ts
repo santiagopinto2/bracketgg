@@ -63,29 +63,40 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                 }
             }`;
 
-export const entrantsQuery = `query Entrants($slug: String!, $page: Int!, $perPage: Int!) {
+// What a bracket page needs to know of its event: about 10 objects
+export const eventPhasesQuery = `query EventPhases($slug: String!) {
                 event(slug: $slug) {
                     id
                     name
+                    type
                     phases {
                         id
                         name
+                        numSeeds
                     }
-                    entrants(query : {
+                }
+            }`;
+
+// One page of a bracket phase's players with their profile pictures, for the bracket view. About 3
+// of start.gg's objects per player, 5 per two-player team (300 cost 901 and 1501, measured
+// 2026-11-13); pictures don't count.
+export const phaseEntrantsQuery = `query PhaseEntrants($phaseId: ID!, $page: Int!, $perPage: Int!) {
+                phase(id: $phaseId) {
+                    seeds(query: {
                         page: $page
                         perPage: $perPage
                     }) {
                         nodes {
-                            id
-                            name
-                            initialSeedNum
-                            participants {
-                                gamerTag
-                                user {
-                                    images(type: "profile") {
-                                        url
-                                        width
-                                        height
+                            entrant {
+                                id
+                                participants {
+                                    gamerTag
+                                    user {
+                                        images(type: "profile") {
+                                            url
+                                            width
+                                            height
+                                        }
                                     }
                                 }
                             }
@@ -289,7 +300,8 @@ export function allQueries(): string[] {
                 overviews.push(eventOverviewQuery({ lostTo, rankings, socials }));
     return [
         tournamentQuery,
-        entrantsQuery,
+        eventPhasesQuery,
+        phaseEntrantsQuery,
         ...overviews,
         phaseQuery,
         poolSetsQuery,

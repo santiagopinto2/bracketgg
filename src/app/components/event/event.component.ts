@@ -40,8 +40,10 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     eventSlug = '';
     // The pool to scroll to once the phase is drawn, from a /brackets/<phase id>/<pool id> link
     poolId = null;
-    allEntrants = [];
-    entrantsById = new Map<any, any>();
+    // The shown phase's players by entrant id, with their pictures, loading alongside its sets
+    playersById: Promise<Map<any, any>> = Promise.resolve(new Map());
+    // The color of each player without a picture, kept while the event stays the same
+    colorsById = new Map<any, string>();
     // A newer phase load makes older ones stale, so they stop instead of mixing two phases' data
     loadId = 0;
     entrants = signal<any[]>([]);
@@ -101,18 +103,15 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.eventId = -1;
                 this.eventName = '';
                 this.eventSlug = '';
-                this.allEntrants = [];
-                this.entrantsById = new Map();
+                this.playersById = Promise.resolve(new Map());
+                this.colorsById = new Map();
                 this.loadId++;
             }
             else {
-                // Get entrants only if the event changes
+                // Players keep their colors across the event's phases
                 if (event.event.id != this.eventId) {
                     this.eventId = event.event.id;
-
-                    this.allEntrants = event.event.entrants.nodes;
-                    this.allEntrants.forEach(entrant => this.prepareEntrant(entrant));
-                    this.entrantsById = new Map(this.allEntrants.map(entrant => [entrant.id, entrant]));
+                    this.colorsById = new Map();
                 }
 
                 this.eventName = event.event.name;
@@ -122,6 +121,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 // Get all phase and phase group data
                 this.phases = event.event.phases;
                 this.currentPhaseIndex = this.phases.findIndex(phase => phase.id == event.phaseId);
+                this.playersById = this.loadPlayers(event.phaseId, this.phases[this.currentPhaseIndex]?.numSeeds, event.event.type === 1);
                 this.getPhase(event.phaseId);
             }
 
@@ -191,12 +191,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!entrant.participants?.length) entrant.participants = [{ gamerTag: entrant.name || '?', user: null }];
         if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
 
-        if (!entrant.backgroundColor && this.getEntrantImage(entrant) === '') {
-            const hue = Math.floor(Math.random() * 361);
-            const sat = Math.floor(Math.random() * 101);
-            const lum = 40;
-            entrant.backgroundColor = `hsl(${hue}, ${sat}%, ${lum}%)`;
-        }
+        if (!entrant.backgroundColor && this.getEntrantImage(entrant) === '') entrant.backgroundColor = this.colorFor(entrant.id);
 
         entrant.name = entrant.name ?? '';
         let pipeIndex = entrant.name.lastIndexOf('|');
@@ -205,6 +200,34 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             entrant.name = entrant.name.slice(pipeIndex + 2);
         }
         return entrant;
+    }
+
+    // A player's random color, the same each time they appear in this event
+    colorFor(entrantId): string {
+        let color = this.colorsById.get(entrantId);
+        if (!color) {
+            const hue = Math.floor(Math.random() * 361);
+            const sat = Math.floor(Math.random() * 101);
+            const lum = 40;
+            color = `hsl(${hue}, ${sat}%, ${lum}%)`;
+            if (entrantId != null) this.colorsById.set(entrantId, color);
+        }
+        return color;
+    }
+
+    // The phase's players by entrant id. Those without a picture get their colors here, in seed order.
+    // If start.gg won't answer, the bracket still draws: each set names its players, who then show
+    // colored initials instead of pictures.
+    // `singles` (start.gg's event type 1) picks the page size.
+    async loadPlayers(phaseId, numSeeds, singles): Promise<Map<any, any>> {
+        try {
+            const players = await this.startggService.getPhaseEntrants(phaseId, numSeeds, singles);
+            for (const player of players) if (!player.participants?.[0]?.user?.images?.length) this.colorFor(player.id);
+            return new Map(players.map(player => [player.id, player]));
+        } catch (error) {
+            console.warn('Could not load the players of this phase', error);
+            return new Map();
+        }
     }
 
     async getPhase(phaseId) {
@@ -257,6 +280,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         phaseGroup.sets = phaseGroupSetsRes;
         let phaseGroupSets = phaseGroup.sets.nodes;
 
+        const playersById = await this.playersById;
+        if (loadId !== this.loadId) return;
+
         // Add entrant data to each set and add unique entrants to entrant list. The set itself carries
         // each entrant's current name and seed, so an entrant missing from the cached list still shows.
         const newEntrants = [];
@@ -264,9 +290,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         phaseGroupSets.forEach(set => {
             set.slots.forEach(slot => {
                 if (!slot?.entrant) return;
-                // Name and seed come from the set (always fresh), the avatar and color from the cached entrant list
-                const listed = this.entrantsById.get(slot.entrant.id);
-                const entrant = this.prepareEntrant({ ...slot.entrant, participants: listed?.participants, backgroundColor: listed?.backgroundColor });
+                // Name and seed come from the set (always fresh), the picture from the phase's player list
+                const listed = playersById.get(slot.entrant.id);
+                const entrant = this.prepareEntrant({ ...slot.entrant, participants: listed?.participants });
                 slot.entrant.name = entrant.name;
                 slot.entrant.sponsor = entrant.sponsor;
                 slot.entrant.participants = entrant.participants;

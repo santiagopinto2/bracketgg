@@ -165,6 +165,8 @@ function kindOf(query) {
     if (query.includes('...PoolSet')) return 'poolSlices';
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
+    if (query.includes('seeds(query')) return 'seeds';
+    if (query.includes('event(slug') && query.includes('numSeeds') && !query.includes('standings(')) return 'eventPhases';
     if (query.includes('event(slug') && query.includes('phases')) return 'overview';
     if (query.includes('phase(id') && query.includes('slots')) return 'phaseSets';
     if (query.includes('phase(id')) return 'phase';
@@ -203,6 +205,18 @@ function answer(query) {
         case 'entrants':
             return { data: { event: { id: 10, name: 'Test Event', phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name })),
                 entrants: { nodes: structuredClone(entrants).map(e => ({ ...e, participants: e.participants.map(p => ({ ...p, user: userAsQueried(p.user, query) })) })) } } } };
+        case 'eventPhases':
+            return { data: { event: { id: 10, name: 'Test Event', type: 1, phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name, numSeeds: entrants.length * (poolsOf[id] ?? [1]).length })) } } };
+        case 'seeds': {
+            // A phase's players in seed order: the entrants who play in its pools
+            const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
+            const page = Number(query.match(/page: (\d+)/)[1]);
+            const perPage = Number(query.match(/perPage: (\d+)/)[1]);
+            const ids = new Set((poolsOf[phaseId] ?? [phaseGroupOf[phaseId]]).flatMap(id => setsOf[id] ?? []).flatMap(set => set.slots.map(slot => slot.entrant?.id)));
+            const nodes = entrants.filter(e => ids.has(e.id)).slice((page - 1) * perPage, page * perPage).map(e =>
+                ({ entrant: { id: e.id, participants: e.participants.map(p => ({ gamerTag: p.gamerTag, user: userAsQueried(structuredClone(p.user), query) })) } }));
+            return { data: { phase: { seeds: { nodes } } } };
+        }
         case 'overview':
             return { data: { event: overview(query) } };
         case 'phase': {
@@ -398,6 +412,8 @@ try {
         await quiet();
         report.firstLoad = count(log);
         check('first load draws the bracket', (await tags(page)).includes('Alpha'), await tags(page));
+        check('a bracket page asks for its event\'s phases and its phase\'s players once each, and never for the whole event\'s entrants',
+            !report.firstLoad.entrants && report.firstLoad.eventPhases === 1 && report.firstLoad.seeds === 1, report.firstLoad);
         check('a small pool takes one sets request (no sample first)', report.firstLoad.sets === 1, report.firstLoad);
 
         let mark = log.length;
@@ -405,12 +421,13 @@ try {
         await quiet();
         report.phaseSwitch = count(log, mark);
         check('phase switch draws the second phase', (await page.locator('text=Top 4').count()) > 0 && (await tags(page)).includes('Alpha'), await tags(page));
-        check('phase switch skips tournament and entrants', !report.phaseSwitch.tournament && !report.phaseSwitch.entrants, report.phaseSwitch);
+        check('phase switch skips tournament and entrants, and asks for the new phase\'s players once', !report.phaseSwitch.tournament && !report.phaseSwitch.entrants && !report.phaseSwitch.eventPhases && report.phaseSwitch.seeds === 1, report.phaseSwitch);
 
         mark = log.length;
         await page.locator('button:has(mat-icon[fonticon="arrow_back"])').click();
         await quiet();
         report.phaseSwitchBack = count(log, mark);
+        check('switching back reuses the first phase\'s players', !report.phaseSwitchBack.seeds && !report.phaseSwitchBack.entrants, report.phaseSwitchBack);
         await context.close();
     }
 
@@ -443,6 +460,21 @@ try {
             report.avatars = { crashed: String(e.message).slice(0, 300), errors };
             check('avatars in the bracket, the search and the set dialog', false, report.avatars);
         }
+        await context.close();
+    }
+
+    // 1c. The players request fails: the bracket still draws, with colored initials, and no error shows
+    {
+        const { context, page, log, quiet } = await openPage(browser, q => kindOf(q) === 'seeds' ? { status: 500, body: { message: 'oops' } } : null);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1001');
+        await quiet();
+        await page.waitForTimeout(500);
+        report.playersFailed = { tags: (await tags(page)).filter(t => t.trim()).length, pictures: await page.locator('#entrant-images img').count(),
+            initials: (await page.locator('.entrant-set-image-default').allInnerTexts()).map(t => t.trim()).filter(Boolean).length, snackbar: await snackText(page), requests: count(log), errors };
+        check('players request fails: every set still drawn, initials instead of pictures, no error shown',
+            report.playersFailed.tags === 12 && report.playersFailed.pictures === 0 && report.playersFailed.initials === 12 && !report.playersFailed.snackbar.includes('error') && !(await spinnerShown(page)) && !errors.length, report.playersFailed);
         await context.close();
     }
 
@@ -643,7 +675,7 @@ try {
     }
 
     // 11. Doubles: start.gg refuses pages that pass the 1000-object cap. Here a set costs 50 objects and
-    //     the refusal gives the count, so one retry fits; entrant refusals give no count (more than 50),
+    //     the refusal gives the count, so one retry fits; player refusals give no count (more than 50),
     //     so those pages halve
     {
         const normal = await openPage(browser);
@@ -657,7 +689,7 @@ try {
         const perPage = q => Number(q.match(/perPage: (\d+)/)?.[1] ?? 0);
         const { context, page, log, quiet } = await openPage(browser, q =>
             kindOf(q) === 'sets' && perPage(q) * 50 > 1000 ? tooBig(perPage(q) * 50)
-                : kindOf(q) === 'entrants' && perPage(q) > 50 ? tooBig(null) : null);
+                : (kindOf(q) === 'entrants' || kindOf(q) === 'seeds') && perPage(q) > 50 ? tooBig(null) : null);
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
         await page.goto(appUrl + eventPath + '/1001');
@@ -665,7 +697,10 @@ try {
         await page.waitForTimeout(1000);
         const got = (await tags(page)).length;
         const text = await snackText(page);
-        report.doublesComplexity = { want, got, snackbar: text, requests: count(log), errors };
+        const seedPages = log.filter(r => r.kind === 'seeds').map(r => perPage(r.query));
+        report.doublesComplexity = { want, got, snackbar: text, requests: count(log), seedPages, errors };
+        check('doubles: a refused players page halves until it fits, and the pictures still show', seedPages.at(-1) <= 50 && seedPages.slice(0, -1).every(n => n > 50)
+            && (await page.locator('#entrant-images img').count()) === 4, report.doublesComplexity);
         check('doubles: oversized pages are retried smaller (sets in one retry) and the bracket draws',
             want > 0 && got === want && report.doublesComplexity.requests.sets === 2 && !text.includes('complexity') && !errors.length, report.doublesComplexity);
         await context.close();
