@@ -224,8 +224,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             const phaseGroupPromises = [];
             for (let i = 0; i < groups.length; i++) this.maxRounds.push([]);
             if (groups.length > 1 && phase.sets?.pageInfo?.total) {
-                const indexOf = new Map(groups.map((group, i) => [group.id, i]));
-                const expected = new Map(groups.map(group => [group.id, group.sets?.pageInfo?.total ?? 0]));
+                const indexOf = new Map<any, number>(groups.map((group, i): [any, number] => [group.id, i]));
+                const expected = new Map<any, number>(groups.map((group): [any, number] => [group.id, group.sets?.pageInfo?.total ?? 0]));
                 await this.startggService.getPhaseSetsByPool(phaseId, phase.sets.pageInfo.total, expected, (poolId, sets) => {
                     if (loadId !== this.loadId) return;
                     const i = indexOf.get(poolId);
