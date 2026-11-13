@@ -119,7 +119,11 @@ export function eventOverviewQuery({ lostTo = false, rankings = false, socials =
                                             externalUsername
                                             url
                                         }`;
-    // Every set the entrant played in the event: a loss on the winners side can be many sets back
+    // Every set the entrant played in the event: a loss on the winners side can be many sets back.
+    // start.gg can't filter sets by who won (SetFilters has no such field), and it counts the sets it
+    // returns, not perPage: Genesis X Melee Singles' top 8 played 89 sets, which cost 89 objects at
+    // perPage 12, 20 or 50 alike (measured 2026-11-13). So a smaller perPage would save nothing and
+    // only hide the losses of a player with more sets.
     const setsQuery = `paginatedSets(page: 1, perPage: ${SETS_PER_STANDING}) {
                                     nodes {
                                         winnerId
