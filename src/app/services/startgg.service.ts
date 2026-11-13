@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
-import { MAX_SET_SCORES, SETS_PER_STANDING, entrantsQuery, eventOverviewQuery, phaseQuery, setScoresQuery, setsQuery, tournamentQuery } from './startgg-queries';
+import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, entrantsQuery, eventOverviewQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -22,9 +22,9 @@ export class StartggService {
     // start.gg's GraphQL API, through this site's server, which shares answers between viewers
     private baseUrl: string = '/api/gql';
     private entrantsPerPage = 100;
-    // start.gg counted about 10 objects per set with scores read from displayScore, the pool's id and
-    // no characters reported (a whole phase: 95 sets 951, 100 sets 1001, cap 1000; measured 2026-11-09). Sets with characters cost more, and a
-    // refused page shrinks to fit.
+    // A single pool's page size. Measured on a whole phase, whose sets also named their pool: about 10
+    // objects per set with no characters reported (95 sets 951, 100 sets 1001, cap 1000; 2026-11-09).
+    // A pool's own sets cost 9. Sets with characters cost more, and a refused page shrinks to fit.
     private setsPerPage = 95;
     // Sets asked for per entrant in the landing page's top 8, to find who they lost to. An entrant
     // with this many may have more, and then shows no losses.
@@ -40,6 +40,15 @@ export class StartggService {
     private rateLimitBackoffMs = 5_000;
     // Page sizes that start.gg accepted after a smaller retry, by event or pool
     private pageSizes = new Map<string, number>();
+    // A multi-pool phase loads in pool slices (getPhaseSetsByPool): `sliceSize` sets a slice, requests of
+    // up to `requestCost` objects. From a pool, start.gg counted 9 objects per set with no characters
+    // reported and 1 per slice (Genesis X Melee R1 Pools: 40 sets in one slice cost 361, in eight
+    // slices of 5 cost 368; measured 2026-11-13). Sets with characters cost more: a refused request
+    // raises the cost per set, remembered by phase in `sliceCosts`.
+    private sliceSize = 5;
+    private objectsPerPoolSet = 9;
+    private requestCost = 980;
+    private sliceCosts = new Map<string, { perSet: number, size: number }>();
 
     constructor(
         private http: HttpClient,
@@ -125,27 +134,15 @@ export class StartggService {
     // Loads `total` items in pages of `perPage`. Sets with characters reported (more so best of 5 and
     // doubles) can pass start.gg's 1000-object cap. When a page does, this shrinks the page size to fit
     // the count start.gg gave (or halves it), tries again, and remembers the size that worked under `key`.
-    // `onPage`, if given, gets each page's items as soon as that page arrives (pages after the first may
-    // arrive in any order), with the attempt it belongs to. A refused page starts a new attempt with new
-    // page boundaries; pages still arriving from an older attempt are not passed on.
-    private async loadPages(key: string, total: number, perPage: number, loadPage: (page: number, perPage: number) => Promise<any[]>,
-        onPage?: (items: any[], page: number, attempt: number) => Promise<void> | void): Promise<any[]> {
+    private async loadPages(key: string, total: number, perPage: number, loadPage: (page: number, perPage: number) => Promise<any[]>): Promise<any[]> {
         perPage = Math.min(perPage, this.pageSizes.get(key) ?? perPage);
-        let latest = 0;
-        for (let attempt = 0; ; attempt++) {
-            latest = attempt;
-            const size = perPage;
-            const load = async (page: number) => {
-                const items = await loadPage(page, size);
-                if (attempt === latest) await onPage?.(items, page, attempt);
-                return items;
-            };
+        for (; ;) {
             try {
                 // The first page alone tests the size, so a refused size wastes one request, not a whole batch
-                const first = await load(1);
-                const numberOfPages = Math.max(1, Math.ceil(total / size));
-                const rest = await Promise.all(Array.from({ length: numberOfPages - 1 }, (_, i) => load(i + 2)));
-                this.pageSizes.set(key, size);
+                const first = await loadPage(1, perPage);
+                const numberOfPages = Math.max(1, Math.ceil(total / perPage));
+                const rest = await Promise.all(Array.from({ length: numberOfPages - 1 }, (_, i) => loadPage(i + 2, perPage)));
+                this.pageSizes.set(key, perPage);
                 return [first, ...rest].flat();
             } catch (error) {
                 if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
@@ -237,52 +234,114 @@ export class StartggService {
         return { nodes };
     }
 
-    // Every set in a phase, all pools at once. start.gg returns each pool's sets in the same order as
-    // asking pool by pool, so the bracket draws the same; a phase with many small pools takes far fewer
-    // requests. `expected` is each pool's set count (from the phase query). As pages arrive, a pool whose
-    // sets have all come in is passed to `onPool` right away, so it can be drawn before the rest of the
-    // phase. Once every page is in, each pool not passed yet goes to `onPool` with whatever it has, and
-    // so does a pool that turned out to have more sets than expected. Each pool gets its own copy of its
-    // sets, so drawing one (which changes the sets) never touches another call's.
-    async getPhaseSetsByPool(phaseId, totalSets, expected: Map<any, number>, onPool: (poolId: any, sets: any[]) => void): Promise<void> {
-        // The current attempt's pages by number, and how many sets each pool was passed on with
-        let pages = new Map<number, any[]>();
-        let attempt = 0;
-        const passed = new Map<any, number>();
-        // A pool's sets from the pages in so far, in page order, which is start.gg's order
-        const setsOf = (poolId: any) => [...pages.keys()].sort((a, b) => a - b)
-            .flatMap(page => pages.get(page).filter(set => set.phaseGroup?.id == poolId))
-            .map(({ phaseGroup, ...set }) => structuredClone(set));
-        const countOf = (poolId: any) => [...pages.values()].reduce((n, sets) => n + sets.filter(set => set.phaseGroup?.id == poolId).length, 0);
-
-        await this.loadPages(`phase-sets:${phaseId}`, totalSets, this.setsPerPage, async (page, perPage) => {
-            const data = await this.getSetsPaginated('phase', phaseId, page, perPage);
-            return data?.phase?.sets?.nodes ?? [];
-        }, async (nodes, page, pageAttempt) => {
-            await this.fillScores(nodes);
-            // A smaller page size after a refusal moves every page boundary, so the bigger pages are dropped.
-            // Pools already passed on keep their sets and aren't passed again.
-            if (pageAttempt < attempt) return;
-            if (pageAttempt > attempt) {
-                attempt = pageAttempt;
-                pages = new Map();
+    // Every set of a multi-pool phase, pool after pool, for drawing each pool as soon as its sets are in.
+    // `expected` is each pool's set count (from the phase query), in the order the pools are shown.
+    //
+    // Each request carries a run of pool slices (poolSlicesQuery): pages of `sliceSize` sets from one
+    // pool, filled up to about `requestCost` of start.gg's objects. So a request holds, say, the end of
+    // pool 2, all of pool 3 and the start of pool 4, and every pool is complete after one or two
+    // requests. start.gg counts only the objects it returns, so the half-empty last slice of a pool costs
+    // nothing extra. Each pool gets one slice past its expected count: if that slice comes back full, the
+    // pool has gained sets since the phase query, and its next page is asked for too, so none are missed.
+    //
+    // Pools go to `onPool` in order, each once, with its sets in the same order as asking the pool alone.
+    // The first request goes alone and tests the cost. A request start.gg refuses for its size raises
+    // the cost per set to what start.gg counted, and its slices are asked for again in smaller requests;
+    // slices that already arrived are kept, so no pool is passed on twice.
+    async getPhaseSetsByPool(phaseId, expected: Map<any, number>, onPool: (poolId: any, sets: any[]) => void): Promise<void> {
+        const key = `pool-slices:${phaseId}`;
+        let { perSet, size } = this.sliceCosts.get(key) ?? { perSet: this.objectsPerPoolSet, size: this.sliceSize };
+        const pools = [...expected.keys()];
+        const total = (pool: any) => Math.max(0, Number(expected.get(pool)) || 0);
+        // Each pool's slices that came in, by page, and how many pages it needs
+        const slices = new Map<any, Map<number, any[]>>();
+        const pages = new Map<any, number>();
+        const restart = (pool: any) => {
+            slices.set(pool, new Map());
+            pages.set(pool, Math.floor(total(pool) / size) + 1);
+        };
+        pools.forEach(restart);
+        // The sets a slice should hold: a full slice past the pool's expected count, since it is only
+        // asked for when the pool has gained sets
+        const setsIn = (pool: any, page: number) => (page - 1) * size > total(pool) ? size : Math.min(size, total(pool) - (page - 1) * size);
+        // Pools before `next` have been passed on
+        let next = 0;
+        const passOn = () => {
+            while (next < pools.length) {
+                const pool = pools[next];
+                const got = slices.get(pool), needed = pages.get(pool);
+                if (got.size < needed) return;
+                if (got.get(needed).length >= size) {
+                    pages.set(pool, needed + 1);
+                    return;
+                }
+                onPool(pool, structuredClone(Array.from({ length: needed }, (_, i) => got.get(i + 1)).flat()));
+                next++;
             }
-            pages.set(page, nodes);
-            for (const [poolId, total] of expected) {
-                if (passed.has(poolId) || !(total > 0)) continue;
-                const count = countOf(poolId);
-                if (count < total) continue;
-                passed.set(poolId, count);
-                onPool(poolId, setsOf(poolId));
-            }
-        });
+        };
 
-        for (const poolId of expected.keys()) {
-            const count = countOf(poolId);
-            if (passed.get(poolId) === count) continue;
-            passed.set(poolId, count);
-            onPool(poolId, setsOf(poolId));
+        while (next < pools.length) {
+            // The slices still to ask for, pool by pool, with the sets each should hold
+            const missing = pools.slice(next).flatMap(pool => Array.from({ length: pages.get(pool) }, (_, i) => i + 1)
+                .filter(page => !slices.get(pool).has(page))
+                .map(page => ({ pool, page, sets: setsIn(pool, page) })));
+            if (!missing.length) {
+                passOn();
+                continue;
+            }
+            const requests = this.packSlices(missing, perSet);
+            const send = async (request: { pool: any, page: number, sets: number }[]) => {
+                const variables: Record<string, any> = { perPage: size };
+                request.forEach((slice, k) => {
+                    variables[`g${k}`] = Number(slice.pool);
+                    variables[`p${k}`] = slice.page;
+                });
+                const data = await this.query(poolSlicesQuery(request.length), variables);
+                const nodes = request.map((_, k) => data?.[`s${k}`]?.sets?.nodes ?? []);
+                await this.fillScores(nodes.flat());
+                request.forEach((slice, k) => slices.get(slice.pool)?.set(slice.page, nodes[k]));
+                passOn();
+            };
+            const settle = (request: any[]) => send(request).then(() => null, error => ({ error, request }));
+            const first = await settle(requests[0]);
+            const refused = first ? [first] : (await Promise.all(requests.slice(1).map(settle))).filter(r => r);
+            if (!refused.length) continue;
+
+            const failed = refused.find(r => !(r.error instanceof TooComplexError));
+            if (failed) throw failed.error;
+            const oldSize = size;
+            for (const { error, request } of refused) {
+                const sets = request.reduce((n, slice) => n + slice.sets, 0);
+                if (request.length === 1 && size === 1) throw error;
+                // start.gg's count, less one object per slice, spread over the sets asked for
+                const counted = error.actual && sets ? Math.ceil((error.actual - request.length) / sets) : perSet * 2;
+                perSet = Math.max(perSet + 1, counted);
+            }
+            // A slice must fit in a request on its own. A smaller slice moves every page boundary, so the
+            // pools not passed on yet start over.
+            size = Math.max(1, Math.min(size, Math.floor((this.requestCost - 1) / perSet)));
+            if (size !== oldSize) pools.slice(next).forEach(restart);
         }
+        this.sliceCosts.set(key, { perSet, size });
+    }
+
+    // Groups slices, in order, into requests of at most `requestCost` estimated objects (each slice
+    // costs one, each set `perSet`) and MAX_POOL_SLICES slices. A request always takes at least one slice.
+    private packSlices<T extends { sets: number }>(slices: T[], perSet: number): T[][] {
+        const requests: T[][] = [];
+        let request: T[] = [], cost = 0;
+        for (const slice of slices) {
+            const sliceCost = 1 + perSet * slice.sets;
+            if (request.length && (cost + sliceCost > this.requestCost || request.length >= MAX_POOL_SLICES)) {
+                requests.push(request);
+                request = [];
+                cost = 0;
+            }
+            request.push(slice);
+            cost += sliceCost;
+        }
+        if (request.length) requests.push(request);
+        return requests;
     }
 
     // Gives each slot the `standing.stats.score.value` the rest of the app reads, from the set's
@@ -305,12 +364,8 @@ export class StartggService {
         }
     }
 
+    // One page of sets from a pool
     getPhaseGroupSetsPaginated(phaseGroupId, page, setsPerPage): Promise<any> {
-        return this.getSetsPaginated('phaseGroup', phaseGroupId, page, setsPerPage);
-    }
-
-    // One page of sets from a pool or a whole phase
-    private getSetsPaginated(parent: 'phase' | 'phaseGroup', id, page, setsPerPage): Promise<any> {
-        return this.query(setsQuery(parent), { id: Number(id), page, perPage: setsPerPage });
+        return this.query(poolSetsQuery, { id: Number(phaseGroupId), page, perPage: setsPerPage });
     }
 }

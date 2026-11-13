@@ -184,11 +184,6 @@ export const phaseQuery = `query Phase($phaseId: ID!) {
                 phase(id: $phaseId) {
                     id
                     bracketType
-                    sets(page: 1, perPage: 1, sortType: ROUND) {
-                        pageInfo {
-                            total
-                        }
-                    }
                     phaseGroups(query : {
                         page: 1
                         perPage: 100
@@ -234,20 +229,8 @@ const setGamesQuery = `games {
             }
         }`;
 
-// One page of sets from a pool (`phaseGroup`, variable $id) or a whole phase (`phase`, which also
-// tells each set's pool). Always asks for games: where no characters were reported they come back
-// empty and cost little.
-export function setsQuery(parent: 'phase' | 'phaseGroup'): string {
-    return `query ${parent === 'phase' ? 'PhaseSets' : 'PoolSets'}($id: ID!, $page: Int!, $perPage: Int!) {
-                ${parent}(id: $id) {
-                    sets(
-                        page: $page
-                        perPage: $perPage
-                        sortType: ROUND
-                    ) {
-                        nodes {
-                            ${parent === 'phase' ? 'phaseGroup { id }' : ''}
-                            id
+// What the app reads of each set, the same from a pool or a pool slice
+const setFields = `id
                             round
                             fullRoundText
                             winnerId
@@ -262,10 +245,39 @@ export function setsQuery(parent: 'phase' | 'phaseGroup'): string {
                                     name
                                     initialSeedNum
                                 }
-                            }
+                            }`;
+
+// One page of a pool's sets (variable $id). Always asks for games: where no characters were reported
+// they come back empty and cost little.
+export const poolSetsQuery = `query PoolSets($id: ID!, $page: Int!, $perPage: Int!) {
+                phaseGroup(id: $id) {
+                    sets(
+                        page: $page
+                        perPage: $perPage
+                        sortType: ROUND
+                    ) {
+                        nodes {
+                            ${setFields}
                         }
                     }
                   }
+            }`;
+
+// The most pool slices one request asks for (poolSlicesQuery). Two variables each, under the
+// server's cap of 120 variables per request.
+export const MAX_POOL_SLICES = 50;
+
+// `count` slices of pools' sets in one request, as s0 … s<count-1>: slice k is page $p<k> of pool
+// $g<k>'s sets, $perPage sets a page, in the same order as asking the pool alone (poolSetsQuery).
+// A multi-pool phase loads as a run of these, pool after pool, so each pool is complete in one or
+// two requests and can be drawn while later pools load.
+export function poolSlicesQuery(count: number): string {
+    const slices = Array.from({ length: count }, (_, k) => k);
+    return `query PoolSlices(${slices.map(k => `$g${k}: ID!, $p${k}: Int!`).join(', ')}, $perPage: Int!) {
+                ${slices.map(k => `s${k}: phaseGroup(id: $g${k}) { sets(page: $p${k}, perPage: $perPage, sortType: ROUND) { nodes { ...PoolSet } } }`).join('\n                ')}
+            }
+            fragment PoolSet on Set {
+                ${setFields}
             }`;
 }
 
@@ -289,8 +301,8 @@ export function allQueries(): string[] {
         entrantsQuery,
         ...overviews,
         phaseQuery,
-        setsQuery('phase'),
-        setsQuery('phaseGroup'),
+        poolSetsQuery,
+        ...Array.from({ length: MAX_POOL_SLICES }, (_, i) => poolSlicesQuery(i + 1)),
         ...Array.from({ length: MAX_SET_SCORES }, (_, i) => setScoresQuery(i + 1)),
     ];
 }
