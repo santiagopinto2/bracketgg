@@ -33,6 +33,8 @@ mat.$theme-ignore-duplication-warnings: true;
 
 @include mat.elevation-classes();
 @include mat.app-background();
+// Text sizes for headings, paragraphs and the body (<body class="mat-typography">)
+@include mat.typography-hierarchy($dark);
 
 html {
     @include mat.all-component-themes($dark);
@@ -46,6 +48,14 @@ html {
 
 html[data-theme='light'] {
     @include mat.all-component-colors($light);
+    // Text fields a shade darker than Material's, which disappear on the light gray page, with labels
+    // that keep 4.5 to 1 on that shade
+    @include mat.form-field-overrides((
+        filled-container-color: #e9ebef,
+        filled-label-text-color: #5f6672,
+        filled-hover-label-text-color: #5f6672,
+        filled-focus-label-text-color: #b71c1c,
+    ));
 }
 
 // Material parts that take the site's own colors (_tokens.scss) in both themes. After the themes,

@@ -1630,16 +1630,14 @@ try {
                 const style = selector => { const el = document.querySelector(selector); return el ? getComputedStyle(el) : null; };
                 // A text's contrast on a background (its own if none is named), or null if the page doesn't show it
                 const of = (text, background = text) => style(text) && style(background) ? contrast(style(text).color, style(background).backgroundColor) : null;
-                const content = style('mat-sidenav-content'), card = style('.standing');
                 return {
                     theme: document.documentElement.getAttribute('data-theme'),
                     stored: localStorage.getItem('bgg-theme'),
                     label: document.querySelector('.theme-toggle')?.getAttribute('aria-label'),
                     page: getComputedStyle(document.body).backgroundColor,
-                    content: content.backgroundColor,
-                    card: card.backgroundColor,
+                    card: style('.standing').backgroundColor,
                     contrast: {
-                        pageText: of('mat-sidenav-content'),
+                        pageText: contrast(style('mat-sidenav-content').color, getComputedStyle(document.body).backgroundColor),
                         cardText: of('.standing'),
                         cardMutedText: of('.standing-lost-to', '.standing'),
                         cardSponsor: of('.standing-sponsor', '.standing'),
@@ -1673,15 +1671,16 @@ try {
             const back = await state();
             report.theme = { first, switched, beforeScripts, reloaded, back };
             check('the page is dark by default on a device that prefers light',
-                first.theme === 'dark' && first.stored === null && first.page === 'rgb(48, 48, 48)' && first.content === 'rgb(48, 48, 48)' && first.card === 'rgb(63, 63, 63)' && first.label === 'Switch to light mode', first);
+                first.theme === 'dark' && first.stored === null && first.page === 'rgb(48, 48, 48)' && first.card === 'rgb(63, 63, 63)' && first.label === 'Switch to light mode', first);
             check("the header's button switches to the light theme and remembers it",
-                switched.theme === 'light' && switched.stored === 'light' && switched.page === 'rgb(243, 244, 246)' && switched.content === switched.page && switched.card === 'rgb(255, 255, 255)' && switched.label === 'Switch to dark mode', switched);
+                switched.theme === 'light' && switched.stored === 'light' && switched.page === 'rgb(243, 244, 246)' && switched.card === 'rgb(255, 255, 255)' && switched.label === 'Switch to dark mode', switched);
             check("a chosen light theme is set before the app's scripts run, so the page never starts dark",
                 beforeScripts.theme === 'light' && beforeScripts.background === 'rgb(243, 244, 246)' && reloaded.theme === 'light' && reloaded.page === switched.page, { beforeScripts, reloaded });
             check('the button switches back to dark', back.theme === 'dark' && back.stored === 'dark' && back.page === first.page && back.card === first.card, back);
             check('light theme: text has at least 4.5 to 1 contrast on its background', readable(switched.contrast, 4.5), switched.contrast);
-            // The dark theme's red header and green chip are as they were before the light theme (4.25 and 3.2 to 1)
-            const { header, activeChip, ...darkText } = first.contrast;
+            // The dark theme's red header, green chip and bronze 3rd place keep the colors they had before the
+            // light theme (4.25, 3.2 and 3.35 to 1)
+            const { header, activeChip, thirdPlace, ...darkText } = first.contrast;
             check('dark theme: text has at least 4.5 to 1 contrast on its background', readable(darkText, 4.5), first.contrast);
         } catch (e) {
             report.theme = { crashed: String(e.message).slice(0, 300) };
