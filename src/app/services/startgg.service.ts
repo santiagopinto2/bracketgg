@@ -125,15 +125,27 @@ export class StartggService {
     // Loads `total` items in pages of `perPage`. Sets with characters reported (more so best of 5 and
     // doubles) can pass start.gg's 1000-object cap. When a page does, this shrinks the page size to fit
     // the count start.gg gave (or halves it), tries again, and remembers the size that worked under `key`.
-    private async loadPages(key: string, total: number, perPage: number, loadPage: (page: number, perPage: number) => Promise<any[]>): Promise<any[]> {
+    // `onPage`, if given, gets each page's items as soon as that page arrives (pages after the first may
+    // arrive in any order), with the attempt it belongs to. A refused page starts a new attempt with new
+    // page boundaries; pages still arriving from an older attempt are not passed on.
+    private async loadPages(key: string, total: number, perPage: number, loadPage: (page: number, perPage: number) => Promise<any[]>,
+        onPage?: (items: any[], page: number, attempt: number) => Promise<void> | void): Promise<any[]> {
         perPage = Math.min(perPage, this.pageSizes.get(key) ?? perPage);
-        for (; ;) {
+        let latest = 0;
+        for (let attempt = 0; ; attempt++) {
+            latest = attempt;
+            const size = perPage;
+            const load = async (page: number) => {
+                const items = await loadPage(page, size);
+                if (attempt === latest) await onPage?.(items, page, attempt);
+                return items;
+            };
             try {
                 // The first page alone tests the size, so a refused size wastes one request, not a whole batch
-                const first = await loadPage(1, perPage);
-                const numberOfPages = Math.max(1, Math.ceil(total / perPage));
-                const rest = await Promise.all(Array.from({ length: numberOfPages - 1 }, (_, i) => loadPage(i + 2, perPage)));
-                this.pageSizes.set(key, perPage);
+                const first = await load(1);
+                const numberOfPages = Math.max(1, Math.ceil(total / size));
+                const rest = await Promise.all(Array.from({ length: numberOfPages - 1 }, (_, i) => load(i + 2)));
+                this.pageSizes.set(key, size);
                 return [first, ...rest].flat();
             } catch (error) {
                 if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
@@ -225,21 +237,52 @@ export class StartggService {
         return { nodes };
     }
 
-    // Every set in a phase, all pools at once, sorted into a Map from pool id to that pool's sets.
-    // start.gg returns each pool's sets in the same order as asking pool by pool, so the bracket
-    // draws the same; a phase with many small pools takes far fewer requests.
-    async getPhaseSetsByPool(phaseId, totalSets): Promise<Map<any, any[]>> {
-        const nodes = await this.loadPages(`phase-sets:${phaseId}`, totalSets, this.setsPerPage, async (page, perPage) => {
+    // Every set in a phase, all pools at once. start.gg returns each pool's sets in the same order as
+    // asking pool by pool, so the bracket draws the same; a phase with many small pools takes far fewer
+    // requests. `expected` is each pool's set count (from the phase query). As pages arrive, a pool whose
+    // sets have all come in is passed to `onPool` right away, so it can be drawn before the rest of the
+    // phase. Once every page is in, each pool not passed yet goes to `onPool` with whatever it has, and
+    // so does a pool that turned out to have more sets than expected. Each pool gets its own copy of its
+    // sets, so drawing one (which changes the sets) never touches another call's.
+    async getPhaseSetsByPool(phaseId, totalSets, expected: Map<any, number>, onPool: (poolId: any, sets: any[]) => void): Promise<void> {
+        // The current attempt's pages by number, and how many sets each pool was passed on with
+        let pages = new Map<number, any[]>();
+        let attempt = 0;
+        const passed = new Map<any, number>();
+        // A pool's sets from the pages in so far, in page order, which is start.gg's order
+        const setsOf = (poolId: any) => [...pages.keys()].sort((a, b) => a - b)
+            .flatMap(page => pages.get(page).filter(set => set.phaseGroup?.id == poolId))
+            .map(({ phaseGroup, ...set }) => structuredClone(set));
+        const countOf = (poolId: any) => [...pages.values()].reduce((n, sets) => n + sets.filter(set => set.phaseGroup?.id == poolId).length, 0);
+
+        await this.loadPages(`phase-sets:${phaseId}`, totalSets, this.setsPerPage, async (page, perPage) => {
             const data = await this.getSetsPaginated('phase', phaseId, page, perPage);
             return data?.phase?.sets?.nodes ?? [];
+        }, async (nodes, page, pageAttempt) => {
+            await this.fillScores(nodes);
+            // A smaller page size after a refusal moves every page boundary, so the bigger pages are dropped.
+            // Pools already passed on keep their sets and aren't passed again.
+            if (pageAttempt < attempt) return;
+            if (pageAttempt > attempt) {
+                attempt = pageAttempt;
+                pages = new Map();
+            }
+            pages.set(page, nodes);
+            for (const [poolId, total] of expected) {
+                if (passed.has(poolId) || !(total > 0)) continue;
+                const count = countOf(poolId);
+                if (count < total) continue;
+                passed.set(poolId, count);
+                onPool(poolId, setsOf(poolId));
+            }
         });
-        await this.fillScores(nodes);
-        const byPool = new Map<any, any[]>();
-        for (const { phaseGroup, ...set } of nodes) {
-            if (!byPool.has(phaseGroup?.id)) byPool.set(phaseGroup?.id, []);
-            byPool.get(phaseGroup?.id).push(set);
+
+        for (const poolId of expected.keys()) {
+            const count = countOf(poolId);
+            if (passed.get(poolId) === count) continue;
+            passed.set(poolId, count);
+            onPool(poolId, setsOf(poolId));
         }
-        return byPool;
     }
 
     // Gives each slot the `standing.stats.score.value` the rest of the app reads, from the set's
