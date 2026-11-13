@@ -89,6 +89,12 @@ const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVarian
 const phaseNames = { 1001: 'Pools', 1002: 'Top 4', 1003: 'Unstarted Pool', 1004: 'Later Phase', 1005: 'Three Pools', 1006: 'Single Elim', 1007: 'Single Elim, No 3rd Place', 1008: 'Round Robin' };
 const phaseStateOf = { 1003: 'CREATED', 1004: 'ACTIVE' };
 const svg = (width, height, color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${color}"/></svg>`)}`;
+// A user's pictures as start.gg answers: with images(type: "profile") only the profile picture, without its type
+const imagesAsQueried = (images, query) => query.includes('images(type: "profile")') ? images.filter(i => i.type === 'profile').map(({ type, ...rest }) => rest) : images;
+// Bravo has a profile picture (portrait) and a banner, the banner first, so taking the first picture of all of them would show the banner
+const bravoImages = [{ url: svg(120, 30, '#c33'), type: 'banner', width: 120, height: 30 }, { url: svg(30, 45, '#2a7'), type: 'profile', width: 30, height: 45 }];
+entrants[1].participants[0].user = { images: bravoImages };
+const userAsQueried = (user, query) => user && { ...user, images: imagesAsQueried(user.images, query) };
 const placements = [1, 2, 3, 4, 5, 7];
 const numEntrants = 60;
 const videogameId = 7;
@@ -132,7 +138,7 @@ const standingNames = ['SPN | Alpha', 'Bravo', 'Charlie', 'Delta', 'Player 5', '
 const standingsPage = query => ({
     nodes: standingNames.map((name, i) => {
         const id = i + 1;
-        const user = i == 2 ? null : { images: i == 1 ? [{ url: svg(40, 40, '#2a7'), type: 'profile', width: 40, height: 40 }] : [] };
+        const user = i == 2 ? null : { images: imagesAsQueried(i == 1 ? [{ url: svg(80, 20, '#c33'), type: 'banner', width: 80, height: 20 }, { url: svg(40, 40, '#2a7'), type: 'profile', width: 40, height: 40 }] : [], query) };
         if (user && query.includes('authorizations(types: [TWITTER, TWITCH, DISCORD])')) user.authorizations = socialsOf[id] ?? [];
         const participant = { id: 100 + i, user };
         if (query.includes(`rankings(limit: 3, videogameId: ${videogameId})`)) participant.player = { rankings: id in rankingsOf ? rankingsOf[id] : [] };
@@ -159,6 +165,8 @@ function kindOf(query) {
     if (query.includes('...PoolSet')) return 'poolSlices';
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
+    if (query.includes('seeds(query')) return 'seeds';
+    if (query.includes('event(slug') && query.includes('numSeeds') && !query.includes('standings(')) return 'eventPhases';
     if (query.includes('event(slug') && query.includes('phases')) return 'overview';
     if (query.includes('phase(id') && query.includes('slots')) return 'phaseSets';
     if (query.includes('phase(id')) return 'phase';
@@ -196,7 +204,19 @@ function answer(query) {
             } } };
         case 'entrants':
             return { data: { event: { id: 10, name: 'Test Event', phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name })),
-                entrants: { nodes: structuredClone(entrants) } } } };
+                entrants: { nodes: structuredClone(entrants).map(e => ({ ...e, participants: e.participants.map(p => ({ ...p, user: userAsQueried(p.user, query) })) })) } } } };
+        case 'eventPhases':
+            return { data: { event: { id: 10, name: 'Test Event', type: 1, phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name, numSeeds: entrants.length * (poolsOf[id] ?? [1]).length })) } } };
+        case 'seeds': {
+            // A phase's players in seed order: the entrants who play in its pools
+            const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
+            const page = Number(query.match(/page: (\d+)/)[1]);
+            const perPage = Number(query.match(/perPage: (\d+)/)[1]);
+            const ids = new Set((poolsOf[phaseId] ?? [phaseGroupOf[phaseId]]).flatMap(id => setsOf[id] ?? []).flatMap(set => set.slots.map(slot => slot.entrant?.id)));
+            const nodes = entrants.filter(e => ids.has(e.id)).slice((page - 1) * perPage, page * perPage).map(e =>
+                ({ entrant: { id: e.id, participants: e.participants.map(p => ({ gamerTag: p.gamerTag, user: userAsQueried(structuredClone(p.user), query) })) } }));
+            return { data: { phase: { seeds: { nodes } } } };
+        }
         case 'overview':
             return { data: { event: overview(query) } };
         case 'phase': {
@@ -392,6 +412,8 @@ try {
         await quiet();
         report.firstLoad = count(log);
         check('first load draws the bracket', (await tags(page)).includes('Alpha'), await tags(page));
+        check('a bracket page asks for its event\'s phases and its phase\'s players once each, and never for the whole event\'s entrants',
+            !report.firstLoad.entrants && report.firstLoad.eventPhases === 1 && report.firstLoad.seeds === 1, report.firstLoad);
         check('a small pool takes one sets request (no sample first)', report.firstLoad.sets === 1, report.firstLoad);
 
         let mark = log.length;
@@ -399,12 +421,60 @@ try {
         await quiet();
         report.phaseSwitch = count(log, mark);
         check('phase switch draws the second phase', (await page.locator('text=Top 4').count()) > 0 && (await tags(page)).includes('Alpha'), await tags(page));
-        check('phase switch skips tournament and entrants', !report.phaseSwitch.tournament && !report.phaseSwitch.entrants, report.phaseSwitch);
+        check('phase switch skips tournament and entrants, and asks for the new phase\'s players once', !report.phaseSwitch.tournament && !report.phaseSwitch.entrants && !report.phaseSwitch.eventPhases && report.phaseSwitch.seeds === 1, report.phaseSwitch);
 
         mark = log.length;
         await page.locator('button:has(mat-icon[fonticon="arrow_back"])').click();
         await quiet();
         report.phaseSwitchBack = count(log, mark);
+        check('switching back reuses the first phase\'s players', !report.phaseSwitchBack.seeds && !report.phaseSwitchBack.entrants, report.phaseSwitchBack);
+        await context.close();
+    }
+
+    // 1b. Avatars: Bravo's profile picture (a portrait), never the banner, in the bracket, the search and the set dialog
+    {
+        const { context, page, quiet } = await openPage(browser);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        const profile = bravoImages.find(i => i.type === 'profile').url;
+        const avatars = selector => page.locator(selector).evaluateAll(images => images.map(img => ({ src: img.getAttribute('src'), portrait: img.classList.contains('portrait') })));
+        const allBravo = (shown, n) => shown.length === n && shown.every(a => a.src === profile && a.portrait);
+        try {
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            const bracket = await avatars('#entrant-images img');
+            await page.locator('.search-entrant-form input').click();
+            await page.locator('.search-entrant-form input').fill('Bra');
+            await page.waitForTimeout(500);
+            const search = { options: (await page.locator('mat-option').allInnerTexts()).map(t => t.trim()), avatars: await avatars('mat-option img') };
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+            await page.locator('.set', { hasText: 'Bravo' }).filter({ hasText: 'Charlie' }).first().click();
+            await page.waitForTimeout(800);
+            const dialog = await avatars('mat-dialog-container .entrant-set-image img');
+            report.avatars = { bracket: bracket.length, search, dialog, errors };
+            check('avatars: Bravo\'s profile picture, as a portrait, in each of their 4 sets, and no other picture', allBravo(bracket, 4), bracket);
+            check('search: typing finds the player, with their picture', JSON.stringify(search.options) === JSON.stringify(['Bravo']) && allBravo(search.avatars, 1), search);
+            check('set dialog: Bravo\'s profile picture, and the colored initial for the other player', allBravo(dialog, 1) && !errors.length, report.avatars);
+        } catch (e) {
+            report.avatars = { crashed: String(e.message).slice(0, 300), errors };
+            check('avatars in the bracket, the search and the set dialog', false, report.avatars);
+        }
+        await context.close();
+    }
+
+    // 1c. The players request fails: the bracket still draws, with colored initials, and no error shows
+    {
+        const { context, page, log, quiet } = await openPage(browser, q => kindOf(q) === 'seeds' ? { status: 500, body: { message: 'oops' } } : null);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1001');
+        await quiet();
+        await page.waitForTimeout(500);
+        report.playersFailed = { tags: (await tags(page)).filter(t => t.trim()).length, pictures: await page.locator('#entrant-images img').count(),
+            initials: (await page.locator('.entrant-set-image-default').allInnerTexts()).map(t => t.trim()).filter(Boolean).length, snackbar: await snackText(page), requests: count(log), errors };
+        check('players request fails: every set still drawn, initials instead of pictures, no error shown',
+            report.playersFailed.tags === 12 && report.playersFailed.pictures === 0 && report.playersFailed.initials === 12 && !report.playersFailed.snackbar.includes('error') && !(await spinnerShown(page)) && !errors.length, report.playersFailed);
         await context.close();
     }
 
@@ -605,7 +675,7 @@ try {
     }
 
     // 11. Doubles: start.gg refuses pages that pass the 1000-object cap. Here a set costs 50 objects and
-    //     the refusal gives the count, so one retry fits; entrant refusals give no count (more than 50),
+    //     the refusal gives the count, so one retry fits; player refusals give no count (more than 50),
     //     so those pages halve
     {
         const normal = await openPage(browser);
@@ -619,7 +689,7 @@ try {
         const perPage = q => Number(q.match(/perPage: (\d+)/)?.[1] ?? 0);
         const { context, page, log, quiet } = await openPage(browser, q =>
             kindOf(q) === 'sets' && perPage(q) * 50 > 1000 ? tooBig(perPage(q) * 50)
-                : kindOf(q) === 'entrants' && perPage(q) > 50 ? tooBig(null) : null);
+                : (kindOf(q) === 'entrants' || kindOf(q) === 'seeds') && perPage(q) > 50 ? tooBig(null) : null);
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
         await page.goto(appUrl + eventPath + '/1001');
@@ -627,7 +697,10 @@ try {
         await page.waitForTimeout(1000);
         const got = (await tags(page)).length;
         const text = await snackText(page);
-        report.doublesComplexity = { want, got, snackbar: text, requests: count(log), errors };
+        const seedPages = log.filter(r => r.kind === 'seeds').map(r => perPage(r.query));
+        report.doublesComplexity = { want, got, snackbar: text, requests: count(log), seedPages, errors };
+        check('doubles: a refused players page halves until it fits, and the pictures still show', seedPages.at(-1) <= 50 && seedPages.slice(0, -1).every(n => n > 50)
+            && (await page.locator('#entrant-images img').count()) === 4, report.doublesComplexity);
         check('doubles: oversized pages are retried smaller (sets in one retry) and the bracket draws',
             want > 0 && got === want && report.doublesComplexity.requests.sets === 2 && !text.includes('complexity') && !errors.length, report.doublesComplexity);
         await context.close();
@@ -1129,6 +1202,11 @@ try {
             report.eventLanding.afterLoad = { standings: await page.locator('.standing').count(), requests: count(log, mark) };
             check('event landing: the standings stay at 8 and make no request after the page loads',
                 report.eventLanding.afterLoad.standings === 8 && report.eventLanding.afterLoad.requests.total === 0, report.eventLanding.afterLoad);
+
+            const standingAvatars = await page.locator('.standing .standing-profile-image img').evaluateAll(images => images.map(img => img.getAttribute('src')));
+            report.eventLanding.avatars = standingAvatars.length;
+            check('event landing: Bravo\'s card shows the profile picture, not the banner, and nobody else has one',
+                standingAvatars.length === 1 && standingAvatars[0] === svg(40, 40, '#2a7'), standingAvatars);
 
             // A phase opens its bracket; the link at the top goes back to the event; so does the browser
             await page.locator('.phase-link', { hasText: 'Top 4' }).click();

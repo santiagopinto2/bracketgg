@@ -83,10 +83,9 @@ export class TournamentComponent {
         return profile && profile.height > profile.width ? 'portrait' : '';
     }
 
+    // The profile picture: the only image asked for (images(type: "profile"))
     private getStandingProfile(standing: any): any {
-        const images = standing.entrant?.participants?.[0]?.user?.images;
-        if (!images?.length) return null;
-        return images.find((img: any) => img.type === 'profile') ?? null;
+        return standing.entrant?.participants?.[0]?.user?.images?.[0] ?? null;
     }
 
     private randomColor(): string {

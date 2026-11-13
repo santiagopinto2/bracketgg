@@ -15,8 +15,6 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                     images {
                         url
                         type
-                        width
-                        height
                     }
                     rules
                     id
@@ -38,8 +36,6 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                             images {
                                 url
                                 type
-                                width
-                                height
                             }
                         }
                         standings(query: {
@@ -53,9 +49,8 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                                     participants {
                                         id
                                         user {
-                                            images {
+                                            images(type: "profile") {
                                                 url
-                                                type
                                                 width
                                                 height
                                             }
@@ -68,30 +63,40 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                 }
             }`;
 
-export const entrantsQuery = `query Entrants($slug: String!, $page: Int!, $perPage: Int!) {
+// What a bracket page needs to know of its event: about 10 objects
+export const eventPhasesQuery = `query EventPhases($slug: String!) {
                 event(slug: $slug) {
                     id
                     name
+                    type
                     phases {
                         id
                         name
+                        numSeeds
                     }
-                    entrants(query : {
+                }
+            }`;
+
+// One page of a bracket phase's players with their profile pictures, for the bracket view. About 3
+// of start.gg's objects per player, 5 per two-player team (300 cost 901 and 1501, measured
+// 2026-11-13); pictures don't count.
+export const phaseEntrantsQuery = `query PhaseEntrants($phaseId: ID!, $page: Int!, $perPage: Int!) {
+                phase(id: $phaseId) {
+                    seeds(query: {
                         page: $page
                         perPage: $perPage
                     }) {
                         nodes {
-                            id
-                            name
-                            initialSeedNum
-                            participants {
-                                gamerTag
-                                user {
-                                    images {
-                                        url
-                                        type
-                                        width
-                                        height
+                            entrant {
+                                id
+                                participants {
+                                    gamerTag
+                                    user {
+                                        images(type: "profile") {
+                                            url
+                                            width
+                                            height
+                                        }
                                     }
                                 }
                             }
@@ -114,7 +119,11 @@ export function eventOverviewQuery({ lostTo = false, rankings = false, socials =
                                             externalUsername
                                             url
                                         }`;
-    // Every set the entrant played in the event: a loss on the winners side can be many sets back
+    // Every set the entrant played in the event: a loss on the winners side can be many sets back.
+    // start.gg can't filter sets by who won (SetFilters has no such field), and it counts the sets it
+    // returns, not perPage: Genesis X Melee Singles' top 8 played 89 sets, which cost 89 objects at
+    // perPage 12, 20 or 50 alike (measured 2026-11-13). So a smaller perPage would save nothing and
+    // only hide the losses of a player with more sets.
     const setsQuery = `paginatedSets(page: 1, perPage: ${SETS_PER_STANDING}) {
                                     nodes {
                                         winnerId
@@ -160,9 +169,8 @@ export function eventOverviewQuery({ lostTo = false, rankings = false, socials =
                                     id
                                     ${rankings ? rankingsQuery : ''}
                                     user {
-                                        images {
+                                        images(type: "profile") {
                                             url
-                                            type
                                             width
                                             height
                                         }
@@ -222,8 +230,6 @@ const setGamesQuery = `games {
                         images {
                         url
                         type
-                        width
-                        height
                     }
                 }
             }
@@ -298,7 +304,8 @@ export function allQueries(): string[] {
                 overviews.push(eventOverviewQuery({ lostTo, rankings, socials }));
     return [
         tournamentQuery,
-        entrantsQuery,
+        eventPhasesQuery,
+        phaseEntrantsQuery,
         ...overviews,
         phaseQuery,
         poolSetsQuery,

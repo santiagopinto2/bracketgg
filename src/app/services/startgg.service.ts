@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
-import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, entrantsQuery, eventOverviewQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
+import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -21,7 +21,10 @@ export class StartggService {
 
     // start.gg's GraphQL API, through this site's server, which shares answers between viewers
     private baseUrl: string = '/api/gql';
-    private entrantsPerPage = 100;
+    // A phase's players cost about 3 objects each and two-player teams 5 (measured 2026-11-13), so 300
+    // players or 190 teams fit under the 1000-object cap. Bigger teams cost more: a refused page shrinks to fit.
+    private playersPerPage = 300;
+    private teamsPerPage = 190;
     // A single pool's page size. Measured on a whole phase, whose sets also named their pool: about 10
     // objects per set with no characters reported (95 sets 951, 100 sets 1001, cap 1000; 2026-11-09).
     // A pool's own sets cost 9. Sets with characters cost more, and a refused page shrinks to fit.
@@ -30,7 +33,7 @@ export class StartggService {
     // with this many may have more, and then shows no losses.
     readonly setsPerStanding = SETS_PER_STANDING;
 
-    // Tournament info and entrant lists rarely change during an event, so they are reused for
+    // Tournament info and player lists rarely change during an event, so they are reused for
     // a few minutes. Sets are never cached, so brackets stay live.
     private cacheMs = 5 * 60_000;
     private cache = new Map<string, { at: number, value: any }>();
@@ -171,24 +174,28 @@ export class StartggService {
         });
     }
 
-    // The whole event's entrants, reused for a few minutes. A changed entrant count makes a new key,
-    // so a late registration or a removed entrant shows up on the next tournament refresh.
-    getEventBySlug(eventSlug, totalEntrants): Promise<any> {
-        return this.cached(`event:${eventSlug}:${totalEntrants}`, async () => {
-            let event;
-            const nodes = await this.loadPages(`event:${eventSlug}`, totalEntrants, this.entrantsPerPage, async (page, perPage) => {
-                const data = await this.getEventBySlugPaginated(eventSlug, page, perPage);
-                if (!data?.event) throw new StartggError('Event not found on start.gg.');
-                if (page == 1) event = data.event;
-                return data.event.entrants.nodes;
-            });
-            event.entrants.nodes = nodes;
-            return event;
+    // The event's id, name and phases, each with its seed count, reused for a few minutes. A changed
+    // entrant count (from the tournament) makes a new key, so new seed counts show up with it.
+    getEventPhases(eventSlug, numEntrants): Promise<any> {
+        return this.cached(`event:${eventSlug}:${numEntrants}`, async () => {
+            const data = await this.query(eventPhasesQuery, { slug: String(eventSlug) });
+            if (!data?.event) throw new StartggError('Event not found on start.gg.');
+            return data.event;
         });
     }
 
-    getEventBySlugPaginated(eventSlug, page, entrantsPerPage): Promise<any> {
-        return this.query(entrantsQuery, { slug: String(eventSlug), page, perPage: entrantsPerPage });
+    // A bracket phase's players (each seed's entrant, with their profile pictures), reused for a few
+    // minutes. A changed seed count makes a new key, so a late registration or a removed entrant shows
+    // up on the next refresh. `singles` picks the page size.
+    getPhaseEntrants(phaseId, numSeeds, singles = true): Promise<any[]> {
+        return this.cached(`players:${phaseId}:${numSeeds}`, async () => {
+            const perPage = singles ? this.playersPerPage : this.teamsPerPage;
+            const seeds = await this.loadPages(`players:${phaseId}`, Number(numSeeds) || 0, perPage, async (page, perPage) => {
+                const data = await this.query(phaseEntrantsQuery, { phaseId: Number(phaseId), page, perPage });
+                return data?.phase?.seeds?.nodes ?? [];
+            });
+            return seeds.map(seed => seed?.entrant).filter(entrant => entrant?.id != null);
+        });
     }
 
     // What the event's landing page shows, in one request: the header, every phase with its pool count,
