@@ -38,6 +38,7 @@ const arrival = async (page, timeout = 120000) => {
 // Runs `act` with the page in the light theme, then puts the dark theme back
 const inLight = async (page, act) => {
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+    await page.waitForTimeout(400); // colors fade from one theme to the other
     await act();
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
 };
