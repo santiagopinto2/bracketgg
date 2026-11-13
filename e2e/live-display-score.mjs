@@ -4,17 +4,19 @@
 // query fits under the 1000-object cap. About 15 requests.
 // Usage: node --experimental-strip-types e2e/live-display-score.mjs
 import { scoresFromDisplayScore } from '../src/app/services/display-score.ts';
+import { askStartgg } from './startgg-live.mjs';
 
 const token = process.env.STARTGG_TOKEN;
 if (!token) {
     console.log(JSON.stringify({ skipped: 'no STARTGG_TOKEN' }));
     process.exit(0);
 }
+// A refused request stops the check with start.gg's answer, rather than counting as an empty page
 const ask = async query => {
-    const res = await fetch('https://api.start.gg/gql/alpha', {
-        method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ query }),
-    });
-    return res.json();
+    const { status, json } = await askStartgg(token, query);
+    if (json.errors?.length && !json.data) throw new Error(`start.gg: ${status} ${JSON.stringify(json.errors).slice(0, 300)}`);
+    if (!json.data) throw new Error(`start.gg: ${status} ${JSON.stringify(json).slice(0, 300)}`);
+    return json;
 };
 
 const report = { phases: [] };

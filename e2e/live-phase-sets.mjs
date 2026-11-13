@@ -3,6 +3,7 @@
 // the same data. The app draws from that order, so matching means every set lands in the same spot.
 // Uses the 8-pool "Brawl" Singles pools phase of Tussle Thru Time. About 15 requests.
 // Usage: node e2e/live-phase-sets.mjs   Prints a JSON report and exits 1 on a mismatch.
+import { askStartgg } from './startgg-live.mjs';
 const token = process.env.STARTGG_TOKEN;
 if (!token) {
     console.log(JSON.stringify({ skipped: 'no STARTGG_TOKEN' }));
@@ -12,11 +13,8 @@ if (!token) {
 const phaseId = 2258351;
 const fields = 'id round fullRoundText winnerId slots { prereqId prereqType prereqPlacement entrant { id name initialSeedNum } standing { stats { score { value } } } }';
 const ask = async query => {
-    const res = await fetch('https://api.start.gg/gql/alpha', {
-        method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ query }),
-    });
-    const json = await res.json();
-    if (json.errors?.length || !json.data) throw new Error(`start.gg: ${res.status} ${JSON.stringify(json.errors ?? json).slice(0, 300)}`);
+    const { status, json } = await askStartgg(token, query);
+    if (json.errors?.length || !json.data) throw new Error(`start.gg: ${status} ${JSON.stringify(json.errors ?? json).slice(0, 300)}`);
     return json.data;
 };
 
