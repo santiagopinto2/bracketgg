@@ -8,5 +8,5 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PrivacyComponent {
-    lastUpdated = 'November 12, 2026';
+    lastUpdated = 'November 13, 2026';
 }

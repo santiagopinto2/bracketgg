@@ -286,7 +286,7 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
         localStorage.setItem('oauth_refresh_token', 'test-refresh');
         localStorage.setItem('oauth_token_expiry', String(Date.now() + 7 * 86400000));
     });
-    await context.route(/\/api\/auth\/session$/, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ loggedIn }) }));
+    await context.route(/\/api\/auth\/(session|theme)$/, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ loggedIn }) }));
     const page = await context.newPage();
     const log = [];
     let pending = 0;
@@ -1184,12 +1184,12 @@ try {
             await page.screenshot({ path: 'e2e-out/event-landing-desktop.png' }).catch(() => { });
             await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-desktop.png' }).catch(() => { });
             await page.locator('.phase-list').screenshot({ path: 'e2e-out/phases-desktop.png' }).catch(() => { });
-            await page.emulateMedia({ colorScheme: 'light' });
+            await page.evaluate(() => localStorage.setItem('bgg-theme', 'light'));
             await page.reload();
             await quiet();
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'e2e-out/event-landing-desktop-light.png' }).catch(() => { });
-            await page.emulateMedia({ colorScheme: 'dark' });
+            await page.evaluate(() => localStorage.removeItem('bgg-theme'));
             await page.reload();
             await quiet();
             await page.setViewportSize({ width: 1280, height: 720 });
@@ -1599,7 +1599,7 @@ try {
                         links: [...(article?.querySelectorAll('a') ?? [])].map(a => a.getAttribute('href')),
                     };
                 });
-                const said = ['Last updated November 12, 2026', 'Message Fable on Discord', 'Logging in is optional', 'user.identity', 'session cookie', 'Logging out deletes', 'a few seconds to a few minutes', 'No analytics and no ads'].filter(t => !privacy.text.includes(t));
+                const said = ['Last updated November 13, 2026', 'Message Fable on Discord', 'your browser remembers the choice', 'Logging in is optional', 'user.identity', 'session cookie', 'Logging out deletes', 'a few seconds to a few minutes', 'No analytics and no ads'].filter(t => !privacy.text.includes(t));
                 report.loginUi[`privacy, ${size}`] = { url: privacy.url, heading: privacy.heading, links: privacy.links, missing: said };
                 check(`${size}: the footer's Privacy link opens /privacy, which says what the site keeps and links to start.gg`,
                     privacy.url === '/privacy' && privacy.heading === 'Privacy' && !said.length
@@ -1609,6 +1609,85 @@ try {
             }
             await context.close();
         }
+    }
+
+    // 23. Light and dark. The page is dark by default, even on a device that prefers light. The header's
+    //     button switches, the choice is there on the next load before the app's scripts run, and
+    //     text keeps WCAG AA contrast (4.5 to 1) on its background in both themes.
+    {
+        const { context, page, quiet } = await openPage(browser, () => null, { colorScheme: 'light', viewport: { width: 1280, height: 1000 } }, { fonts: true });
+        try {
+            const state = () => page.evaluate(() => {
+                const rgb = color => color.match(/[\d.]+/g).map(Number);
+                const luminance = color => {
+                    const [r, g, b] = rgb(color).map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+                    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                };
+                const contrast = (text, background) => {
+                    const [a, b] = [luminance(text), luminance(background)].sort((x, y) => y - x);
+                    return Math.round((a + 0.05) / (b + 0.05) * 100) / 100;
+                };
+                const style = selector => { const el = document.querySelector(selector); return el ? getComputedStyle(el) : null; };
+                // A text's contrast on a background (its own if none is named), or null if the page doesn't show it
+                const of = (text, background = text) => style(text) && style(background) ? contrast(style(text).color, style(background).backgroundColor) : null;
+                const content = style('mat-sidenav-content'), card = style('.standing');
+                return {
+                    theme: document.documentElement.getAttribute('data-theme'),
+                    stored: localStorage.getItem('bgg-theme'),
+                    label: document.querySelector('.theme-toggle')?.getAttribute('aria-label'),
+                    page: getComputedStyle(document.body).backgroundColor,
+                    content: content.backgroundColor,
+                    card: card.backgroundColor,
+                    contrast: {
+                        pageText: of('mat-sidenav-content'),
+                        cardText: of('.standing'),
+                        cardMutedText: of('.standing-lost-to', '.standing'),
+                        cardSponsor: of('.standing-sponsor', '.standing'),
+                        firstPlace: of('.standing .placement-1', '.standing'),
+                        secondPlace: of('.standing .placement-2', '.standing'),
+                        thirdPlace: of('.standing .placement-3', '.standing'),
+                        phaseName: of('.phase-name', '.phase-card'),
+                        activeChip: of('.state-chip.state-active'),
+                        header: of('mat-toolbar'),
+                    },
+                };
+            });
+            const readable = (contrast, least) => Object.values(contrast).every(ratio => ratio === null || ratio >= least);
+            const scripts = /\.js(\?.*)?$/;
+            const block = route => route.abort();
+            await page.goto(appUrl + '/tournament/test-tourney/event/test-event');
+            await quiet();
+            const first = await state();
+            await page.locator('.theme-toggle').click();
+            const switched = await state();
+
+            // The next load, with the app's scripts blocked: only index.html's own script can have set the theme
+            await page.route(scripts, block);
+            await page.reload();
+            const beforeScripts = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), background: getComputedStyle(document.documentElement).backgroundColor }));
+            await page.unroute(scripts, block);
+            await page.reload();
+            await quiet();
+            const reloaded = await state();
+            await page.locator('.theme-toggle').click();
+            const back = await state();
+            report.theme = { first, switched, beforeScripts, reloaded, back };
+            check('the page is dark by default on a device that prefers light',
+                first.theme === 'dark' && first.stored === null && first.page === 'rgb(48, 48, 48)' && first.content === 'rgb(48, 48, 48)' && first.card === 'rgb(63, 63, 63)' && first.label === 'Switch to light mode', first);
+            check("the header's button switches to the light theme and remembers it",
+                switched.theme === 'light' && switched.stored === 'light' && switched.page === 'rgb(243, 244, 246)' && switched.content === switched.page && switched.card === 'rgb(255, 255, 255)' && switched.label === 'Switch to dark mode', switched);
+            check("a chosen light theme is set before the app's scripts run, so the page never starts dark",
+                beforeScripts.theme === 'light' && beforeScripts.background === 'rgb(243, 244, 246)' && reloaded.theme === 'light' && reloaded.page === switched.page, { beforeScripts, reloaded });
+            check('the button switches back to dark', back.theme === 'dark' && back.stored === 'dark' && back.page === first.page && back.card === first.card, back);
+            check('light theme: text has at least 4.5 to 1 contrast on its background', readable(switched.contrast, 4.5), switched.contrast);
+            // The dark theme's red header and green chip are as they were before the light theme (4.25 and 3.2 to 1)
+            const { header, activeChip, ...darkText } = first.contrast;
+            check('dark theme: text has at least 4.5 to 1 contrast on its background', readable(darkText, 4.5), first.contrast);
+        } catch (e) {
+            report.theme = { crashed: String(e.message).slice(0, 300) };
+            check('light and dark themes', false, report.theme);
+        }
+        await context.close();
     }
 } finally {
     await browser.close();

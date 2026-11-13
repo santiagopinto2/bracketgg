@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="utf-8">
@@ -13,6 +13,18 @@
         if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
             document.querySelector('meta[name=viewport]').content += ', maximum-scale=1';
     </script>
+    <script>
+        // The theme the visitor chose (ThemeService keeps it under this key), set before the first paint
+        // so a light page never starts dark. Dark unless they chose light, whatever the device prefers.
+        try {
+            if (localStorage.getItem('bgg-theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+        } catch (e) { }
+    </script>
+    <style>
+        /* The page's color until the stylesheet arrives: the two --page-bg values in src/styles/_tokens.scss */
+        html { background: #303030; }
+        html[data-theme='light'] { background: #f3f4f6; }
+    </style>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">

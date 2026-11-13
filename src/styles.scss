@@ -1,7 +1,6 @@
-/* You can add global styles to this file, and also import other style files */
-@use '@angular/material' as mat;
-@include mat.elevation-classes();
-@include mat.app-background();
+// Global styles. The colors of both themes are in src/styles/_tokens.scss, Material's in src/styles/_material.scss.
+@use './styles/tokens';
+@use './styles/material';
 
 html,
 body {
@@ -11,80 +10,10 @@ body {
 body {
     margin: 0;
     font-family: Roboto, "Helvetica Neue", sans-serif;
-}
-
-html,
-body {
-    height: 100%;
-}
-
-body {
-    margin: 0;
-    font-family: Roboto, "Helvetica Neue", sans-serif;
-}
-
-
-
-
-// Define a light theme
-$light-primary: mat.m2-define-palette(mat.$m2-indigo-palette);
-$light-accent: mat.m2-define-palette(mat.$m2-pink-palette);
-$light-theme: mat.m2-define-light-theme((color: (primary: $light-primary,
-                accent: $light-accent,
-            ),
-        ));
-
-// Define a dark theme
-$dark-primary: mat.m2-define-palette(mat.$m2-pink-palette);
-$dark-accent: mat.m2-define-palette(mat.$m2-blue-gray-palette);
-$dark-theme: mat.m2-define-dark-theme((color: (primary: $dark-primary,
-                accent: $dark-accent,
-            ),
-        ));
-
-.color-scheme-dark {
-    @include mat.elevation-classes();
-    @include mat.app-background();
-    @include mat.button-color($dark-theme);
-    @include mat.icon-color($dark-theme);
-    @include mat.list-color($dark-theme);
-    @include mat.sidenav-color($dark-theme);
-    @include mat.toolbar-color($dark-theme);
-    @include mat.card-color($dark-theme);
-
-    .themed-text {
-        color: #FFFFFF !important;
-    }
-
-    .disabled-icon:disabled {
-        color: #969696;
-    }
-
-    & {
-        background-color: #303030;
-    }
-}
-
-.color-scheme-light {
-    @include mat.elevation-classes();
-    @include mat.app-background();
-    @include mat.button-color($light-theme);
-    @include mat.icon-color($light-theme);
-    @include mat.list-color($light-theme);
-    @include mat.sidenav-color($light-theme);
-    @include mat.toolbar-color($light-theme);
-    @include mat.card-color($light-theme);
-
-    .themed-text {
-        color: #000000DE !important;
-    }
+    background-color: var(--page-bg);
 }
 
 .row {
     margin-left: 0;
     margin-right: 0;
-}
-
-:root {
-    @include mat.progress-spinner-overrides((active-indicator-color: #f21a1a));
 }

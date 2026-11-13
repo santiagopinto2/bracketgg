@@ -62,7 +62,7 @@ a:focus-visible {
 code {
     padding: 1px 5px;
     border-radius: 4px;
-    background: rgba(128, 128, 128, 0.22);
+    background: var(--code-bg);
     color: inherit;
     font-size: 0.9em;
 }

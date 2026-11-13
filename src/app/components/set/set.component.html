@@ -1,7 +1,7 @@
 <div mat-dialog-title style="text-align: center">{{set.fullRoundText}}</div>
 <hr style="margin: 0 20px">
 
-<mat-dialog-content style="padding: 16px 24px 32px; color: #ffffff">
+<mat-dialog-content class="set-dialog-content">
 
     <div class="mb-4 d-flex justify-content-center">
         <div class="entrant-name" style="text-align: end; padding-right: 16px">
@@ -61,7 +61,7 @@
                     </div>
                     }
                     @if (game.winnerId) {
-                    <div class="game-result-abbr" style="padding-right: 20px" [ngStyle]="{'color': getResultColor(game, 0)}">
+                    <div class="game-result-abbr" style="padding-right: 20px" [ngClass]="getResultClass(game, 0)">
                         {{getResultAbbr(game, 0)}}
                     </div>
                     }
@@ -69,7 +69,7 @@
                         <mat-icon style="width: 32px; height: 30px; font-size: 32px">{{getWinnerArrow(game)}}</mat-icon>
                     </div>
                     @if (game.winnerId) {
-                    <div class="game-result-abbr" style="padding-left: 20px" [ngStyle]="{'color': getResultColor(game, 1)}">
+                    <div class="game-result-abbr" style="padding-left: 20px" [ngClass]="getResultClass(game, 1)">
                         {{getResultAbbr(game, 1)}}
                     </div>
                     }

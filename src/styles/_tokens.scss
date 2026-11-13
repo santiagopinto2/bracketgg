@@ -1,0 +1,189 @@
+// The site's colors, as CSS custom properties: one list of names with a dark and a light value each.
+// Components use var(--name) and never a color of their own, so a theme is only this file plus the
+// Material theme in _material.scss. Dark is the default; <html data-theme="light"> switches
+// (src/index.html sets it before the first paint, ThemeService after that).
+@use 'sass:map';
+
+$dark: (
+    // The page and the header
+    page-bg: #303030,
+    text-muted: darkgray,
+    divider: rgba(128, 128, 128, 0.3),
+    link: #4a9eff,
+    brand: #f21a1a,
+    on-brand: #fff,
+    on-brand-border: rgba(255, 255, 255, 0.55),
+    on-brand-hover: rgba(255, 255, 255, 0.14),
+    spinner: #f21a1a,
+    danger: #f44336,
+    code-bg: rgba(128, 128, 128, 0.22),
+    banner-bg: #111,
+
+    // Cards: standings, phases, a tournament's events
+    surface: rgb(63, 63, 63),
+    surface-border: rgba(128, 128, 128, 0.2),
+    surface-shadow: none,
+    surface-hover: rgba(255, 255, 255, 0.06),
+    surface-text: #fff,
+    surface-text-muted: rgb(197, 197, 197),
+    placeholder-bg: rgb(63, 63, 63),
+
+    // Small labels. chip: an event's or phase's state. tag: a small clickable label, like a link
+    // to the next phase beside a set.
+    chip-bg: rgba(128, 128, 128, 0.3),
+    chip-active-bg: #00a800,
+    chip-active-text: #fff,
+    tag-bg: #424242,
+    tag-text: #fff,
+    tag-border: rgba(255, 255, 255, 0.24),
+    tag-hover-bg: #525252,
+    // A set or row pointed out for a moment, like the one a link scrolled to: an outline color
+    // and a fill to fade from
+    highlight: #ffd54f,
+    highlight-bg: rgba(255, 213, 79, 0.3),
+
+    // Placements and rankings
+    place-1: #ffd700,
+    place-2: #c0c0c0,
+    place-3: #cd7f32,
+    rank-icon: #ffc94d,
+    avatar-bg: #555,
+    avatar-text: #fff,
+
+    // The bracket
+    round-bg: #424242,
+    bracket-line: white,
+    set-bg: #525252,
+    set-outline: none,
+    set-divider: #303030,
+    set-text-shadow: 1px 1px 2px black,
+    set-seed-bg: #939393,
+    set-seed-text: black,
+    set-sponsor: rgb(197, 197, 197),
+    set-sponsor-on-tint: rgb(197, 197, 197),
+    set-projected: goldenrod,
+    set-win-bg: #00a800,
+    set-win-text: black,
+    set-lose-bg: #939393,
+    set-lose-text: black,
+    // The hovered player's rows across the bracket
+    set-hover-bg: #1b1b1b,
+    // Show Upsets: the loser's row, from a small upset (0) to the biggest (10)
+    upset-0: rgb(117, 194, 219),
+    upset-1: rgb(42, 42, 236),
+    upset-2: rgb(0, 100, 0),
+    upset-3: rgb(54, 219, 54),
+    upset-4: rgb(204, 204, 0),
+    upset-5: rgb(228, 148, 0),
+    upset-6: orangered,
+    upset-7: rgb(209, 20, 20),
+    upset-8: maroon,
+    upset-9: purple,
+    upset-10: rgb(63, 0, 63),
+
+    // The set dialog
+    dialog-text: #ffffff,
+    dialog-text-muted: rgb(197, 197, 197),
+    dialog-card-bg: rgb(87, 87, 87),
+    game-win: #00a800,
+    game-loss: #ff2020,
+
+    // The loading notice (Material draws it light on the dark theme and dark on the light one)
+    snackbar-spinner: #f21a1a,
+    snackbar-success: seagreen,
+);
+
+$light: (
+    page-bg: #f3f4f6,
+    text-muted: #5f6672,
+    divider: #dde0e5,
+    link: #0b5fcc,
+    brand: #d81616,
+    on-brand: #fff,
+    on-brand-border: rgba(255, 255, 255, 0.6),
+    on-brand-hover: rgba(255, 255, 255, 0.16),
+    spinner: #d81616,
+    danger: #c62828,
+    code-bg: #e4e7eb,
+    banner-bg: #dde0e5,
+
+    surface: #fff,
+    surface-border: #dde0e5,
+    surface-shadow: 0 1px 2px rgba(16, 24, 40, 0.06),
+    surface-hover: rgba(16, 24, 40, 0.045),
+    surface-text: #1c1e21,
+    surface-text-muted: #5f6672,
+    placeholder-bg: #e4e7eb,
+
+    chip-bg: #e4e7eb,
+    chip-active-bg: #15803d,
+    chip-active-text: #fff,
+    tag-bg: #e4e7eb,
+    tag-text: #1c1e21,
+    tag-border: #c9ced6,
+    tag-hover-bg: #d5dae1,
+    highlight: #d97706,
+    highlight-bg: rgba(245, 158, 11, 0.28),
+
+    place-1: #8a6500,
+    place-2: #5f6b7a,
+    place-3: #9a4f12,
+    rank-icon: #b7791f,
+    avatar-bg: #6b7280,
+    avatar-text: #fff,
+
+    round-bg: #e4e7eb,
+    bracket-line: #808a99,
+    set-bg: #fff,
+    set-outline: 0 0 0 1px #cdd3db,
+    set-divider: #e4e7eb,
+    set-text-shadow: none,
+    set-seed-bg: #dde1e7,
+    set-seed-text: #2b3038,
+    set-sponsor: #677080,
+    set-sponsor-on-tint: #33383f,
+    set-projected: #855800,
+    set-win-bg: #17803d,
+    set-win-text: #fff,
+    set-lose-bg: #d5dae1,
+    set-lose-text: #2b3038,
+    set-hover-bg: #ffe9a6,
+    upset-0: #cfe8f3,
+    upset-1: #b9c8ff,
+    upset-2: #a9dcb5,
+    upset-3: #c9f0a8,
+    upset-4: #fff08a,
+    upset-5: #ffd08a,
+    upset-6: #ffb199,
+    upset-7: #ff9a9a,
+    upset-8: #eb9db0,
+    upset-9: #d9a0e8,
+    upset-10: #bfa0ea,
+
+    dialog-text: #1c1e21,
+    dialog-text-muted: #5f6672,
+    dialog-card-bg: #f3f4f6,
+    game-win: #146c34,
+    game-loss: #c62828,
+
+    snackbar-spinner: #ff6b63,
+    snackbar-success: #4cc38a,
+);
+
+@if map.keys($dark) != map.keys($light) {
+    @error 'The dark and light themes must define the same tokens, in the same order.';
+}
+
+@mixin emit($tokens) {
+    @each $name, $value in $tokens {
+        --#{$name}: #{$value};
+    }
+}
+
+:root {
+    @include emit($dark);
+}
+
+:root[data-theme='light'] {
+    @include emit($light);
+}

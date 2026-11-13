@@ -1,5 +1,5 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ViewChild, effect, ChangeDetectionStrategy } from '@angular/core';
-import { ColorSchemeService } from './services/color-scheme.service';
+import { ThemeService } from './services/theme.service';
 import { StartggError, StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -42,7 +42,7 @@ export class AppComponent implements AfterViewInit {
     );
 
     constructor(
-        public colorSchemeService: ColorSchemeService,
+        public themeService: ThemeService,
         private startggService: StartggService,
         private tournamentDataService: TournamentDataService,
         private loadingService: LoadingService,
@@ -50,7 +50,6 @@ export class AppComponent implements AfterViewInit {
         private router: Router,
         public authService: AuthService
     ) {
-        this.colorSchemeService.load();
         this.largeQuery.addEventListener('change', () => this.syncLayout());
         window.addEventListener('pageshow', () => this.syncLayout());
 
@@ -158,10 +157,6 @@ export class AppComponent implements AfterViewInit {
 
     goToAboutPage() {
         this.router.navigate(['/']);
-    }
-
-    toggleDarkMode() {
-        this.colorSchemeService.update(this.colorSchemeService.currentActive() === 'dark' ? 'light' : 'dark');
     }
 
     closeSidenav() {

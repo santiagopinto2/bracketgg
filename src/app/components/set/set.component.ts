@@ -53,8 +53,8 @@ export class SetComponent implements OnInit {
         return this.set.slots[0].entrant.id == game.winnerId ? 'arrow_left' : 'arrow_right';
     }
 
-    getResultColor(game, playerIndex) {
-        return this.set.slots[playerIndex].entrant.id == game.winnerId ? '#00a800' : '#ff2020';
+    getResultClass(game, playerIndex) {
+        return this.set.slots[playerIndex].entrant.id == game.winnerId ? 'game-win' : 'game-loss';
     }
 
     getResultAbbr(game, playerIndex) {

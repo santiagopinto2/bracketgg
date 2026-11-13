@@ -23,10 +23,11 @@
         }
         }
 
-        <!-- <button mat-icon-button (click)="toggleDarkMode()">
-            <mat-icon *ngIf="colorSchemeService.currentActive() === 'dark'">dark_mode</mat-icon>
-            <mat-icon *ngIf="colorSchemeService.currentActive() === 'light'">light_mode</mat-icon>
-        </button> -->
+        <!-- The icon shows the theme a click switches to -->
+        <button mat-icon-button type="button" class="theme-toggle" [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+            [title]="themeService.theme() === 'dark' ? 'Light mode' : 'Dark mode'" (click)="themeService.toggle()">
+            <mat-icon>{{ themeService.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        </button>
 </mat-toolbar>
 
 <mat-sidenav-container class="sidenav-container" autosize>
@@ -50,7 +51,7 @@
                     }
 
                     @if (tournament.events?.length > 0) {
-                        <span style="padding: 0 16px; color: darkgray">Events</span>
+                        <span class="events-label">Events</span>
                     }
 
                     @for (event of tournament.events; track event.slug) {

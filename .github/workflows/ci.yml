@@ -31,6 +31,13 @@ jobs:
         with:
           name: e2e-out
           path: e2e-out
+      # This commit's build, to open against real brackets before merging (STATIC_DIR=<dir> node proxy-server.js)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-branch
+          path: /tmp/app-branch
+          retention-days: 7
 
   # The build the live site deploys: ~/ops/bin/bracketgg-build downloads this artifact for main's head commit
   dist:

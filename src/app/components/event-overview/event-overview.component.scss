@@ -49,7 +49,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgb(63, 63, 63);
+    background: var(--placeholder-bg);
 
     mat-icon {
         font-size: 32px;
@@ -100,11 +100,11 @@
     font-weight: 500;
     white-space: nowrap;
     flex-shrink: 0;
-    background: rgba(128, 128, 128, 0.3);
+    background: var(--chip-bg);
 
     &.state-active {
-        background: #00a800;
-        color: #fff;
+        background: var(--chip-active-bg);
+        color: var(--chip-active-text);
     }
 
     &.state-completed {
@@ -142,12 +142,12 @@
     line-height: 24px;
 }
 
-// These cards are dark in both color schemes, so their text is always light
 .standing,
 .phase-card {
-    border: 1px solid rgba(128, 128, 128, 0.2);
-    background: rgb(63, 63, 63);
-    color: #fff;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    box-shadow: var(--surface-shadow);
+    color: var(--surface-text);
 }
 
 .standing-placement {
@@ -155,9 +155,9 @@
     flex-shrink: 0;
     min-width: 38px;
 
-    &.placement-1 { color: #ffd700; }
-    &.placement-2 { color: #c0c0c0; }
-    &.placement-3 { color: #cd7f32; }
+    &.placement-1 { color: var(--place-1); }
+    &.placement-2 { color: var(--place-2); }
+    &.placement-3 { color: var(--place-3); }
 }
 
 .standing .standing-placement {
@@ -192,7 +192,7 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    color: #fff;
+    color: var(--avatar-text);
     font-size: 26px;
     display: flex;
     align-items: center;
@@ -206,7 +206,7 @@
 }
 
 .standing-sponsor {
-    color: rgb(197, 197, 197);
+    color: var(--surface-text-muted);
     padding-right: 6px;
     flex: 0 10000 auto;
     min-width: 22px;
@@ -234,7 +234,7 @@
 }
 
 .standing-lost-to {
-    color: rgb(197, 197, 197);
+    color: var(--surface-text-muted);
     font-size: 0.8rem;
     line-height: 17px;
 }
@@ -253,7 +253,7 @@
     padding: 0;
     border: 0;
     background: none;
-    color: rgb(197, 197, 197);
+    color: var(--surface-text-muted);
     cursor: pointer;
 
     svg {
@@ -265,7 +265,7 @@
 }
 
 .standing-social:hover {
-    color: #fff;
+    color: var(--surface-text);
 }
 
 // A ranking is its series' logo (or a trophy) and the rank, as on start.gg; its name is the tooltip
@@ -286,7 +286,7 @@
     svg {
         width: 13px;
         height: 13px;
-        fill: #ffc94d;
+        fill: var(--rank-icon);
     }
 }
 
@@ -316,7 +316,7 @@
     text-decoration: none;
 
     &:hover {
-        background: rgba(255, 255, 255, 0.06);
+        background: var(--surface-hover);
     }
 }
 

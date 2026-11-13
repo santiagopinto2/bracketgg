@@ -84,7 +84,7 @@
 
 .entrant-image-default {
     border-radius: 50%;
-    color: #fff;
+    color: var(--avatar-text);
     text-align: center;
 }
 
@@ -117,26 +117,27 @@
     padding: 8px 22px;
     font-size: 16px;
     /* font-weight: bold; */
-    background-color: #424242;
+    background-color: var(--round-bg);
     border-radius: 4px;
 }
 
 .set {
     width: 204px;
     border-radius: 4px;
+    box-shadow: var(--set-outline);
     cursor: pointer;
 }
 
 .set-row:first-child {
-    border-bottom: 1px solid #303030;
+    border-bottom: 1px solid var(--set-divider);
 }
 
 .set-seeds {
     max-width: 20px;
     border-top-left-radius: 4px;
     border-bottom-left-radius: 4px;
-    background-color: #939393;
-    color: black;
+    background-color: var(--set-seed-bg);
+    color: var(--set-seed-text);
 }
 
 .entrant-set-image-default {
@@ -158,11 +159,12 @@
 }
 
 .set-name {
-    padding: 0 0 0 4px;
+    padding: 4px 3px 0 0;
+    text-shadow: var(--set-text-shadow);
 }
 
 .set-sponsor {
-    color: rgb(197, 197, 197);
+    color: var(--set-sponsor);
     min-width: 22px;
     flex: 0 10000 auto;
     padding-right: 4px;
@@ -183,7 +185,6 @@
     max-width: 20px;
     border-top-right-radius: 4px !important;
     border-bottom-right-radius: 4px !important;
-    color: black;
 }
 
 .set-scores {
@@ -197,96 +198,69 @@
 }
 
 .projected {
-    color: goldenrod;
+    color: var(--set-projected);
     font-style: italic;
     padding-right: 3px;
 }
 
 .winner-score {
-    background-color: #00a800;
-    /* font-weight: bold; */
+    background-color: var(--set-win-bg);
+    color: var(--set-win-text);
 }
 
 .loser-score {
-    background-color: #939393;
+    background-color: var(--set-lose-bg);
+    color: var(--set-lose-text);
 }
 
 .set-middle {
-    background-color: #525252;
+    background-color: var(--set-bg);
 }
 
 .slot-hover {
-    background-color: #1b1b1b;
+    background-color: var(--set-hover-bg);
 }
 
 .slot-hover-rounded-corners:first-child {
-    background-color: #1b1b1b;
+    background-color: var(--set-hover-bg);
     border-top-right-radius: 4px;
 }
 
 .slot-hover-rounded-corners:last-child {
-    background-color: #1b1b1b;
+    background-color: var(--set-hover-bg);
     border-bottom-right-radius: 4px;
 }
 
-.upset-factor-0 {
-    background-color: rgb(117, 194, 219);
+// On a hovered or upset row the sponsor needs a color that reads on the row's own
+.slot-hover,
+.slot-hover-rounded-corners,
+[class*='upset-factor-'] {
+    .set-sponsor {
+        color: var(--set-sponsor-on-tint);
+    }
 }
 
-.upset-factor-1 {
-    background-color: rgb(42, 42, 236);
-}
-
-.upset-factor-2 {
-    background-color: rgb(0, 100, 0);
-}
-
-.upset-factor-3 {
-    background-color: rgb(54, 219, 54);
-}
-
-.upset-factor-4 {
-    background-color: rgb(204, 204, 0);
-}
-
-.upset-factor-5 {
-    background-color: rgb(228, 148, 0);
-}
-
-.upset-factor-6 {
-    background-color: orangered;
-}
-
-.upset-factor-7 {
-    background-color: rgb(209, 20, 20);
-}
-
-.upset-factor-8 {
-    background-color: maroon;
-}
-
-.upset-factor-9 {
-    background-color: purple;
-}
-
-.upset-factor-10 {
-    background-color: rgb(63, 0, 63);
+// Show Upsets: the loser's row, from a small upset (0) to the biggest (10)
+@for $factor from 0 through 10 {
+    .upset-factor-#{$factor} {
+        background-color: var(--upset-#{$factor});
+    }
 }
 
 .first-block-column-first-row {
-    border-top: 1px solid white;
-    border-right: 1px solid white;
+    border-top: 1px solid var(--bracket-line);
+    border-right: 1px solid var(--bracket-line);
     border-top-right-radius: 4px;
 }
 
 .first-block-column-second-row {
-    border-bottom: 1px solid white;
-    border-right: 1px solid white;
+    border-bottom: 1px solid var(--bracket-line);
+    border-right: 1px solid var(--bracket-line);
     border-bottom-right-radius: 4px;
 }
 
 .straight-block {
-    border-bottom: 1px solid white;
+    border-bottom: 1px solid var(--bracket-line);
 }
 
 .text-overflow {

@@ -278,6 +278,22 @@ try {
             { during: during.json, after: after.json, recovered: recovered.status, lastUsed });
     }
 
+    // 8b. A logged-in visitor's light or dark theme is kept with the session, and survives a restart
+    {
+        const saved = await api('/api/auth/theme', { method: 'POST', cookie, body: { theme: 'light' } });
+        const session = await api('/api/auth/session', { cookie });
+        const invalid = await api('/api/auth/theme', { method: 'POST', cookie, body: { theme: 'pink' } });
+        const anonymous = await api('/api/auth/theme', { method: 'POST', body: { theme: 'light' } });
+        const crossSite = await api('/api/auth/theme', { method: 'POST', cookie, body: { theme: 'dark' }, headers: { origin: 'https://evil.example' } });
+        await stopServer();
+        await startServer();
+        const afterRestart = await api('/api/auth/session', { cookie });
+        report.theme = { saved: saved.json, session: session.json, invalid: invalid.status, anonymous: anonymous.status, crossSite: crossSite.status, afterRestart: afterRestart.json };
+        check("the server keeps a logged-in visitor's theme with their session, through a restart, and refuses other values, visitors and other sites",
+            saved.status === 200 && session.json?.loggedIn === true && session.json?.theme === 'light' && invalid.status === 400 && anonymous.status === 401
+            && crossSite.status === 403 && afterRestart.json?.theme === 'light', report.theme);
+    }
+
     // 9. start.gg refuses the refresh token: the session ends cleanly and the page keeps working as a visitor
     {
         const { context, page, authorizeRequests } = await newPage();

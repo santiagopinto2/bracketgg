@@ -13,6 +13,8 @@ import { environment } from '../../environments/environment';
 })
 export class AuthService {
   isAuthenticated = signal<boolean>(false);
+  // The light or dark theme the server keeps with this login, if the visitor ever chose one (ThemeService)
+  savedTheme = signal<string | null>(null);
 
   // Other tabs of the site hear about a login or logout at once
   private channel: BroadcastChannel | null = typeof BroadcastChannel === 'function' ? new BroadcastChannel('bracketgg-auth') : null;
@@ -28,7 +30,8 @@ export class AuthService {
   // start.gg token first, so this stays true after a week away as long as start.gg accepts the refresh.
   async checkSession(): Promise<boolean> {
     try {
-      const res = await firstValueFrom(this.http.get<{ loggedIn: boolean }>('/api/auth/session'));
+      const res = await firstValueFrom(this.http.get<{ loggedIn: boolean, theme?: string }>('/api/auth/session'));
+      this.savedTheme.set(res?.loggedIn ? res.theme ?? null : null);
       this.isAuthenticated.set(!!res?.loggedIn);
     } catch {
       // The server is unreachable: keep what we knew
