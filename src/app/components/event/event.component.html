@@ -76,8 +76,10 @@
                 <mat-menu #phaseMenu="matMenu">
                     @for (phase of phases; track phase.id; let i = $index) {
                     <button mat-menu-item class="phase-menu-item" (click)="goToPhase(phase)">
-                        <mat-icon>{{i == currentPhaseIndex ? 'check' : ''}}</mat-icon>
-                        {{phase.name}}
+                        <span class="phase-menu-label">
+                            <span class="phase-menu-name">{{phase.name}}</span>
+                            <mat-icon class="phase-menu-check">{{i == currentPhaseIndex ? 'check' : ''}}</mat-icon>
+                        </span>
                     </button>
                     }
                 </mat-menu>

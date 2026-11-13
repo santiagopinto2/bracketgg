@@ -41,6 +41,19 @@
     letter-spacing: normal;
 }
 
+// The check sits after the phase's name, at the menu's right edge. Every item keeps the space for it, so the names line up.
+.phase-menu-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.phase-menu-item .phase-menu-check {
+    flex-shrink: 0;
+    margin: 0;
+}
+
 .search-entrant-form {
     width: 350px;
     max-width: calc(100% - 56px);
