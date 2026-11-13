@@ -281,10 +281,12 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         if (newEntrants.length) this.entrants.update(entrants => [...entrants, ...newEntrants]);
         this.entrantCtrl.setValue('');
 
-        // Corrects the data to account for a grand final reset
-        if (phaseGroupSets[phaseGroupSets.length - 1].fullRoundText === 'Grand Final Reset') {
-            if (phaseGroupSets[phaseGroupSets.length - 1].slots[0].entrant) phaseGroupSets[phaseGroupSets.length - 1].round++;
-            else phaseGroupSets.pop();
+        // A grand final reset shares the grand final's round: a played one gets its own column after it,
+        // an unplayed one is dropped. start.gg sometimes lists it before the grand final, so look for it.
+        let resetIndex = phaseGroupSets.findIndex(set => set.fullRoundText === 'Grand Final Reset');
+        if (resetIndex >= 0) {
+            if (phaseGroupSets[resetIndex].slots[0]?.entrant) phaseGroupSets[resetIndex].round++;
+            else phaseGroupSets.splice(resetIndex, 1);
         }
 
         // Standardizes the round data for each set. Single elimination has no losers rounds to shift.

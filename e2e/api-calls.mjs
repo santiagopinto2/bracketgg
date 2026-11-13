@@ -37,6 +37,18 @@ function poolSets(idBase) {
     ];
 }
 
+// The same pool with a grand final reset that start.gg lists before the grand final, as it does in some
+// real pools. Played: Bravo, from the losers side, wins the grand final and Alpha the reset. Not played:
+// Alpha wins the grand final and the reset stays empty.
+function resetFirstSets(idBase, played) {
+    const sets = poolSets(idBase);
+    const grandFinal = sets.pop();
+    if (played) Object.assign(grandFinal, { winnerId: 2, slots: [slot(1, 1), slot(2, 3)] });
+    const reset = { id: idBase + 7, round: 3, fullRoundText: 'Grand Final Reset', winnerId: played ? 1 : null,
+        slots: played ? [slot(2, 1), slot(1, 3)] : [from(grandFinal.id, 1), from(grandFinal.id, 2)] };
+    return [...sets, reset, grandFinal];
+}
+
 // A 4-player single elimination pool with the semi-finals played and the final still empty. start.gg
 // puts a 3rd place match ("3rd Place Tiebreak") in the round after the final, fed by the semi-finals' losers.
 function singleElimSets(idBase, withThirdPlace) {
@@ -925,6 +937,44 @@ try {
             check(`pools with byes${projected ? ', projected' : ''}`, false, String(e.message).slice(0, 300));
         }
         await context.close();
+    }
+    // A grand final reset that start.gg lists before the grand final: a played one gets its own column
+    // right of the grand final, and an unplayed one isn't drawn
+    report.resetFirst = {};
+    for (const played of [true, false]) {
+        const saved = setsOf[2001];
+        setsOf[2001] = resetFirstSets(100, played);
+        const { context, page, quiet } = await openPage(browser);
+        try {
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            await page.waitForTimeout(1000);
+            // The winners side: each column's header and the pairs drawn in it, left to right
+            const winners = await page.evaluate(() => {
+                const side = document.querySelector('#full-round-text-row')?.parentElement;
+                if (!side) return null;
+                const pair = set => [...set.querySelectorAll('.set-tag')].map(tag => tag.textContent.replace(/\u200e/g, '').trim()).filter(Boolean).join(' vs ');
+                return {
+                    rounds: [...side.querySelectorAll('.full-round-text')].map(p => p.innerText.trim()),
+                    columns: [...side.querySelectorAll('#set-column')].map(column => [...column.querySelectorAll('.set')].map(pair)),
+                };
+            });
+            const got = { ...winners, errors };
+            const want = {
+                rounds: ['Winners Semi-Final', 'Winners Final', 'Grand Final', ...(played ? ['Grand Final Reset'] : [])],
+                columns: [['Alpha vs Delta', 'Bravo vs Charlie'], ['Alpha vs Bravo'], ['Alpha vs Bravo'], ...(played ? [['Bravo vs Alpha']] : [])],
+                errors: [],
+            };
+            const key = played ? 'played' : 'not played';
+            report.resetFirst[key] = got;
+            check(`grand final reset listed first, ${key}: ${played ? 'drawn alone in a column right of the grand final' : 'not drawn'}`, JSON.stringify(got) === JSON.stringify(want), got);
+            await page.screenshot({ path: `e2e-out/reset-first-${played ? 'played' : 'not-played'}.png`, fullPage: true }).catch(() => { });
+        } finally {
+            setsOf[2001] = saved;
+            await context.close();
+        }
     }
     // 17. The event's landing page: header, standings and phases in two requests; a phase, a pool, the
     //     phase menu and the back link all lead where they say; back and forward work; and every other
