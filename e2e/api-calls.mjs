@@ -1203,6 +1203,11 @@ try {
             check('event landing: the standings stay at 8 and make no request after the page loads',
                 report.eventLanding.afterLoad.standings === 8 && report.eventLanding.afterLoad.requests.total === 0, report.eventLanding.afterLoad);
 
+            const standingAvatars = await page.locator('.standing .standing-profile-image img').evaluateAll(images => images.map(img => img.getAttribute('src')));
+            report.eventLanding.avatars = standingAvatars.length;
+            check('event landing: Bravo\'s card shows the profile picture, not the banner, and nobody else has one',
+                standingAvatars.length === 1 && standingAvatars[0] === svg(40, 40, '#2a7'), standingAvatars);
+
             // A phase opens its bracket; the link at the top goes back to the event; so does the browser
             await page.locator('.phase-link', { hasText: 'Top 4' }).click();
             await quiet();
@@ -1225,10 +1230,6 @@ try {
                 && backByLink && backToBracket && backToLanding && forwardToBracket, report.eventLanding.navigation);
 
             // The phase menu jumps from Top 4 to Single Elim, four phases on; the arrows stay
-            const standingAvatars = await page.locator('.standing .standing-profile-image img').evaluateAll(images => images.map(img => img.getAttribute('src')));
-            report.eventLanding.avatars = standingAvatars.length;
-            check('event landing: Bravo\'s card shows the profile picture, not the banner, and nobody else has one',
-                standingAvatars.length === 1 && standingAvatars[0] === svg(40, 40, '#2a7'), standingAvatars);
             mark = log.length;
             await page.locator('.phase-menu-button').click();
             await page.waitForTimeout(500);
