@@ -21,3 +21,10 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 ## Building and testing
 
 CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and push to main. `e2e/api-calls.mjs` runs the app against a fake start.gg. `e2e/gql-cache.mjs` tests the cache, allowlist and site gate; `e2e/auth.mjs` runs the real server against a fake start.gg for login, sessions and security headers.
+
+## Where things live (for whoever picks this up next)
+
+- Deploy: `~/ops/bin/bracketgg-build` (after main's CI passes); the live checkout is `/srv/santi/bracketgg`, the container is `bracketgg` in `/srv/santi/compose.yml`.
+- Server state: sessions in `/srv/santi/bracketgg-data/sessions.json`. Secrets: `~/.config/secrets/bracketgg.env`, `bracketgg-site-token.env`, `startgg.env`.
+- Work in progress sits in worktrees `~/projects/bracketgg-<name>` on a branch of the same purpose, each with an open PR. `git worktree list` and `gh pr list` show them.
+- Nothing builds or tests on the VM: CI does, and installs go to Santi's PC (`~/ops/bin/goat`).
