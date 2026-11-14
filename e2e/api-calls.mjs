@@ -1330,6 +1330,8 @@ try {
                 cards.every((c, i) => !i || c.top >= cards[i - 1].top + cards[i - 1].height) && sameCards(cards) && rankingsOwnLine(cards), cards);
             check('phone: in each card the 24 px placement, the 52 px picture and the text block are centered top to bottom within 2 px',
                 centeredCards(cards), cards.map(c => [c.centers, c.placementSize, c.avatarSize, c.lineLefts]));
+            const headingOrder = await page.locator('.section-heading').allInnerTexts();
+            check('event landing: Brackets comes before Standings', headingOrder.slice(0, 2).join() === 'Brackets,Standings', headingOrder);
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'e2e-out/event-landing-phone.png' }).catch(() => { });
             await page.locator('.standings-list').screenshot({ path: 'e2e-out/standings-phone.png' }).catch(() => { });
