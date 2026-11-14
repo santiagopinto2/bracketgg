@@ -104,6 +104,12 @@ export class AppComponent implements AfterViewInit {
                                 tournamentData.event.phaseId = Number(phaseId);
                                 if (Number(poolId)) tournamentData.event.poolId = Number(poolId);
                             }
+                            // A link from a set's progression tag names the player to scroll to (?player=<entrant id>);
+                            // the entry it leaves behind in the history names the set it was clicked on (?set=<set id>)
+                            const params = this.router.parseUrl(this.router.url).queryParams;
+                            const player = params['player'], set = params['set'];
+                            if (Number(player)) tournamentData.event.playerId = Number(player);
+                            if (typeof set === 'string' && /^[\w-]{1,80}$/.test(set)) tournamentData.event.setId = set;
 
                             // The event's id, name and phases, in one small request. The bracket view then loads
                             // only the shown phase's players, not the whole event's. Cached, and fetched again

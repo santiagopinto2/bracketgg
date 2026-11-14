@@ -94,7 +94,7 @@
     }
 
     @for (phaseGroup of phaseGroups; track i; let i = $index; let lastPhaseGroup = $last) {
-    <div class="row" [attr.id]="phaseGroup ? 'pool-' + phaseGroup.id : null">
+    <div class="row" [attr.id]="phaseGroup ? 'pool-' + phaseGroup.id : null" [attr.data-pool-index]="i">
         <div class="col-12">
             @if (phaseGroups.length > 1) {
             <p style="font-size: 18px; margin-bottom: 0">
@@ -121,7 +121,7 @@
                             @if (j % 3 == 0) {
                             <div class="d-flex flex-column round" id="set-column">
                                 @for (set of getRoundSets(phaseGroup, side, (j / 3 + 1) * maxRoundModifier[side], i); track set.id) {
-                                <div class="row set" id="set" [attr.data-set-id]="set.id" [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set)">
+                                <div class="row set" id="set" [attr.data-set-id]="set.id" [class.set-arrived]="highlightedSetId != null && highlightedSetId == set.id" [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set)">
                                     <div class="col p-0 set-seeds" id="seeds">
                                         @for (slot of set.slots; track slot; let firstSlot = $first) {
                                         <div class="row set-row" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
@@ -181,6 +181,21 @@
                                                 {{getScore(slot, set)}}
                                             </div>
                                         </div>
+                                        }
+                                    </div>
+                                    }
+                                    @if (tagsOf(set); as tags) {
+                                    <!-- Where the set's players go in a later phase: beside a set in its side's last round, under any other -->
+                                    <div class="progression-tags" [class.progression-tags-below]="j / 3 + 1 < maxRounds[i][side]" (click)="$event.stopPropagation()">
+                                        @for (tag of tags; track tag.key) {
+                                        <a class="progression-tag" draggable="false" [attr.href]="tag.href" [attr.title]="tag.title" [attr.aria-label]="tag.title"
+                                            (mousedown)="$event.stopPropagation()" (click)="followProgression($event, phaseGroup, set, tag)">
+                                            @if (tag.short) {
+                                            <span class="progression-who">{{tag.short}}</span>
+                                            }
+                                            <span class="progression-arrow" aria-hidden="true">→</span>
+                                            <span class="progression-to">{{tag.label}}</span>
+                                        </a>
                                         }
                                     </div>
                                     }

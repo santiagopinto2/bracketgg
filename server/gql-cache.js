@@ -38,6 +38,7 @@ function checkVariables(variables) {
 function ttlMs(query) {
     if (/\bsets?\s*\(/.test(query) && /\bslots\b/.test(query)) return 15_000; // set results: live
     if (/\bphaseGroups\s*\(/.test(query)) return 60_000;                       // a phase's pools
+    if (/\bprogressionSource\b/.test(query)) return 60_000;                    // who start.gg has placed in the next phase
     return 5 * 60_000;                                                           // tournament, entrants
 }
 

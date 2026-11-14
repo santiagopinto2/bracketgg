@@ -122,10 +122,107 @@
 }
 
 .set {
+    position: relative;
     width: 204px;
     border-radius: 4px;
     box-shadow: var(--set-outline);
     cursor: pointer;
+}
+
+// A set is positioned, for its progression tags, which would draw it over the lines to the next round
+// where its outline touches them. Positioning the lines' column too keeps them drawn in page order.
+#block-column {
+    position: relative;
+}
+
+// The set a link scrolled to: an outline and a glow in the highlight color that stay for two seconds, then fade
+.set-arrived {
+    animation: set-arrived 3.5s ease-out forwards;
+}
+
+@keyframes set-arrived {
+    0%,
+    60% {
+        box-shadow: 0 0 0 2px var(--highlight), 0 0 14px 3px var(--highlight-bg);
+    }
+
+    100% {
+        box-shadow: 0 0 0 2px transparent, 0 0 14px 3px transparent;
+    }
+}
+
+// Where a set sends its players in a later phase. The tags sit outside the set's box, on the page:
+// to the right of a set in its side's last round, where nothing else is drawn...
+.progression-tags {
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: max-content;
+    max-width: 230px;
+    padding: 0;
+    cursor: default;
+}
+
+// ...and under any other set, in the gap above the next one, where the lines to the next round leave no room beside it
+.progression-tags-below {
+    left: 0;
+    top: calc(100% + 3px);
+    transform: none;
+    flex-direction: row;
+    max-width: 100%;
+}
+
+.progression-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    max-width: 100%;
+    height: 20px;
+    padding: 0 8px 0 6px;
+    border: 1px solid var(--tag-border);
+    border-radius: 10px;
+    background-color: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: 11.5px;
+    line-height: 18px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover,
+    &:focus-visible {
+        background-color: var(--tag-hover-bg);
+        color: var(--tag-text);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--highlight);
+        outline-offset: 1px;
+    }
+}
+
+.progression-who {
+    font-weight: 600;
+}
+
+// The font's arrow is small at the tag's text size, so it is drawn larger
+.progression-arrow {
+    font-size: 15px;
+    line-height: 1;
+    margin-top: -2px;
+    opacity: 0.85;
+}
+
+.progression-to {
+    min-width: 0;
+    @extend .text-overflow;
 }
 
 .set-row:first-child {

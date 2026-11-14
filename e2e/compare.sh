@@ -46,6 +46,9 @@ echo "live displayScore: ok"
 # With the token: a phase's players, profile pictures only, and the top 8's losses, from the real start.gg
 node --experimental-strip-types e2e/live-players.mjs > $out/live-players.json 2> $out/live-players.err || { cat $out/live-players.json $out/live-players.err; echo "live players check failed"; exit 1; }
 echo "live players: ok"
+# With the token: the next phase's seeds for a real pool, what asking costs, each player's last set, and that a player keeps their entrant id in the next phase
+node --experimental-strip-types e2e/live-progression.mjs > $out/live-progression.json 2> $out/live-progression.err || { cat $out/live-progression.json $out/live-progression.err; echo "live progression check failed"; exit 1; }
+echo "live progression: ok"
 
 npm install --no-save --no-audit --no-fund --loglevel=error playwright pixelmatch pngjs > /dev/null || exit 1
 npx playwright install --with-deps chromium webkit > $out/playwright-install.log 2>&1 || { tail -30 $out/playwright-install.log; exit 1; }
@@ -67,6 +70,17 @@ auth=$?
 echo "auth run exit: $auth"
 cat $out/auth.json; tail -20 $out/auth.err
 [ $auth -ne 0 ] && status=1
+
+# With the token: a browser walk through real brackets (Genesis X) for the progression tags, in dark mode.
+# Screenshots and a report in e2e-out/live-bracket; it never fails the run.
+if [ -n "${STARTGG_TOKEN:-}" ]; then
+  PORT=4304 STATIC_DIR=/tmp/app-branch STARTGG_SITE_TOKEN="$STARTGG_TOKEN" node proxy-server.js > $out/server-live.log 2>&1 &
+  live_server=$!
+  sleep 3
+  node e2e/live-bracket.mjs http://localhost:4304 $out/live-bracket > $out/live-bracket.json 2> $out/live-bracket.err
+  cat $out/live-bracket.json
+  kill $live_server
+fi
 
 # The same pages from both builds, pixel for pixel. A PR that changes the look on purpose gets the
 # visual-change label (VISUAL_CHANGES_OK=true), which keeps the report but doesn't fail on it.

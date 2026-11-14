@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
-import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
+import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -196,6 +196,28 @@ export class StartggService {
             });
             return seeds.map(seed => seed?.entrant).filter(entrant => entrant?.id != null);
         });
+    }
+
+    // The seeds of a phase that takes players from an earlier one, each with the pool and placement it
+    // comes from, the pool it plays in and its entrant once placed. Never cached here, so a player
+    // shows up soon after start.gg places them. `expected` is how many seeds the phase should have;
+    // start.gg can have more, so pages are asked for until one comes back short.
+    private seedsPerPage = 240;
+    async getPhaseProgressions(phaseId, expected): Promise<any[]> {
+        const loadPage = async (page: number, perPage: number) => {
+            const data = await this.query(phaseProgressionsQuery, { phaseId: Number(phaseId), page, perPage });
+            return data?.phase?.seeds?.nodes ?? [];
+        };
+        const key = `progressions:${phaseId}`;
+        const seeds = await this.loadPages(key, Number(expected) || 0, this.seedsPerPage, loadPage);
+        const perPage = this.pageSizes.get(key) ?? this.seedsPerPage;
+        // More seeds than expected: keep going, up to 20 pages more
+        for (let page = Math.max(1, Math.ceil((Number(expected) || 0) / perPage)) + 1, extra = 0; seeds.length >= (page - 1) * perPage && extra < 20; page++, extra++) {
+            const more = await loadPage(page, perPage);
+            seeds.push(...more);
+            if (more.length < perPage) break;
+        }
+        return seeds;
     }
 
     // What the event's landing page shows, in one request: the header, every phase with its pool count,

@@ -13,10 +13,11 @@ const report = { checks: [] };
 const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail });
 
 const allowed = await loadAllowlist();
-check('the allowlist holds every query the app can send', allowed.size === 3 + 8 + 1 + 1 + Q.MAX_POOL_SLICES + Q.MAX_SET_SCORES && allowed.has(Q.tournamentQuery) && allowed.has(Q.setScoresQuery(37)) && allowed.has(Q.poolSlicesQuery(Q.MAX_POOL_SLICES)), allowed.size);
+check('the allowlist holds every query the app can send', allowed.size === 4 + 8 + 1 + 1 + Q.MAX_POOL_SLICES + Q.MAX_SET_SCORES && allowed.has(Q.tournamentQuery) && allowed.has(Q.setScoresQuery(37)) && allowed.has(Q.poolSlicesQuery(Q.MAX_POOL_SLICES)), allowed.size);
 // Pool slices are set results, which stay fresh for 15 s like any other
 const sliceTtls = Array.from({ length: Q.MAX_POOL_SLICES }, (_, i) => ttlMs(Q.poolSlicesQuery(i + 1)));
 check('pool slices get the 15 s set results TTL', sliceTtls.every(ttl => ttl === 15_000) && ttlMs(Q.poolSetsQuery) === 15_000, [...new Set(sliceTtls)]);
+check('the seeds a phase takes from an earlier one stay fresh for a minute, a phase\'s players for five', ttlMs(Q.phaseProgressionsQuery) === 60_000 && ttlMs(Q.phaseEntrantsQuery) === 5 * 60_000, [ttlMs(Q.phaseProgressionsQuery), ttlMs(Q.phaseEntrantsQuery)]);
 
 // A fake start.gg: answers per query, counts calls and the tokens they came with, can be slow
 let upstreamCalls = 0;

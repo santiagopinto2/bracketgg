@@ -63,7 +63,9 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                 }
             }`;
 
-// What a bracket page needs to know of its event: about 10 objects
+// What a bracket page needs to know of its event: about 10 objects. `progressingInData` names the
+// phases each phase takes players from, and how many (one object per phase it names). It tells which
+// later phases a phase sends players on to; start.gg fills it in before the event starts (checked 2026-11-13).
 export const eventPhasesQuery = `query EventPhases($slug: String!) {
                 event(slug: $slug) {
                     id
@@ -73,6 +75,42 @@ export const eventPhasesQuery = `query EventPhases($slug: String!) {
                         id
                         name
                         numSeeds
+                        groupCount
+                        progressingInData {
+                            origin
+                            numProgressing
+                        }
+                    }
+                }
+            }`;
+
+// One page of a phase's seeds with where each comes from: the pool of an earlier phase, and the
+// placement there, that fills it (`progressionSource`), the pool of this phase it plays in, and the
+// entrant once start.gg has placed one. The bracket view asks this of the phases that take players
+// from the shown phase, to draw the tags that say where a pool's players go next. 4 objects per seed
+// (Genesis X R2 Pools: 240 seeds cost 961, the other 144 cost 577; measured 2026-11-13).
+export const phaseProgressionsQuery = `query PhaseProgressions($phaseId: ID!, $page: Int!, $perPage: Int!) {
+                phase(id: $phaseId) {
+                    seeds(query: {
+                        page: $page
+                        perPage: $perPage
+                    }) {
+                        nodes {
+                            entrant {
+                                id
+                            }
+                            phaseGroup {
+                                id
+                                displayIdentifier
+                            }
+                            progressionSource {
+                                originPlacement
+                                originOrder
+                                originPhaseGroup {
+                                    id
+                                }
+                            }
+                        }
                     }
                 }
             }`;
@@ -306,6 +344,7 @@ export function allQueries(): string[] {
         tournamentQuery,
         eventPhasesQuery,
         phaseEntrantsQuery,
+        phaseProgressionsQuery,
         ...overviews,
         phaseQuery,
         poolSetsQuery,
