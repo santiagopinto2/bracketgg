@@ -41,6 +41,29 @@
         </div>
     </div>
 
+    <div class="section">
+        <h2 class="section-heading">Brackets</h2>
+        @if (!event().phases.length) {
+        <p class="phase-details">This event has no brackets yet.</p>
+        }
+        <div class="phase-list">
+            @for (phase of event().phases; track phase.id) {
+            <div class="phase-card">
+                <a class="phase-link" [routerLink]="phaseLink(phase)">
+                    <div class="phase-info">
+                        <span class="phase-name">{{ phase.name }}</span>
+                        <span class="phase-details">{{ getPhaseDetails(phase) }}</span>
+                    </div>
+                    @if (getStateLabel(phase.state)) {
+                    <span class="state-chip" [ngClass]="'state-' + phase.state.toLowerCase()">{{ getStateLabel(phase.state) }}</span>
+                    }
+                    <mat-icon class="phase-arrow">chevron_right</mat-icon>
+                </a>
+            </div>
+            }
+        </div>
+    </div>
+
     @if (standings().length) {
     <div class="section">
         <h2 class="section-heading">Standings</h2>
@@ -100,29 +123,6 @@
         </div>
     </div>
     }
-
-    <div class="section">
-        <h2 class="section-heading">Brackets</h2>
-        @if (!event().phases.length) {
-        <p class="phase-details">This event has no brackets yet.</p>
-        }
-        <div class="phase-list">
-            @for (phase of event().phases; track phase.id) {
-            <div class="phase-card">
-                <a class="phase-link" [routerLink]="phaseLink(phase)">
-                    <div class="phase-info">
-                        <span class="phase-name">{{ phase.name }}</span>
-                        <span class="phase-details">{{ getPhaseDetails(phase) }}</span>
-                    </div>
-                    @if (getStateLabel(phase.state)) {
-                    <span class="state-chip" [ngClass]="'state-' + phase.state.toLowerCase()">{{ getStateLabel(phase.state) }}</span>
-                    }
-                    <mat-icon class="phase-arrow">chevron_right</mat-icon>
-                </a>
-            </div>
-            }
-        </div>
-    </div>
 
     @if (prizing()) {
     <div class="section">
