@@ -62,7 +62,8 @@ html[data-theme='light'] {
 // and as specific as the light one, so these win.
 html[data-theme] {
     @include mat.progress-spinner-overrides((active-indicator-color: var(--spinner)));
-    @include mat.sidenav-overrides((content-background-color: var(--page-bg)));
+    // The phone menu's backdrop dims the page in both themes (Material's dark theme makes it white)
+    @include mat.sidenav-overrides((content-background-color: var(--page-bg), scrim-color: var(--scrim)));
 
     .mat-mdc-snack-bar-container {
         @include mat.progress-spinner-overrides((active-indicator-color: var(--snackbar-spinner)));
