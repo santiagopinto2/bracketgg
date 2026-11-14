@@ -1254,29 +1254,16 @@ try {
                 && menu.url === eventPath + '/1006' && menu.phase === 'Single Elim' && menu.rounds.join() === 'Semi-Final,Final' && menu.arrows === 2
                 && !menu.requests.tournament && !menu.requests.entrants, menu);
 
-            // A pool's own URL still opens its phase scrolled down to that pool
-            await page.goto(appUrl + eventPath + '/1005/2007');
-            await quiet();
-            await page.waitForTimeout(500);
-            const pool = await page.evaluate(() => {
-                const box = document.querySelector('mat-sidenav-content');
-                const el = document.getElementById('pool-2007');
-                return { scrollTop: Math.round(box.scrollTop), top: el ? Math.round(el.getBoundingClientRect().top - box.getBoundingClientRect().top) : null, viewHeight: box.clientHeight };
-            });
-            pool.url = new URL(page.url()).pathname;
-            report.eventLanding.pool = pool;
-            check('bracket URLs: a pool URL opens its phase, scrolled to that pool', pool.url === eventPath + '/1005/2007' && pool.scrollTop > 0 && pool.top !== null && pool.top >= 0 && pool.top < pool.viewHeight - 100, pool);
-
-            // A URL of a phase's first or only pool stays at the top, with the search and phase menu showing
+            // A pool's URL opens its phase at the top of the page, with the search and phase menu showing, never scrolled to the pool (Santi, 2026-11-13)
             const topScroll = {};
-            for (const path of ['/1002/2002', '/1005/2005']) {
+            for (const path of ['/1002/2002', '/1005/2005', '/1005/2007']) {
                 await page.goto(appUrl + eventPath + path);
                 await quiet();
                 await page.waitForTimeout(500);
                 topScroll[path] = await page.evaluate(() => Math.round(document.querySelector('mat-sidenav-content').scrollTop));
             }
             report.eventLanding.poolTop = topScroll;
-            check('bracket URLs: the URL of a phase\'s first or only pool stays at the top', Object.values(topScroll).every(top => top === 0), topScroll);
+            check('bracket URLs: a pool URL opens its phase at the top, never scrolled to the pool', Object.values(topScroll).every(top => top === 0), topScroll);
 
             // /brackets with no phase, and start.gg's ?filter= form, still open a bracket
             await page.goto(appUrl + eventPath);
