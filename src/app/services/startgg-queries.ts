@@ -458,6 +458,30 @@ export const poolSetsQuery = `query PoolSets($id: ID!, $page: Int!, $perPage: In
                   }
             }`;
 
+// A pool start.gg has seeded but made no sets for: its seed order (seedMap), how many go on, and its
+// players, from which generated-bracket.ts builds the sets (about 4 objects a seed).
+export const poolSeedsQuery = `query PoolSeeds($id: ID!) {
+                phaseGroup(id: $id) {
+                    seedMap
+                    progressionsOut {
+                        originPlacement
+                    }
+                    seeds(query: { page: 1, perPage: 128 }) {
+                        nodes {
+                            groupSeedNum
+                            progressionSource {
+                                id
+                            }
+                            entrant {
+                                id
+                                name
+                                initialSeedNum
+                            }
+                        }
+                    }
+                }
+            }`;
+
 // The most pool slices one request asks for (poolSlicesQuery). Two variables each, under the
 // server's cap of 120 variables per request.
 export const MAX_POOL_SLICES = 50;
@@ -520,6 +544,7 @@ export function allQueries(): string[] {
         eventPhasesQuery,
         phaseEntrantsQuery,
         phaseProgressionsQuery,
+        poolSeedsQuery,
         attendeesQuery(false),
         attendeesQuery(true),
         seededAttendeesQuery,
