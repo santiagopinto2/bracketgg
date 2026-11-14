@@ -262,7 +262,6 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             await Promise.all(phaseGroupPromises);
             if (loadId !== this.loadId) return;
             this.loadingService.updateValue(false);
-            if (this.poolId) setTimeout(() => document.getElementById('pool-' + this.poolId)?.scrollIntoView({ block: 'start' }));
         } catch (error) {
             if (loadId !== this.loadId) return;
             console.error(error);
