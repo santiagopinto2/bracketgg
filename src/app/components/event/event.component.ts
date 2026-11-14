@@ -40,7 +40,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     eventSlug = '';
     // The shown phase's id, also for a phase the event's list doesn't have
     phaseId = null;
-    // The pool to scroll to once the phase is drawn, from a /brackets/<phase id>/<pool id> link
+    // The pool a /brackets/<phase id>/<pool id> link names. It loads first; the page stays at the top.
     poolId = null;
     // Where the link that opened this phase points: its pool, and the player (?player=, from a set's
     // progression tag) or the set (?set=, the history entry a followed tag leaves behind) to center.
@@ -140,7 +140,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.eventSlug = event.slug;
                 this.phaseId = event.phaseId;
                 this.poolId = event.poolId ?? null;
-                if (event.poolId || event.playerId || event.setId) {
+                // A plain pool link names no player and no set: its phase opens at the top of the page
+                if (event.playerId || event.setId) {
                     this.arrival = { poolId: event.poolId ?? null, playerId: event.playerId ?? null, setId: event.setId ?? null, done: false };
                 }
 
@@ -277,15 +278,15 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
             // With several pools, fetch them in runs of pool slices and draw each pool, in order, as soon as
             // all of its sets are in. Each pool goes in its own slot, so the pools keep their order.
-            // The pool a link names loads first and is scrolled to as soon as it is drawn (arrive), without
-            // waiting for the others.
+            // The pool a link names loads first. A link that also names a player or a set is scrolled to it
+            // as soon as that pool is drawn (arrive), without waiting for the others.
             const groups = phase.phaseGroups.nodes;
             const phaseGroupPromises = [];
             const progression = this.sendsPlayersOn(phaseId);
             for (let i = 0; i < groups.length; i++) this.maxRounds.push([]);
             if (groups.length > 1) {
                 const indexOf = new Map<any, number>(groups.map((group, i): [any, number] => [group.id, i]));
-                const first = groups.find(group => group.id == this.arrival?.poolId);
+                const first = groups.find(group => group.id == this.poolId);
                 const order = first ? [first, ...groups.filter(group => group !== first)] : groups;
                 const expected = new Map<any, number>(order.map((group): [any, number] => [group.id, group.sets?.pageInfo?.total ?? 0]));
                 await this.startggService.getPhaseSetsByPool(phaseId, expected, (poolId, sets) => {

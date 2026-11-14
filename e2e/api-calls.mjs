@@ -1515,6 +1515,10 @@ try {
                 topScroll[path] = await page.evaluate(() => Math.round(document.querySelector('mat-sidenav-content').scrollTop));
             }
             report.eventLanding.poolTop = topScroll;
+            // The pool's link still loads that pool first, and outlines nothing
+            const poolFirst = { asked: slicesAsked(log.findLast(r => r.kind === 'poolSlices')?.query ?? '')[0]?.groupId, outlined: await page.locator('.set-arrived').count() };
+            report.eventLanding.poolFirst = poolFirst;
+            check('bracket URLs: a pool URL asks for its pool first and outlines no set', poolFirst.asked === 2007 && poolFirst.outlined === 0, poolFirst);
             check('bracket URLs: a pool URL opens its phase at the top, never scrolled to the pool', Object.values(topScroll).every(top => top === 0), topScroll);
 
             // /brackets with no phase, and start.gg's ?filter= form, still open a bracket
