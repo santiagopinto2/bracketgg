@@ -1267,6 +1267,17 @@ try {
             report.eventLanding.pool = pool;
             check('bracket URLs: a pool URL opens its phase, scrolled to that pool', pool.url === eventPath + '/1005/2007' && pool.scrollTop > 0 && pool.top !== null && pool.top >= 0 && pool.top < pool.viewHeight - 100, pool);
 
+            // A URL of a phase's first or only pool stays at the top, with the search and phase menu showing
+            const topScroll = {};
+            for (const path of ['/1002/2002', '/1005/2005']) {
+                await page.goto(appUrl + eventPath + path);
+                await quiet();
+                await page.waitForTimeout(500);
+                topScroll[path] = await page.evaluate(() => Math.round(document.querySelector('mat-sidenav-content').scrollTop));
+            }
+            report.eventLanding.poolTop = topScroll;
+            check('bracket URLs: the URL of a phase\'s first or only pool stays at the top', Object.values(topScroll).every(top => top === 0), topScroll);
+
             // /brackets with no phase, and start.gg's ?filter= form, still open a bracket
             await page.goto(appUrl + eventPath);
             await quiet();

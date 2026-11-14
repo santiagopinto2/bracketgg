@@ -262,7 +262,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             await Promise.all(phaseGroupPromises);
             if (loadId !== this.loadId) return;
             this.loadingService.updateValue(false);
-            if (this.poolId) setTimeout(() => document.getElementById('pool-' + this.poolId)?.scrollIntoView({ block: 'start' }));
+            // A link to a pool further down scrolls to it. The first (or only) pool is already in view, so the
+            // page stays at the top, with the search and phase menu showing.
+            if (this.poolId && String(this.poolId) !== String(groups[0]?.id)) {
+                setTimeout(() => document.getElementById('pool-' + this.poolId)?.scrollIntoView({ block: 'start' }));
+            }
         } catch (error) {
             if (loadId !== this.loadId) return;
             console.error(error);
