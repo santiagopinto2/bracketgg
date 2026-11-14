@@ -6,6 +6,7 @@ import { TournamentComponent } from './components/tournament/tournament.componen
 import { AboutComponent } from './components/about/about.component';
 import { CallbackComponent } from './components/callback/callback.component';
 import { PrivacyComponent } from './components/privacy/privacy.component';
+import { AttendeesComponent } from './components/attendees/attendees.component';
 
 // An event URL with /brackets after the event's name opens a bracket; any other event URL opens the
 // event's landing page. `path` has no query string.
@@ -30,6 +31,14 @@ const eventOverviewMatcher: UrlMatcher = (segments: UrlSegment[]) => {
     return null;
 };
 
+// /tournament/<slug>/attendees
+const attendeesMatcher: UrlMatcher = (segments: UrlSegment[]) => {
+    if (segments.length === 3 && segments[0].path === 'tournament' && segments[2].path === 'attendees') {
+        return { consumed: segments };
+    }
+    return null;
+};
+
 const tournamentMatcher: UrlMatcher = (segments: UrlSegment[]) => {
     if (segments.length > 0 && segments[0].path === 'tournament' && !segments.some(s => s.path === 'event')) {
         return { consumed: segments };
@@ -43,6 +52,7 @@ const routes: Routes = [
     { path: 'privacy', component: PrivacyComponent },
     { matcher: eventMatcher, component: EventComponent },
     { matcher: eventOverviewMatcher, component: EventOverviewComponent },
+    { matcher: attendeesMatcher, component: AttendeesComponent },
     { matcher: tournamentMatcher, component: TournamentComponent }
 ];
 

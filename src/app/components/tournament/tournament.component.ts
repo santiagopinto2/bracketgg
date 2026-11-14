@@ -34,6 +34,9 @@ export class TournamentComponent {
         return new Date(t.startAt * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     });
 
+    // "4,786"
+    attendeeCount = computed(() => Number(this.tournament()?.numAttendees ?? 0).toLocaleString('en-US'));
+
     googleMapsUrl = computed(() => {
         const t = this.tournament();
         if (!t?.venueAddress) return '';

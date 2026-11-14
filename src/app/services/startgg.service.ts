@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
-import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setDetailsQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
+import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuery, attendeesQuery, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, seededAttendeesQuery, setDetailsQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -218,6 +218,76 @@ export class StartggService {
             if (more.length < perPage) break;
         }
         return seeds;
+    }
+
+    // The Attendees page loads this many rows at a time as the visitor scrolls. An attendee costs about
+    // 11 objects from the tournament's list and a singles seed up to 18, so 50 fit in one request
+    // (startgg-queries.ts has the measurements). A team's seed costs about 16 per player: teams load 25
+    // seeds at a time, 50 rows of a doubles event. A page start.gg refuses for its size shrinks to fit.
+    readonly attendeesPerPage = 50;
+    private teamSeedsPerPage = 25;
+
+    // The next slice of a list that loads as the visitor scrolls: the items from `offset` on, about
+    // `size` of them. `loadPage` asks for one page. A page start.gg refuses for its size is asked for
+    // again smaller, and the smaller size is remembered under `key`; the page that holds `offset` at
+    // that size starts earlier, so the items already loaded are dropped from it.
+    private async loadSlice(key: string, offset: number, size: number, loadPage: (page: number, perPage: number) => Promise<any>): Promise<{ nodes: any[], total: number, done: boolean }> {
+        let perPage = Math.min(size, this.pageSizes.get(key) ?? size);
+        for (; ;) {
+            try {
+                const connection = await loadPage(Math.floor(offset / perPage) + 1, perPage);
+                const all: any[] = connection?.nodes ?? [];
+                const nodes = all.slice(offset % perPage);
+                const total = Number(connection?.pageInfo?.total) || 0;
+                this.pageSizes.set(key, perPage);
+                return { nodes, total, done: all.length < perPage || offset + nodes.length >= total };
+            } catch (error) {
+                if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
+                perPage = error.actual
+                    ? Math.max(1, Math.min(perPage - 1, Math.floor(perPage * 980 / error.actual)))
+                    : Math.floor(perPage / 2);
+            }
+        }
+    }
+
+    // A tournament's attendees from `offset` on, in player id order: everyone, or only those whose tag
+    // matches `search`, or only those in the event `eventId`. `total` counts all that match.
+    getAttendees(tourneySlug, offset: number, { search = '', eventId = null }: { search?: string, eventId?: any } = {}): Promise<{ nodes: any[], total: number, done: boolean }> {
+        const slug = String(tourneySlug);
+        const variables = { slug, ...this.searchVariable(search), ...(eventId ? { eventId: Number(eventId) } : {}) };
+        return this.loadSlice(`attendees:${slug}:${eventId ?? ''}`, offset, this.attendeesPerPage, async (page, perPage) => {
+            const data = await this.query(attendeesQuery(!!eventId), { ...variables, page, perPage });
+            if (!data?.tournament) throw new StartggError('Tournament not found on start.gg.');
+            return data.tournament.participants;
+        });
+    }
+
+    // A phase's seeds from `offset` on, in seed order, each with its entrant's players. With `search`,
+    // only the seeds of players whose tag matches, in start.gg's own order. `total` counts seeds, so
+    // teams in a teams event.
+    getSeededAttendees(phaseId, offset: number, { search = '', teams = false }: { search?: string, teams?: boolean } = {}): Promise<{ nodes: any[], total: number, done: boolean }> {
+        const variables = { phaseId: Number(phaseId), ...this.searchVariable(search) };
+        return this.loadSlice(`seeded-attendees:${phaseId}`, offset, teams ? this.teamSeedsPerPage : this.attendeesPerPage, async (page, perPage) => {
+            const data = await this.query(seededAttendeesQuery, { ...variables, page, perPage });
+            if (!data?.phase) throw new StartggError('Bracket phase not found on start.gg.');
+            return data.phase.seeds;
+        });
+    }
+
+    // The server takes only plain values as variables, so no search leaves the variable out
+    private searchVariable(search: string): { search?: string } {
+        const text = String(search ?? '').trim().slice(0, 100);
+        return text ? { search: text } : {};
+    }
+
+    // An attendee's event entries, each with its seed, placement, teammates, and phases (the attendee
+    // dialog), reused for a few minutes.
+    getAttendeeDetails(participantId): Promise<any[]> {
+        return this.cached(`attendee:${participantId}`, async () => {
+            const data = await this.query(attendeeDetailsQuery, { id: Number(participantId) });
+            if (!data?.participant) throw new StartggError('Attendee not found on start.gg.');
+            return data.participant.entrants ?? [];
+        });
     }
 
     // What the event's landing page shows, in one request: the header, every phase with its pool count,

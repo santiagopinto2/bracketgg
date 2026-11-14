@@ -33,6 +33,10 @@ const shots = eventPath => ({
     // The end of a bracket, where the footer is
     'bracket-end': { path: eventPath + '/1001', act: page => page.locator('mat-sidenav-content').evaluate(el => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })) },
     privacy: { path: '/privacy' },
+    // The Attendees page: every event, one event in seed order, and an attendee's dialog
+    attendees: { path: '/tournament/att-tourney/attendees' },
+    'attendees-event': { path: '/tournament/att-tourney/attendees?event=solo-cup' },
+    'attendee-dialog': { path: '/tournament/att-tourney/attendees', act: page => page.locator('.att-row .att-name').first().click() },
     // As a visitor: the header's login button on desktop, and the phone's menu
     'home-visitor': { path: '/', visitor: true },
     'menu-visitor': { path: '/', visitor: true, phoneOnly: true, act: openMenu },

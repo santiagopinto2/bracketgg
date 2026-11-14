@@ -9,6 +9,7 @@
 // Prints a JSON report. Without --report-only it exits 1 if a check fails.
 import { chromium, webkit, devices } from 'playwright';
 import { readFileSync } from 'node:fs';
+import { attendeeAnswer, attendeeChecks, attendeeEventPhases, attendeeKind, attendeeTournament } from './attendees.mjs';
 
 const appUrl = process.argv[2] ?? 'http://localhost:4300';
 const reportOnly = process.argv.includes('--report-only');
@@ -200,6 +201,9 @@ const overview = query => ({
 });
 
 function kindOf(query) {
+    // The Attendees page's lists and the attendee dialog's details (e2e/attendees.mjs)
+    const attendees = attendeeKind(query);
+    if (attendees) return attendees;
     if (query.includes('...PoolSet')) return 'poolSlices';
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
@@ -236,19 +240,25 @@ const slicesAsked = query => [...query.matchAll(/(\w+): phaseGroup\(id: "?(\d+)"
 
 function answer(query) {
     switch (kindOf(query)) {
+        case 'attendees':
+        case 'attendeeSeeds':
+        case 'attendeeDetails':
+            return attendeeAnswer(kindOf(query), query);
         case 'tournament':
-            return { data: { tournament: {
+            // "Attendee Open" for the Attendees page's checks, and for everything else Test Tourney: five
+            // attendees, its four entrants and a spectator
+            return attendeeTournament(query) ?? { data: { tournament: {
                 images: [], rules: null, id: 1, name: 'Test Tourney', slug: 'tournament/test-tourney', venueAddress: null,
-                startAt: 1794000000, primaryContact: null, primaryContactType: null,
-                events: [{ name: 'Test Event', slug: 'tournament/test-tourney/event/test-event', numEntrants: entrants.length,
-                    startAt: 1794000000, type: 1, videogame: { id: videogameId, name: 'Test Game', images: [] }, standings: { nodes: [] } }]
+                startAt: 1794000000, timezone: 'America/Los_Angeles', numAttendees: 5, primaryContact: null, primaryContactType: null,
+                events: [{ id: 10, name: 'Test Event', slug: 'tournament/test-tourney/event/test-event', numEntrants: entrants.length,
+                    startAt: 1794000000, type: 1, state: 'COMPLETED', videogame: { id: videogameId, name: 'Test Game', images: [] }, standings: { nodes: [] } }]
             } } };
         case 'entrants':
             return { data: { event: { id: 10, name: 'Test Event', phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name })),
                 entrants: { nodes: structuredClone(entrants).map(e => ({ ...e, participants: e.participants.map(p => ({ ...p, user: userAsQueried(p.user, query) })) })) } } } };
         case 'eventPhases':
             // The phases that have seeds filled from "Progress Pools" (1010) name it as where their players come from
-            return { data: { event: { id: 10, name: 'Test Event', type: 1, phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name, numSeeds: entrants.length * (poolsOf[id] ?? [1]).length,
+            return attendeeEventPhases(query) ?? { data: { event: { id: 10, name: 'Test Event', type: 1, phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name, numSeeds: entrants.length * (poolsOf[id] ?? [1]).length,
                 groupCount: (poolsOf[id] ?? [1]).length, progressingInData: progressionSeedsOf[id] ? [{ origin: 1010, numProgressing: progressionSeedsOf[id].length }] : [] })) } } };
         case 'seeds': {
             // A phase's players in seed order: the entrants who play in its pools
@@ -2313,6 +2323,9 @@ try {
             await context.close();
         }
     }
+
+    // 25. The Attendees page and the attendee dialog (e2e/attendees.mjs)
+    await attendeeChecks({ browser, openPage, appUrl, eventPath, check, report, count, devices });
 } finally {
     await browser.close();
 }

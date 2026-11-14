@@ -48,6 +48,15 @@
                             <span class="home-text">Home</span>
                         </div>
                     </a>
+                    <a mat-list-item [routerLink]="'/' + tournament.slug + '/attendees'" routerLinkActive="attendees-active" class="attendees-link" (click)="closeSidenav()">
+                        <div class="attendees-item">
+                            <span class="attendees-icon"><mat-icon>group</mat-icon></span>
+                            <span class="attendees-text">Attendees</span>
+                            @if (tournament.numAttendees) {
+                            <span class="attendees-count">{{ attendeeCount() }}</span>
+                            }
+                        </div>
+                    </a>
                     }
 
                     @if (tournament.events?.length > 0) {

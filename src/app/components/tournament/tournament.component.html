@@ -26,6 +26,12 @@
                         <a [href]="googleMapsUrl()" target="_blank" rel="noopener">{{ tournament().venueAddress }}</a>
                     </span>
                     }
+                    @if (tournament().numAttendees) {
+                    <span class="meta-item">
+                        <mat-icon>group</mat-icon>
+                        <a class="attendees-link" [routerLink]="'/' + tournament().slug + '/attendees'">{{ attendeeCount() }} {{ tournament().numAttendees == 1 ? 'attendee' : 'attendees' }}</a>
+                    </span>
+                    }
                     @if (tournament().primaryContact) {
                     <span class="meta-item">
                         <mat-icon>email</mat-icon>

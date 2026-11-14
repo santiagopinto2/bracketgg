@@ -1,0 +1,114 @@
+<span class="dlg-grab"></span>
+<button type="button" class="dlg-close" aria-label="Close" (click)="close()"><mat-icon>close</mat-icon></button>
+
+<div class="dlg-head">
+    <span class="dlg-avatar" [style.background]="row.image ? null : row.color">
+        @if (row.image) {
+        <img [src]="row.image" alt="" (error)="row.image = ''" />
+        } @else {
+        {{ row.initial }}
+        }
+    </span>
+    <div class="dlg-who">
+        <h2 class="dlg-name">
+            @if (row.sponsor) {
+            <span class="dlg-sponsor">{{ row.sponsor }}</span>
+            }
+            <span class="dlg-tag">{{ row.tag }}</span>
+        </h2>
+        @if (row.socials.length) {
+        <div class="dlg-pills">
+            @for (social of row.socials; track social.type) {
+            @if (social.url) {
+            <a class="dlg-pill" [href]="social.url" target="_blank" rel="noopener noreferrer" [title]="social.label">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg><span>{{ social.username }}</span>
+            </a>
+            } @else {
+            <button type="button" class="dlg-pill" #tip="matTooltip" [matTooltip]="copied() === social ? 'Copied ' + social.username : social.label + ' (copy)'" (click)="copy(social); tip.show()">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg><span>{{ social.username }}</span>
+            </button>
+            }
+            }
+        </div>
+        }
+        @if (row.rankings.length) {
+        <div class="dlg-ranks">
+            @for (ranking of row.rankings; track $index) {
+            <span class="dlg-rank">
+                @if (ranking.image) {
+                <img [src]="ranking.image" alt="" width="18" height="18" (error)="ranking.image = ''" />
+                } @else {
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="rankIcon" /></svg>
+                }
+                <b>{{ ranking.rank }}</b>{{ ranking.title }}
+            </span>
+            }
+        </div>
+        }
+    </div>
+</div>
+
+<div class="dlg-body">
+    <h3 class="dlg-section">Events</h3>
+
+    @if (!row.events.length) {
+    <p class="dlg-none">Registered for {{ tournament.name }} without entering an event.</p>
+    }
+
+    @if (failed()) {
+    <p class="dlg-none" role="alert">{{ failed() }} <button type="button" class="dlg-retry" (click)="load()">Try again</button></p>
+    }
+
+    @for (entry of entries(); track entry.event.slug) {
+    <section class="dlg-entry">
+        <div class="dlg-entry-top">
+            <div class="dlg-entry-main">
+                <a class="dlg-entry-name" [routerLink]="'/' + entry.event.slug" (click)="close()">{{ entry.event.name }}<mat-icon>chevron_right</mat-icon></a>
+                @if (entry.loaded && entry.team.length) {
+                <div class="dlg-team">
+                    <mat-icon>group</mat-icon>
+                    <span>@for (part of entry.team; track $index) {<span [class.dlg-strong]="part.bold">{{ part.text }}</span>}</span>
+                </div>
+                }
+                @if (entry.loaded && entry.seed) {
+                <div class="dlg-entry-sub">
+                    <span>Seed <b>{{ count(entry.seed) }}</b></span><span class="dlg-dot"></span><span>{{ count(entry.event.numEntrants) }} {{ entry.teams ? 'teams' : 'entrants' }}</span>
+                </div>
+                }
+            </div>
+            @if (entry.place) {
+            <div class="dlg-place" title="Final placement">
+                <span class="dlg-place-num dlg-place-{{ entry.place }}">{{ count(entry.place) }}<sup>{{ ordinal(entry.place) }}</sup></span>
+                <small>of {{ count(entry.event.numEntrants) }}</small>
+            </div>
+            } @else if (entry.state) {
+            <span class="dlg-state" [class.active]="entry.state === 'In Progress'">{{ entry.state }}</span>
+            }
+        </div>
+
+        @if (!entry.loaded) {
+        @if (loading()) {
+        <div class="dlg-loading" role="status" aria-label="Loading"><i></i><i></i></div>
+        }
+        } @else if (entry.phases.length) {
+        <ol class="dlg-phases">
+            @for (phase of entry.phases; track phase.id) {
+            <li>
+                <a class="dlg-phase" [routerLink]="phase.link" [queryParams]="{ player: entry.entrantId }" [title]="phase.title" (click)="close()">
+                    <span class="dlg-phase-name">{{ phase.name }}</span>
+                    @if (phase.pool) {
+                    <span class="dlg-pool">Pool {{ phase.pool }}</span>
+                    }
+                    @if (phase.time) {
+                    <span class="dlg-phase-time">{{ phase.time }}</span>
+                    }
+                </a>
+            </li>
+            }
+        </ol>
+        } @else {
+        <p class="dlg-note">Not seeded yet. The seed and pools show here once the organizers publish them.</p>
+        }
+    </section>
+    }
+</div>
