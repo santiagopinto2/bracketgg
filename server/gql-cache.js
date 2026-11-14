@@ -36,6 +36,7 @@ function checkVariables(variables) {
 
 // How long an answer stays fresh, by what the query asks for
 function ttlMs(query) {
+    if (/\bset\s*\(/.test(query) && /\bauthorizations\b/.test(query)) return 5 * 60_000; // a set's stream and its players' accounts
     if (/\bsets?\s*\(/.test(query) && /\bslots\b/.test(query)) return 15_000; // set results: live
     if (/\bphaseGroups\s*\(/.test(query)) return 60_000;                       // a phase's pools
     if (/\bprogressionSource\b/.test(query)) return 60_000;                    // who start.gg has placed in the next phase

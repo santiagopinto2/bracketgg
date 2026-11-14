@@ -121,7 +121,7 @@
                             @if (j % 3 == 0) {
                             <div class="d-flex flex-column round" id="set-column">
                                 @for (set of getRoundSets(phaseGroup, side, (j / 3 + 1) * maxRoundModifier[side], i); track set.id) {
-                                <div class="row set" id="set" [attr.data-set-id]="set.id" [class.set-arrived]="highlightedSetId != null && highlightedSetId == set.id" [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set)">
+                                <div class="row set" id="set" [attr.data-set-id]="set.id" [class.set-arrived]="highlightedSetId != null && highlightedSetId == set.id" [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set, phaseGroup)">
                                     <div class="col p-0 set-seeds" id="seeds">
                                         @for (slot of set.slots; track slot; let firstSlot = $first) {
                                         <div class="row set-row" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">

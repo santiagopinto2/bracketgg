@@ -38,6 +38,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     // The event's name and slug, for the link back to its landing page
     eventName = '';
     eventSlug = '';
+    tournamentName = '';
     // The shown phase's id, also for a phase the event's list doesn't have
     phaseId = null;
     // The pool a /brackets/<phase id>/<pool id> link names. It loads first; the page stays at the top.
@@ -132,6 +133,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.eventName = '';
                 this.eventSlug = '';
                 this.phaseId = null;
+                this.tournamentName = '';
                 this.playersById = Promise.resolve(new Map());
                 this.colorsById = new Map();
                 this.loadId++;
@@ -144,6 +146,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 }
 
                 this.eventName = event.event.name;
+                this.tournamentName = tournament.name ?? '';
                 this.eventSlug = event.slug;
                 this.phaseId = event.phaseId;
                 this.poolId = event.poolId ?? null;
@@ -1223,10 +1226,21 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         });
     }
 
-    openSet(set) {
-        const dialogRef = this.dialog.open(SetComponent, {
-            data: { set },
-            width: '800px',
+    // Opens a set's dialog. Its top line names the pool (when the phase has several), the phase, the
+    // event and the tournament. An empty slot says who it waits for, from start.gg's links between sets.
+    openSet(set, phaseGroup = null) {
+        const pool = this.phaseGroups.length > 1 && phaseGroup?.displayIdentifier ? `Pool ${phaseGroup.displayIdentifier}` : '';
+        const poolSets = new Map<string, any>((phaseGroup?.sets?.nodes ?? []).flat(2).map(poolSet => [String(poolSet.id), poolSet]));
+        const waiting = set.slots.map(slot => {
+            if (slot?.entrant || slot?.prereqType !== 'set') return null;
+            const source = poolSets.get(String(slot.prereqId));
+            return source?.fullRoundText ? `${slot.prereqPlacement == 2 ? 'Loser' : 'Winner'} of ${source.fullRoundText}` : null;
+        });
+        this.dialog.open(SetComponent, {
+            data: { set, crumbs: [pool, this.phases[this.currentPhaseIndex]?.name, this.eventName, this.tournamentName], waiting },
+            panelClass: 'set-dialog-panel',
+            width: '600px',
+            maxWidth: 'calc(100vw - 48px)',
             autoFocus: false
         });
     }

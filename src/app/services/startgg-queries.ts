@@ -273,12 +273,19 @@ const setGamesQuery = `games {
             }
         }`;
 
-// What the app reads of each set, the same from a pool or a pool slice
+// What the app reads of each set, the same from a pool or a pool slice. The set dialog's state, best of,
+// times and video are scalars, which start.gg doesn't count. The stream would cost 1 object for every
+// set, streamed or not (measured 2026-11-14), so the dialog asks for it when it opens (setDetailsQuery).
 const setFields = `id
                             round
                             fullRoundText
                             winnerId
                             displayScore
+                            state
+                            totalGames
+                            startedAt
+                            completedAt
+                            vodUrl
                             ${setGamesQuery}
                             slots {
                                 prereqId
@@ -333,6 +340,30 @@ export function setScoresQuery(count: number): string {
             }`;
 }
 
+// What the set dialog asks for when it opens: the stream the set was on, and its players' X and Twitch
+// accounts. About 16 objects for a singles set (measured 2026-11-14).
+export const setDetailsQuery = `query SetDetails($id: ID!) {
+                set(id: $id) {
+                    stream {
+                        streamName
+                        streamSource
+                    }
+                    slots {
+                        entrant {
+                            id
+                            participants {
+                                user {
+                                    authorizations(types: [TWITTER, TWITCH]) {
+                                        type
+                                        externalUsername
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }`;
+
 // Every query text above, for the server's allowlist
 export function allQueries(): string[] {
     const overviews = [];
@@ -350,5 +381,6 @@ export function allQueries(): string[] {
         poolSetsQuery,
         ...Array.from({ length: MAX_POOL_SLICES }, (_, i) => poolSlicesQuery(i + 1)),
         ...Array.from({ length: MAX_SET_SCORES }, (_, i) => setScoresQuery(i + 1)),
+        setDetailsQuery,
     ];
 }
