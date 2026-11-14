@@ -663,6 +663,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         let projectedPhaseGroup = structuredClone(phaseGroup.sets.nodes);
         let setsById = new Map<string, any>(projectedPhaseGroup.flat(2).map(set => [String(set.id), set]));
         let done = new Set<string>();
+        const hidden = this.getHiddenLosersSources(projectedPhaseGroup.flat(2), setsById);
 
         const fill = (set, depth) => {
             if (done.has(String(set.id)) || depth > 64) return;
@@ -672,15 +673,43 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             set.slots.forEach((slot, slotIndex) => {
                 if (slot.entrant || slot.prereqType !== 'set') return;
                 let source = setsById.get(String(slot.prereqId));
+                let placement = slot.prereqPlacement;
+                // A set start.gg doesn't send: its winner is the loser of a winners round 1 set
+                if (!source && hidden.has(String(slot.prereqId))) {
+                    source = hidden.get(String(slot.prereqId));
+                    placement = 2;
+                }
                 if (!source) return;
                 fill(source, depth + 1);
-                let advancing = this.getSetPlacement(source, slot.prereqPlacement);
+                let advancing = this.getSetPlacement(source, placement);
                 if (advancing.entrant) set.slots[slotIndex] = this.setProjectedSlot(advancing);
             });
         };
         setsById.forEach(set => fill(set, 0));
 
         return projectedPhaseGroup;
+    }
+
+    // Losers round 1 can link to a hidden round that start.gg leaves out of the sets it sends: one set
+    // per winners round 1 set, holding that set's loser. Its ids, sorted, follow winners round 1's
+    // (preview_<pool>_-2_<k> holds the loser of the k-th winners round 1 set; in a started pool the
+    // numeric ids run in the same order). Maps each hidden id to its winners round 1 set, and only
+    // when there are exactly as many as winners round 1 has sets (measured on Port Priority DX's pools,
+    // 2026-11-14).
+    getHiddenLosersSources(sets, setsById) {
+        const missing = [...new Set<string>(sets.filter(set => set.round < 0)
+            .flatMap(set => set.slots.filter(slot => slot.prereqType === 'set' && slot.prereqPlacement == 1 && !setsById.has(String(slot.prereqId)))
+                .map(slot => String(slot.prereqId))))];
+        const winnersRounds = sets.map(set => set.round).filter(round => round > 0);
+        if (!missing.length || !winnersRounds.length) return new Map<string, any>();
+        const first = sets.filter(set => set.round === Math.min(...winnersRounds));
+        // preview_<pool>_<round>_<k> sorts by k; numeric ids by their number
+        const order = id => { const preview = /^preview_\d+_-?\d+_(\d+)$/.exec(String(id)); return preview ? Number(preview[1]) : Number(id); };
+        const byOrder = (a, b) => order(a) - order(b);
+        if (missing.length !== first.length || [...missing, ...first.map(set => set.id)].some(id => Number.isNaN(order(id)))) return new Map<string, any>();
+        missing.sort(byOrder);
+        first.sort((a, b) => byOrder(a.id, b.id));
+        return new Map<string, any>(missing.map((id, i) => [id, first[i]]));
     }
 
     // The slot that finishes a set in `placement` (1 winner, 2 loser): the real result if the set is
