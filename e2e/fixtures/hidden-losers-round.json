@@ -655,5 +655,584 @@
     }
    ]
   }
- ]
+ ],
+ "byes": {
+  "source": "Set links from start.gg GraphQL, phaseGroup 3246554 (Port Priority DX Rivals of Aether II Singles pool D13, 12 players, not started, 2026-11-14), in the app's order (sortType: ROUND). Winners round 1 has byes, so start.gg leaves out sets 1_0, 1_4, and 1_6, the hidden -2 sets, and the losers round 1 byes (-3_0, -3_2, -3_3) that Losers Round 2 links to. expectedProjectedPairs is every pair start.gg's own Show Projected drew for this pool. Players renamed R<seed>.",
+  "expectedProjectedPairs": [
+   [
+    "R2",
+    "R31"
+   ],
+   [
+    "R15",
+    "R18"
+   ],
+   [
+    "R2",
+    "R63"
+   ],
+   [
+    "R31",
+    "R34"
+   ],
+   [
+    "R15",
+    "R50"
+   ],
+   [
+    "R18",
+    "R47"
+   ],
+   [
+    "R63",
+    "R66"
+   ],
+   [
+    "R31",
+    "R98"
+   ],
+   [
+    "R34",
+    "R95"
+   ],
+   [
+    "R50",
+    "R79"
+   ],
+   [
+    "R47",
+    "R82"
+   ],
+   [
+    "R31",
+    "R47"
+   ],
+   [
+    "R18",
+    "R34"
+   ],
+   [
+    "R47",
+    "R50"
+   ],
+   [
+    "R34",
+    "R63"
+   ],
+   [
+    "R47",
+    "R66"
+   ],
+   [
+    "R50",
+    "R95"
+   ],
+   [
+    "R34",
+    "R79"
+   ],
+   [
+    "R63",
+    "R82"
+   ],
+   [
+    "R98",
+    "R95"
+   ]
+  ],
+  "sets": [
+   {
+    "id": "preview_3246554_-6_0",
+    "round": -6,
+    "fullRoundText": "Losers Quarter-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_3_0",
+      "prereqType": "set",
+      "prereqPlacement": 2,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-5_0",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-6_1",
+    "round": -6,
+    "fullRoundText": "Losers Quarter-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_3_1",
+      "prereqType": "set",
+      "prereqPlacement": 2,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-5_1",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-5_0",
+    "round": -5,
+    "fullRoundText": "Losers Round 3",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_-4_0",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-4_1",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-5_1",
+    "round": -5,
+    "fullRoundText": "Losers Round 3",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_-4_2",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-4_3",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-4_0",
+    "round": -4,
+    "fullRoundText": "Losers Round 2",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_2_3",
+      "prereqType": "set",
+      "prereqPlacement": 2,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-3_0",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-4_1",
+    "round": -4,
+    "fullRoundText": "Losers Round 2",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_2_2",
+      "prereqType": "set",
+      "prereqPlacement": 2,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-3_1",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-4_2",
+    "round": -4,
+    "fullRoundText": "Losers Round 2",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_2_1",
+      "prereqType": "set",
+      "prereqPlacement": 2,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-3_2",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-4_3",
+    "round": -4,
+    "fullRoundText": "Losers Round 2",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_2_0",
+      "prereqType": "set",
+      "prereqPlacement": 2,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-3_3",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_-3_1",
+    "round": -3,
+    "fullRoundText": "Losers Round 1",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_-2_2",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_-2_3",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_1_1",
+    "round": 1,
+    "fullRoundText": "Winners Round 1",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "42038572",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6063,
+       "name": "R63",
+       "initialSeedNum": 63
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "42044526",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6066,
+       "name": "R66",
+       "initialSeedNum": 66
+      },
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_1_2",
+    "round": 1,
+    "fullRoundText": "Winners Round 1",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "41951374",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6031,
+       "name": "R31",
+       "initialSeedNum": 31
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "41675046",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6098,
+       "name": "R98",
+       "initialSeedNum": 98
+      },
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_1_3",
+    "round": 1,
+    "fullRoundText": "Winners Round 1",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "42451756",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6034,
+       "name": "R34",
+       "initialSeedNum": 34
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "42046401",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6095,
+       "name": "R95",
+       "initialSeedNum": 95
+      },
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_1_5",
+    "round": 1,
+    "fullRoundText": "Winners Round 1",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "41594680",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6050,
+       "name": "R50",
+       "initialSeedNum": 50
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "42052678",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6079,
+       "name": "R79",
+       "initialSeedNum": 79
+      },
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_1_7",
+    "round": 1,
+    "fullRoundText": "Winners Round 1",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "39885683",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6047,
+       "name": "R47",
+       "initialSeedNum": 47
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "41795612",
+      "prereqType": "seed",
+      "prereqPlacement": null,
+      "entrant": {
+       "id": 6082,
+       "name": "R82",
+       "initialSeedNum": 82
+      },
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_2_0",
+    "round": 2,
+    "fullRoundText": "Winners Quarter-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_1_0",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": {
+       "id": 6002,
+       "name": "R2",
+       "initialSeedNum": 2
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_1_1",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_2_1",
+    "round": 2,
+    "fullRoundText": "Winners Quarter-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_1_2",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_1_3",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_2_2",
+    "round": 2,
+    "fullRoundText": "Winners Quarter-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_1_4",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": {
+       "id": 6015,
+       "name": "R15",
+       "initialSeedNum": 15
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_1_5",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_2_3",
+    "round": 2,
+    "fullRoundText": "Winners Quarter-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_1_6",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": {
+       "id": 6018,
+       "name": "R18",
+       "initialSeedNum": 18
+      },
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_1_7",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_3_0",
+    "round": 3,
+    "fullRoundText": "Winners Semi-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_2_0",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_2_1",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   },
+   {
+    "id": "preview_3246554_3_1",
+    "round": 3,
+    "fullRoundText": "Winners Semi-Final",
+    "winnerId": null,
+    "slots": [
+     {
+      "prereqId": "preview_3246554_2_2",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     },
+     {
+      "prereqId": "preview_3246554_2_3",
+      "prereqType": "set",
+      "prereqPlacement": 1,
+      "entrant": null,
+      "standing": null
+     }
+    ]
+   }
+  ]
+ }
 }

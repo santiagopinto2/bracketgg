@@ -674,7 +674,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 if (slot.entrant || slot.prereqType !== 'set') return;
                 let source = setsById.get(String(slot.prereqId));
                 let placement = slot.prereqPlacement;
-                // A set start.gg doesn't send: its winner is the loser of a winners round 1 set
+                // A set start.gg doesn't send: whoever reaches it is the loser of a winners round 1 set
                 if (!source && hidden.has(String(slot.prereqId))) {
                     source = hidden.get(String(slot.prereqId));
                     placement = 2;
@@ -690,26 +690,47 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         return projectedPhaseGroup;
     }
 
-    // Losers round 1 can link to a hidden round that start.gg leaves out of the sets it sends: one set
-    // per winners round 1 set, holding that set's loser. Its ids, sorted, follow winners round 1's
-    // (preview_<pool>_-2_<k> holds the loser of the k-th winners round 1 set; in a started pool the
-    // numeric ids run in the same order). Maps each hidden id to its winners round 1 set, and only
-    // when there are exactly as many as winners round 1 has sets (measured on Port Priority DX's pools,
-    // 2026-11-14).
+    // Losers round 1 can link to sets start.gg leaves out of what it sends. Before a pool starts their ids
+    // say what they are (preview_<pool>_<round>_<k>, w = winners round 1's id round):
+    //   round -(w+1), k: holds the loser of winners round 1's set k (nobody, if that set is a bye)
+    //   round -(w+2), k: a losers round 1 bye, holding whoever reaches it from -(w+1) sets 2k and 2k+1
+    // In a started pool the ids are numbers, which only say their order: they are matched in order to
+    // winners round 1's sets, and only when they all feed one losers round and there are exactly as many
+    // as winners round 1 has sets (no byes). Maps each hidden id to the winners round 1 set whose loser
+    // it holds (Port Priority DX's Melee and Rivals II pools, 2026-11-14).
     getHiddenLosersSources(sets, setsById) {
-        const missing = [...new Set<string>(sets.filter(set => set.round < 0)
-            .flatMap(set => set.slots.filter(slot => slot.prereqType === 'set' && slot.prereqPlacement == 1 && !setsById.has(String(slot.prereqId)))
-                .map(slot => String(slot.prereqId))))];
+        const hidden = new Map<string, any>();
+        const feeding = sets.filter(set => set.round < 0).flatMap(set => set.slots
+            .filter(slot => slot.prereqType === 'set' && slot.prereqPlacement == 1 && !setsById.has(String(slot.prereqId)))
+            .map(slot => ({ id: String(slot.prereqId), round: set.round })));
+        const missing = [...new Set<string>(feeding.map(feed => feed.id))];
         const winnersRounds = sets.map(set => set.round).filter(round => round > 0);
-        if (!missing.length || !winnersRounds.length) return new Map<string, any>();
+        if (!missing.length || !winnersRounds.length) return hidden;
+
+        const preview = id => { const match = /^preview_(\d+)_(-?\d+)_(\d+)$/.exec(String(id)); return match && { pool: match[1], round: Number(match[2]), k: Number(match[3]) }; };
+        if (missing.every(id => preview(id))) {
+            const winnersIdRounds = sets.map(set => preview(set.id)).filter(parsed => parsed && parsed.round > 0).map(parsed => parsed.round);
+            if (!winnersIdRounds.length) return hidden;
+            const w = Math.min(...winnersIdRounds);
+            const resolve = id => {
+                const { pool, round, k } = preview(id);
+                if (round === -(w + 1)) return setsById.get(`preview_${pool}_${w}_${k}`) ?? null;
+                if (round === -(w + 2)) {
+                    const reached = [2 * k, 2 * k + 1].map(j => setsById.get(`preview_${pool}_${w}_${j}`)).filter(Boolean);
+                    return reached.length === 1 ? reached[0] : null;
+                }
+                return null;
+            };
+            missing.forEach(id => { const source = resolve(id); if (source) hidden.set(id, source); });
+            return hidden;
+        }
+
         const first = sets.filter(set => set.round === Math.min(...winnersRounds));
-        // preview_<pool>_<round>_<k> sorts by k; numeric ids by their number
-        const order = id => { const preview = /^preview_\d+_-?\d+_(\d+)$/.exec(String(id)); return preview ? Number(preview[1]) : Number(id); };
-        const byOrder = (a, b) => order(a) - order(b);
-        if (missing.length !== first.length || [...missing, ...first.map(set => set.id)].some(id => Number.isNaN(order(id)))) return new Map<string, any>();
-        missing.sort(byOrder);
-        first.sort((a, b) => byOrder(a.id, b.id));
-        return new Map<string, any>(missing.map((id, i) => [id, first[i]]));
+        const feedRounds = new Set(feeding.map(feed => feed.round));
+        if (feedRounds.size !== 1 || missing.length !== first.length || [...missing, ...first.map(set => set.id)].some(id => Number.isNaN(Number(id)))) return hidden;
+        missing.sort((a, b) => Number(a) - Number(b));
+        [...first].sort((a, b) => Number(a.id) - Number(b.id)).forEach((set, i) => hidden.set(missing[i], set));
+        return hidden;
     }
 
     // The slot that finishes a set in `placement` (1 winner, 2 loser): the real result if the set is
