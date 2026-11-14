@@ -104,20 +104,22 @@ const unstartedVariants = {
 const laterPhase = JSON.parse(readFileSync(new URL('./fixtures/later-phase-pool.json', import.meta.url)));
 // Three real pools with byes (20, 19 and 21 players), where start.gg's set ids skip the hidden bye sets
 const byePools = JSON.parse(readFileSync(new URL('./fixtures/bye-pools.json', import.meta.url))).pools;
-// A real pool that hasn't started, whose Losers Round 1 links to a round start.gg doesn't send (phase 1011, opened by its URL only)
+// Real pools that haven't started, whose Losers Round 1 links to a round start.gg doesn't send (phase 1011, and
+// 1012 with byes, both opened by their URL only)
+const key2 = pair => [...pair].sort().join(' vs ');
 const hiddenLosers = JSON.parse(readFileSync(new URL('./fixtures/hidden-losers-round.json', import.meta.url)));
 const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004, 1006: 2008, 1007: 2009, 1008: 2010 };
 // Phase 1005 has three pools, which the app fetches as one phase. Phase 1009 (the pools with byes) is
 // opened by its URL only: it isn't in the event's phase list, so the landing page and phase menu stay the same.
 // Phase 1010 ("Progress Pools", whose players go on to phases 1005 and 1002) too: a cut pool with links
 // between its sets, a whole pool without links, and a cut pool that hasn't started.
-const poolsOf = { 1005: [2005, 2006, 2007], 1009: [2011, 2012, 2013], 1010: [2014, 2015, 2022], 1011: [2023] };
+const poolsOf = { 1005: [2005, 2006, 2007], 1009: [2011, 2012, 2013], 1010: [2014, 2015, 2022], 1011: [2023], 1012: [2024] };
 // Phases are double elimination unless listed here. 1008's sets are never asked for: the type is refused first.
 const bracketTypeOf = { 1006: 'SINGLE_ELIMINATION', 1007: 'SINGLE_ELIMINATION', 1008: 'ROUND_ROBIN' };
 const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700),
     2008: singleElimSets(800, true), 2009: singleElimSets(900, false), 2010: singleElimSets(1000, false),
     2011: byePools[0].sets, 2012: byePools[1].sets, 2013: byePools[2].sets,
-    2014: cutPoolSets(1400), 2015: poolSets(1500), 2022: notStarted(cutPoolSets(2200)), 2023: hiddenLosers.sets };
+    2014: cutPoolSets(1400), 2015: poolSets(1500), 2022: notStarted(cutPoolSets(2200)), 2023: hiddenLosers.sets, 2024: hiddenLosers.byes.sets };
 
 // What the set dialog shows beyond the score. Pool 2001's grand final was best of 5, has a YouTube video
 // that starts at 1:30 and was on a Twitch stream; start.gg gives the stream only to the dialog's own query.
@@ -696,23 +698,27 @@ try {
     }
 
     // 9b. Show Projected fills Losers Round 1 of a pool that hasn't started, though its sets link to a
-    //     hidden round start.gg doesn't send: each holds the loser of a winners round 1 set
-    {
+    //     hidden round start.gg doesn't send: each holds the loser of a winners round 1 set. With byes in
+    //     winners round 1, every projected set matches what start.gg's own Show Projected drew.
+    report.hiddenLosersRound = {};
+    for (const [name, phase, check_] of [
+        ['no byes', 1011, (got) => hiddenLosers.expectedLosersRound1Pairs.map(key2).filter(want => !got.includes(want))],
+        ['byes', 1012, (got) => { const left = [...got]; return hiddenLosers.byes.expectedProjectedPairs.map(key2).filter(want => { const i = left.indexOf(want); if (i == -1) return true; left.splice(i, 1); return false; }); }],
+    ]) {
         const { context, page, quiet } = await openPage(browser);
         await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
-        await page.goto(appUrl + eventPath + '/1011');
+        await page.goto(appUrl + eventPath + '/' + phase);
         await quiet();
         await page.waitForTimeout(1000);
         const pairs = await page.locator('.set').evaluateAll(sets => sets.map(set =>
             [...set.querySelectorAll('.set-tag')].map(tag => tag.textContent.replace(/\u200e/g, '').trim()).filter(Boolean)));
-        const key = pair => [...pair].sort().join(' vs ');
-        const got = pairs.filter(p => p.length == 2).map(key);
-        const missing = hiddenLosers.expectedLosersRound1Pairs.map(key).filter(want => !got.includes(want));
-        report.hiddenLosersRound = { sets: pairs.length, missing, errors };
-        check('unstarted pool: Show Projected fills Losers Round 1 from winners round 1\'s losers', !missing.length && !errors.length, report.hiddenLosersRound);
-        await page.screenshot({ path: 'e2e-out/hidden-losers-round-projected.png', fullPage: true }).catch(() => { });
+        const got = pairs.filter(p => p.length == 2).map(key2);
+        const missing = check_(got);
+        report.hiddenLosersRound[name] = { sets: pairs.length, missing, errors };
+        check(`unstarted pool (${name}): Show Projected fills the losers side from winners round 1's losers`, !missing.length && !errors.length, report.hiddenLosersRound[name]);
+        await page.screenshot({ path: `e2e-out/hidden-losers-round-${name.replace(' ', '-')}.png`, fullPage: true }).catch(() => { });
         await context.close();
     }
 
