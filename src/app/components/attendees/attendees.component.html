@@ -1,0 +1,164 @@
+@if (tournament()) {
+<div class="page-content">
+    <a class="back-link" [routerLink]="'/' + tournament().slug">
+        <mat-icon>chevron_left</mat-icon>
+        {{ tournament().name }}
+    </a>
+    <h1 class="page-title">Attendees</h1>
+
+    <div class="att-count" aria-live="polite">
+        <mat-icon>group</mat-icon>
+        @if (total() !== null) {
+        <span>
+            <b>{{ count(total()) }}</b>
+            @if (shown().search) {
+            {{ unit(total()) }} {{ total() === 1 ? 'matches' : 'match' }} "{{ shown().search }}"
+            } @else {
+            {{ unit(total()) }}
+            }
+            @if (shown().event) { in <b>{{ shown().event.name }}</b>}@if (shown().seeded && !shown().search) {<span>, in seed order</span>}
+        </span>
+        } @else {
+        <span>Loading attendees</span>
+        }
+    </div>
+
+    <!-- The search box and the event filter stay at the top while the list scrolls -->
+    <div class="att-controls">
+        <label class="att-field att-search" [class.has-text]="!!searchText()">
+            <mat-icon>search</mat-icon>
+            <input #box type="search" placeholder="Search by tag" autocomplete="off" spellcheck="false" maxlength="100" aria-label="Search attendees by tag"
+                [value]="searchText()" (input)="onSearchInput(box.value)" />
+            <button type="button" class="att-clear" aria-label="Clear search" (click)="clearSearch(); box.focus()"><mat-icon>close</mat-icon></button>
+        </label>
+        <label class="att-field att-event">
+            <select #picker aria-label="Event" (change)="pickEvent(picker.value)">
+                <option value="" [selected]="!event()">All events</option>
+                @for (option of tournament().events; track option.slug) {
+                <option [value]="shortSlug(option)" [selected]="option === event()">{{ option.name }}</option>
+                }
+            </select>
+            <mat-icon class="att-drop">arrow_drop_down</mat-icon>
+        </label>
+    </div>
+
+    <div class="att-list">
+        @for (row of rows(); track row.key) {
+        <div class="att-row" [class.seeded]="shown().seeded" [class.plain]="!row.socials.length && !row.rankings.length" role="button" tabindex="0"
+            [attr.aria-label]="(row.sponsor ? row.sponsor + ' ' : '') + row.tag + ', details'" (click)="openAttendee(row)" (keydown.enter)="openAttendee(row)" (keydown.space)="$event.preventDefault(); openAttendee(row)">
+            @if (shown().seeded) {
+            <span class="att-seed" [title]="row.seed ? 'Seed ' + row.seed + ' in ' + shown().event?.name : ''">{{ row.seed }}</span>
+            }
+            <span class="att-avatar" [style.background]="row.image ? null : row.color">
+                @if (row.image) {
+                <img [src]="row.image" alt="" loading="lazy" (error)="row.image = ''" />
+                } @else {
+                {{ row.initial }}
+                }
+            </span>
+            <div class="att-who">
+                <div class="att-name">
+                    @if (row.sponsor) {
+                    <span class="att-sponsor">{{ row.sponsor }}</span>
+                    }
+                    <span class="att-tag">{{ row.tag }}</span>
+                </div>
+                @if (row.socials.length || row.rankings.length) {
+                <div class="att-extras" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                    @if (row.socials.length) {
+                    <span class="att-socials">
+                        @for (social of row.socials; track social.type) {
+                        @if (social.url) {
+                        <a class="att-social" [href]="social.url" target="_blank" rel="noopener noreferrer" [title]="social.label" [attr.aria-label]="social.label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg>
+                        </a>
+                        } @else {
+                        <button type="button" class="att-social" #tip="matTooltip" [matTooltip]="copied() === social ? 'Copied ' + social.username : social.label" [attr.aria-label]="social.label + ', copy'" (click)="copy(social); tip.show()">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="social.icon" /></svg>
+                        </button>
+                        }
+                        }
+                    </span>
+                    }
+                    @if (row.rankings.length) {
+                    <span class="att-rankings">
+                        @for (ranking of row.rankings; track $index) {
+                        <button type="button" class="att-ranking" #tip="matTooltip" [matTooltip]="ranking.title" (click)="tip.show()">
+                            @if (ranking.image) {
+                            <img [src]="ranking.image" [alt]="ranking.title" width="16" height="16" loading="lazy" (error)="ranking.image = ''" />
+                            } @else {
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="rankIcon" /></svg>
+                            }
+                            {{ ranking.rank }}
+                        </button>
+                        }
+                    </span>
+                    }
+                </div>
+                }
+            </div>
+            <div class="att-events">
+                @for (entered of row.events; track entered.slug; let last = $last) {
+                <a [routerLink]="'/' + entered.slug" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">{{ entered.name }}</a>@if (!last) {, }
+                } @empty {
+                <span class="att-no-events">No events</span>
+                }
+            </div>
+        </div>
+        }
+
+        @if (!rows().length && total() === null && !failed()) {
+        <!-- The first rows are on their way -->
+        @for (i of placeholders; track i) {
+        <div class="att-skeleton" aria-hidden="true"><i class="s-av"></i><div class="s-lines"><i class="s-a"></i><i class="s-b"></i></div><i class="s-c"></i></div>
+        }
+        }
+
+        @if (!rows().length && total() !== null && !failed()) {
+        <div class="att-empty">
+            <mat-icon>search</mat-icon>
+            @if (shown().search) {
+            <div class="att-empty-title">No attendees match "{{ shown().search }}"{{ shown().event ? ' in ' + shown().event.name : '' }}</div>
+            <div class="att-empty-text">Search looks at the tags of everyone registered on start.gg. Try a shorter part of the tag.</div>
+            <div class="att-buttons">
+                <button type="button" class="att-button" (click)="clearSearch()">Clear search</button>
+                @if (shown().event) {
+                <button type="button" class="att-button" (click)="pickEvent('')">Search all events</button>
+                }
+            </div>
+            } @else {
+            <div class="att-empty-title">No attendees yet</div>
+            <div class="att-empty-text">Nobody has registered for {{ shown().event ? shown().event.name : tournament().name }} on start.gg.</div>
+            }
+        </div>
+        }
+
+        @if (rows().length && !done() && !failed()) {
+        <div #sentinel class="att-sentinel"></div>
+        @if (loading()) {
+        <div class="att-skeleton" aria-hidden="true"><i class="s-av"></i><div class="s-lines"><i class="s-a"></i><i class="s-b"></i></div><i class="s-c"></i></div>
+        <div class="att-skeleton" aria-hidden="true"><i class="s-av"></i><div class="s-lines"><i class="s-a"></i><i class="s-b"></i></div><i class="s-c"></i></div>
+        <div class="att-loader" role="status"><span class="att-spinner"></span>Loading more attendees</div>
+        }
+        }
+
+        @if (failed()) {
+        <div class="att-empty att-failed" role="alert">
+            <div class="att-empty-title">Couldn't load the attendees</div>
+            <div class="att-empty-text">{{ failed() }}</div>
+            <div class="att-buttons"><button type="button" class="att-button" (click)="retry()">Try again</button></div>
+        </div>
+        }
+    </div>
+
+    @if (rows().length && total() !== null) {
+    <p class="att-foot">
+        @if (done()) {
+        All {{ count(total()) }} shown
+        } @else {
+        Showing {{ count(loaded()) }} of {{ count(total()) }}{{ shown().teams ? ' ' + unit(total()) : '' }}
+        }
+    </p>
+    }
+</div>
+}

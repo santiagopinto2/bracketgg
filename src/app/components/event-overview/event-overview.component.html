@@ -35,7 +35,8 @@
                 }
                 <span class="meta-item">
                     <mat-icon>group</mat-icon>
-                    {{ event().numEntrants ?? 0 }} {{ event().numEntrants == 1 ? 'entrant' : 'entrants' }}
+                    <!-- The Attendees page with this event picked: its entrants in seed order -->
+                    <a class="entrants-link" [routerLink]="'/' + tournament().slug + '/attendees'" [queryParams]="{ event: shortSlug() }">{{ entrantCount() }} {{ event().numEntrants == 1 ? 'entrant' : 'entrants' }}</a>
                 </span>
             </div>
         </div>

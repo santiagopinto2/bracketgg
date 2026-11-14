@@ -1,0 +1,273 @@
+// The dialog's event blocks (the dialog around them is attendee-dialog.component.scss)
+.dlg-entry {
+    padding: 14px 16px 10px;
+    border-radius: 10px;
+    background: var(--dialog-card-bg);
+
+    & + & {
+        margin-top: 10px;
+    }
+}
+
+.dlg-entry-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.dlg-entry-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dlg-entry-name {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    max-width: 100%;
+    color: inherit;
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+
+    &:hover {
+        text-decoration: underline;
+    }
+
+    mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        opacity: 0.6;
+        margin-right: -4px;
+    }
+}
+
+.dlg-entry-sub,
+.dlg-team {
+    display: flex;
+    font-size: 0.85rem;
+    color: var(--dialog-text-muted);
+    line-height: 1.45;
+
+    b,
+    .dlg-strong {
+        font-weight: 500;
+        color: var(--dialog-text);
+    }
+}
+
+.dlg-entry-sub {
+    flex-wrap: wrap;
+    gap: 2px 8px;
+}
+
+.dlg-dot::before {
+    content: '·';
+}
+
+.dlg-team {
+    align-items: flex-start;
+    gap: 6px;
+
+    mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+}
+
+.dlg-place {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    padding-top: 1px;
+
+    small {
+        font-size: 0.72rem;
+        color: var(--dialog-text-muted);
+    }
+}
+
+.dlg-place-num {
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0;
+
+    sup {
+        font-size: 0.6em;
+    }
+}
+
+.dlg-place-1 { color: var(--place-1); }
+.dlg-place-2 { color: var(--place-2); }
+.dlg-place-3 { color: var(--place-3); }
+
+.dlg-state {
+    flex-shrink: 0;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    background: var(--chip-bg);
+
+    &.active {
+        background: var(--chip-active-bg);
+        color: var(--chip-active-text);
+    }
+}
+
+.dlg-phases {
+    margin: 10px 0 0;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--divider);
+    list-style: none;
+}
+
+// A dot per phase, joined by a line down to the next one
+.dlg-phase {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    min-height: 36px;
+    margin: 0 -8px;
+    padding: 7px 8px 7px 26px;
+    border-radius: 6px;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+        background: var(--surface-hover);
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 14px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--dialog-text-muted);
+    }
+
+    li:not(:last-child) > &::after {
+        content: '';
+        position: absolute;
+        left: 12px;
+        top: 25px;
+        bottom: -11px;
+        width: 2px;
+        background: var(--divider);
+    }
+}
+
+.dlg-phase-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.dlg-pool {
+    padding: 1px 9px;
+    border: 1px solid var(--tag-border);
+    border-radius: 11px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 18px;
+    white-space: nowrap;
+
+    .dlg-phase:hover & {
+        background: var(--tag-hover-bg);
+    }
+}
+
+.dlg-phase-time {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--dialog-text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.dlg-note,
+.dlg-none {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--dialog-text-muted);
+    line-height: 1.45;
+}
+
+.dlg-note {
+    margin-top: 10px;
+    padding: 10px 0 4px;
+    border-top: 1px solid var(--divider);
+}
+
+.dlg-none {
+    padding: 4px 0 8px;
+    font-size: 0.9rem;
+}
+
+.dlg-retry {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--link);
+    font: inherit;
+    cursor: pointer;
+}
+
+// The phases still loading
+.dlg-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 14px 0 8px;
+    border-top: 1px solid var(--divider);
+
+    i {
+        width: 60%;
+        height: 12px;
+        border-radius: 6px;
+        background: var(--skeleton);
+    }
+
+    i + i {
+        width: 45%;
+    }
+}
+
+// On a phone
+:host-context(.attendee-sheet) {
+    .dlg-entry {
+        padding: 12px 14px 8px;
+    }
+
+    .dlg-phase {
+        min-height: 40px;
+
+        &::before {
+            top: 16px;
+        }
+    }
+
+    li:not(:last-child) > .dlg-phase::after {
+        top: 27px;
+    }
+}

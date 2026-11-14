@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ViewChild, effect, ChangeDetectionStrategy } from '@angular/core';
 import { ThemeService } from './services/theme.service';
 import { StartggError, StartggService } from './services/startgg.service';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData.service';
 import { MatToolbar } from '@angular/material/toolbar';
@@ -20,7 +20,7 @@ import { isBracketPath } from './app-routing.module';
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet]
+    imports: [MatToolbar, MatIconButton, MatIcon, RouterLink, RouterLinkActive, MatSidenavContainer, MatSidenav, SearchComponent, MatNavList, MatListItem, MatSidenavContent, RouterOutlet]
 })
 export class AppComponent implements AfterViewInit {
 
@@ -159,6 +159,11 @@ export class AppComponent implements AfterViewInit {
         const images = this.tournament.images;
         if (!images?.length) return '';
         return (images.find((i: any) => i.type === 'profile') ?? images[0]).url ?? '';
+    }
+
+    // The tournament's attendees, as "4,786"
+    attendeeCount(): string {
+        return Number(this.tournament.numAttendees).toLocaleString('en-US');
     }
 
     goToAboutPage() {

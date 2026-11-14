@@ -22,14 +22,18 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                     slug
                     venueAddress
                     startAt
+                    timezone
+                    numAttendees
                     primaryContact
                     primaryContactType
                     events {
+                        id
                         name
                         slug
                         numEntrants
                         startAt
                         type
+                        state
                         videogame {
                             id
                             name
@@ -137,6 +141,146 @@ export const phaseEntrantsQuery = `query PhaseEntrants($phaseId: ID!, $page: Int
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }`;
+
+// What a row of the Attendees page shows of one attendee: tag, sponsor, picture, linked accounts,
+// rankings (of any game), and the ids of the events they entered. Nothing of their seeds or pools:
+// those cost 25 to 35 objects per attendee and load for one attendee at a time (attendeeDetailsQuery).
+const attendeeFields = `id
+                            gamerTag
+                            prefix
+                            player {
+                                rankings(limit: 3) {
+                                    rank
+                                    title
+                                }
+                            }
+                            user {
+                                images(type: "profile") {
+                                    url
+                                    width
+                                    height
+                                }
+                                authorizations(types: [TWITTER, TWITCH, DISCORD]) {
+                                    type
+                                    externalUsername
+                                    url
+                                }
+                            }
+                            events {
+                                id
+                            }`;
+
+// One page of a tournament's attendees in player id order, which puts longtime players first.
+// start.gg sorts participants by "<column> asc" for id, createdAt, checkedInAt, prefix, userId, and
+// playerId, ignores other names, and returns nothing for "gamerTag asc" (measured 2026-11-14).
+// $search looks in tags only (naming "prefix" in fieldsToSearch changes nothing); null searches nothing.
+// `ofEvent` keeps only one event's attendees ($eventId); a null id there would match nobody, so the
+// filter is in the text only when asked for.
+// About 11 objects per attendee: 50 cost 555 at the top of Genesis X's list, where players have the
+// most accounts and rankings, and 487 to 513 further down (measured 2026-11-14).
+export function attendeesQuery(ofEvent: boolean): string {
+    return `query Attendees($slug: String!, $page: Int!, $perPage: Int!, $search: String${ofEvent ? ', $eventId: ID!' : ''}) {
+                tournament(slug: $slug) {
+                    participants(query: {
+                        page: $page
+                        perPage: $perPage
+                        sortBy: "playerId asc"
+                        filter: {
+                            ${ofEvent ? 'eventIds: [$eventId]' : ''}
+                            search: {
+                                searchString: $search
+                                fieldsToSearch: ["gamerTag"]
+                            }
+                        }
+                    }) {
+                        pageInfo {
+                            total
+                        }
+                        nodes {
+                            ${attendeeFields}
+                        }
+                    }
+                }
+            }`;
+}
+
+// One page of a phase's seeds in seed order, each with its players as the Attendees page shows them.
+// sortBy "seedNum" (no direction) is the only spelling that sorts: without it seeds come in the order
+// start.gg made them, and "seedNum asc" shuffles them (measured 2026-11-14). A search keeps start.gg's
+// own order for matches. Event.entrants can't be sorted by seed at all.
+// About 18 objects per singles seed at the top of a big event (Genesis X Melee Singles: seeds 1 to 50
+// cost 880, seeds 951 to 1000 cost 552), 32 per two-player team (50 cost 1576, 25 cost 839), and 43
+// per four-player team (measured 2026-11-14).
+export const seededAttendeesQuery = `query SeededAttendees($phaseId: ID!, $page: Int!, $perPage: Int!, $search: String) {
+                phase(id: $phaseId) {
+                    seeds(query: {
+                        page: $page
+                        perPage: $perPage
+                        sortBy: "seedNum"
+                        filter: {
+                            search: {
+                                searchString: $search
+                                fieldsToSearch: ["gamerTag"]
+                            }
+                        }
+                    }) {
+                        pageInfo {
+                            total
+                        }
+                        nodes {
+                            seedNum
+                            entrant {
+                                id
+                                participants {
+                                    ${attendeeFields}
+                                }
+                            }
+                        }
+                    }
+                }
+            }`;
+
+// What the attendee dialog adds to a row: each event entry with its seed, placement, teammates, and
+// every phase the attendee is in, with their pool and its start time. One request per attendee,
+// 10 to 20 objects per event entered (at Genesis X, Hungrybox with 3 events and 9 phases: 56; mallow with 5 events: 50;
+// measured 2026-11-14). The phases come in no useful order, and `phaseOrder` alone is unreliable
+// (Genesis X Melee Singles: R1 Pools 1, R2 Pools 5, Top 64 3, Top 8 4), so the dialog sorts them by
+// their pool's start time and uses `phaseOrder` only to place a pool that has none.
+export const attendeeDetailsQuery = `query AttendeeDetails($id: ID!) {
+                participant(id: $id) {
+                    id
+                    entrants {
+                        id
+                        name
+                        initialSeedNum
+                        event {
+                            id
+                        }
+                        standing {
+                            placement
+                            isFinal
+                        }
+                        participants {
+                            id
+                            gamerTag
+                        }
+                        seeds {
+                            seedNum
+                            phase {
+                                id
+                                name
+                                groupCount
+                                phaseOrder
+                            }
+                            phaseGroup {
+                                id
+                                displayIdentifier
+                                startAt
                             }
                         }
                     }
@@ -376,6 +520,10 @@ export function allQueries(): string[] {
         eventPhasesQuery,
         phaseEntrantsQuery,
         phaseProgressionsQuery,
+        attendeesQuery(false),
+        attendeesQuery(true),
+        seededAttendeesQuery,
+        attendeeDetailsQuery,
         ...overviews,
         phaseQuery,
         poolSetsQuery,

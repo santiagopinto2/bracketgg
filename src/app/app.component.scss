@@ -79,8 +79,42 @@
     color: var(--text-muted);
 }
 
-.home-section {
+// Attendees, under Home: an icon where Home has the tournament's picture, and the count on the right
+.attendees-link {
     margin-bottom: 16px;
+
+    // The page that is open
+    &.attendees-active {
+        background: var(--surface-hover);
+        box-shadow: inset 3px 0 0 var(--brand);
+    }
+}
+
+.attendees-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+}
+
+.attendees-icon {
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    opacity: 0.85;
+}
+
+.attendees-text {
+    flex: 1 1 auto;
+}
+
+.attendees-count {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
 }
 
 .home-image {

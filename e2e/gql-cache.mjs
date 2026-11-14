@@ -13,7 +13,7 @@ const report = { checks: [] };
 const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail });
 
 const allowed = await loadAllowlist();
-check('the allowlist holds every query the app can send', allowed.size === 4 + 8 + 1 + 1 + Q.MAX_POOL_SLICES + Q.MAX_SET_SCORES + 1 && allowed.has(Q.tournamentQuery) && allowed.has(Q.setDetailsQuery) && allowed.has(Q.setScoresQuery(37)) && allowed.has(Q.poolSlicesQuery(Q.MAX_POOL_SLICES)), allowed.size);
+check('the allowlist holds every query the app can send', allowed.size === 4 + 4 + 8 + 1 + 1 + Q.MAX_POOL_SLICES + Q.MAX_SET_SCORES + 1 && allowed.has(Q.tournamentQuery) && allowed.has(Q.attendeesQuery(true)) && allowed.has(Q.attendeeDetailsQuery) && allowed.has(Q.setDetailsQuery) && allowed.has(Q.setScoresQuery(37)) && allowed.has(Q.poolSlicesQuery(Q.MAX_POOL_SLICES)), allowed.size);
 // Pool slices are set results, which stay fresh for 15 s like any other
 const sliceTtls = Array.from({ length: Q.MAX_POOL_SLICES }, (_, i) => ttlMs(Q.poolSlicesQuery(i + 1)));
 // The set dialog's stream and accounts rarely change; set scores looked up by id stay live

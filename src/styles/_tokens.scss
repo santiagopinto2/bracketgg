@@ -27,6 +27,8 @@ $dark: (
     surface-text: #fff,
     surface-text-muted: rgb(197, 197, 197),
     placeholder-bg: rgb(63, 63, 63),
+    // The gray bars that stand in for rows still loading
+    skeleton: rgba(255, 255, 255, 0.09),
 
     // Small labels. chip: an event's or phase's state. tag: a small clickable label, like a link
     // to the next phase beside a set.
@@ -85,6 +87,8 @@ $dark: (
     // winner's ring and a won game's edge, with win-text for the same green as text and win-tint
     // for the fade across a won game. The video colors lie over a thumbnail, so both themes share them.
     dialog-bg: #424242,
+    // The attendee dialog's event blocks
+    dialog-card-bg: rgb(87, 87, 87),
     dialog-inset: #383838,
     dialog-line: rgba(255, 255, 255, 0.1),
     dialog-text: #ffffff,
@@ -127,6 +131,7 @@ $light: (
     surface-text: #1c1e21,
     surface-text-muted: #5f6672,
     placeholder-bg: #e4e7eb,
+    skeleton: rgba(16, 24, 40, 0.08),
 
     chip-bg: #e4e7eb,
     chip-active-bg: #15803d,
@@ -175,6 +180,7 @@ $light: (
     upset-10: #bfa0ea,
 
     dialog-bg: #fff,
+    dialog-card-bg: #f3f4f6,
     dialog-inset: #f1f2f4,
     dialog-line: rgba(0, 0, 0, 0.1),
     dialog-text: #1c1e21,

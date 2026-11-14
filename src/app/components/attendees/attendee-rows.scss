@@ -1,0 +1,224 @@
+// The list and its rows (the page around them is attendees.component.scss)
+.att-list {
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--surface-shadow);
+    color: var(--surface-text);
+    overflow: hidden;
+    container-type: inline-size;
+}
+
+.att-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 66px;
+    padding: 10px 16px;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--surface-hover);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--link);
+        outline-offset: -2px;
+    }
+}
+
+.att-row + .att-row,
+.att-skeleton + .att-skeleton,
+.att-row ~ .att-skeleton,
+.att-loader {
+    border-top: 1px solid var(--divider);
+}
+
+.att-seed {
+    flex: 0 0 34px;
+    margin-left: -4px;
+    text-align: right;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--surface-text-muted);
+}
+
+.att-avatar {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--avatar-text);
+    font-size: 22px;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+.att-who {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.att-name {
+    display: flex;
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 22px;
+}
+
+.att-sponsor {
+    color: var(--surface-text-muted);
+    padding-right: 6px;
+    flex: 0 10000 auto;
+    min-width: 22px;
+}
+
+.att-tag {
+    font-weight: 700;
+    flex: 0 1 auto;
+}
+
+.att-sponsor,
+.att-tag {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.att-extras {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    min-height: 18px;
+    align-self: flex-start;
+}
+
+.att-socials,
+.att-rankings {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.att-social,
+.att-ranking {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.att-social {
+    color: var(--surface-text-muted);
+    cursor: pointer;
+
+    svg {
+        width: 15px;
+        height: 15px;
+        fill: currentColor;
+    }
+
+    &:hover {
+        color: var(--surface-text);
+    }
+}
+
+// A ranking is its series' logo (or a trophy) and the rank; its name is the tooltip
+.att-ranking {
+    gap: 3px;
+    color: inherit;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.3;
+    cursor: default;
+
+    svg {
+        width: 14px;
+        height: 14px;
+        fill: var(--rank-icon);
+    }
+}
+
+.att-events {
+    flex: 0 1 44%;
+    min-width: 0;
+    text-align: right;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--surface-text-muted);
+
+    a {
+        color: var(--link);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+// A narrow list (a phone): the events go under the name
+@container (max-width: 560px) {
+    .att-row {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 0 12px;
+        padding: 12px 14px;
+    }
+
+    .att-avatar {
+        margin-top: 1px;
+    }
+
+    .att-who {
+        flex: 1 1 0;
+    }
+
+    .att-seed {
+        flex-basis: 26px;
+        margin-left: -6px;
+        line-height: 46px;
+    }
+
+    .att-events {
+        flex: 1 1 100%;
+        text-align: left;
+        padding-left: 56px;
+        margin-top: 5px;
+    }
+
+    .seeded .att-events {
+        padding-left: 88px;
+    }
+
+    // Room for a thumb on the social links and the rankings
+    .att-social,
+    .att-ranking {
+        margin: -6px;
+        padding: 6px;
+    }
+
+    .att-socials,
+    .att-rankings {
+        gap: 15px;
+    }
+
+    .plain .att-who {
+        align-self: center;
+    }
+}

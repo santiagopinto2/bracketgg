@@ -3,7 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { StartggService } from 'src/app/services/startgg.service';
-import { socials } from '../event-overview/event-overview.component';
+import { socials } from 'src/app/services/player-extras';
 import { webLink, youtubePlayer, youtubeThumbnail, youtubeVideo } from './video';
 
 // start.gg's numbers for a set's state (ActivityState)
