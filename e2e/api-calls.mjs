@@ -2161,7 +2161,7 @@ try {
                 report.setDialog.rightWinner = { scores: right.scores, arrow: right.arrow, players: right.players.map(player => player.result), foot: right.foot };
                 check('set dialog: when the right side won, the arrow points right, nudged 1 px that way; with no time or stream there is no footer',
                     same(right.scores, ['0', '2']) && right.arrow.icon === 'arrow_right' && right.arrow.nudge === 'matrix(1, 0, 0, 1, 1, 0)' && same(right.players.map(player => player.result), ['lost', 'won']) && right.foot === null
-                    && right.note === 'The tournament reported the score only, so there are no games, characters or stages to show.', report.setDialog.rightWinner);
+                    && right.note === 'The tournament reported the score only, so there are no games, characters, or stages to show.', report.setDialog.rightWinner);
                 await close(page);
 
                 // A disqualification
