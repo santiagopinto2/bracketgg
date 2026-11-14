@@ -22,7 +22,9 @@ const decodeEntities = text => text.replace(/&quot;/g, '"').replace(/&#39;/g, "'
 
 // The page's Content Security Policy. index.html's own inline scripts (the iPhone zoom fix) and inline
 // event handlers (the build's onload that switches the stylesheet on) are allowed by their hashes;
-// no other script runs. Material and the build's inlined critical CSS need inline styles.
+// no other script runs. Material and the build's inlined critical CSS need inline styles. The only
+// frame is the set dialog's video, YouTube's player from its no-cookie address; its thumbnail
+// (i.ytimg.com) is one of the https images.
 function contentSecurityPolicy(html) {
     const scripts = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => sha256(m[1]));
     const handlers = [...html.matchAll(/<[^>]+?\son[a-z]+=(?:"([^"]*)"|'([^']*)')/gi)].map(m => sha256(decodeEntities(m[1] ?? m[2])));
@@ -34,6 +36,7 @@ function contentSecurityPolicy(html) {
         "font-src 'self' data: https://fonts.gstatic.com",
         "img-src 'self' data: https:",
         "connect-src 'self'",
+        "frame-src https://www.youtube-nocookie.com",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",

@@ -21,6 +21,9 @@ const shots = eventPath => ({
     'double-elim': { path: eventPath + '/1001' },
     'single-elim': { path: eventPath + '/1006' },
     'set-popup': { path: eventPath + '/1001', act: page => page.locator('.set', { hasText: 'Delta' }).filter({ hasText: 'Alpha' }).first().click() },
+    // A set with a video, its start time and a stream, and a set nobody has played yet
+    'set-popup-video': { path: eventPath + '/1001', act: page => page.locator('.set[data-set-id="106"]').click() },
+    'set-popup-unplayed': { path: eventPath + '/1006', act: page => page.locator('.set[data-set-id="803"]').click() },
     'phase-menu': { path: eventPath + '/1001', act: page => page.locator('.phase-menu-button').click() },
     tournament: { path: '/tournament/test-tourney' },
     search: { path: eventPath + '/1001', act: async page => {

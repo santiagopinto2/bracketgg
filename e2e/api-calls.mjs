@@ -116,6 +116,12 @@ const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVarian
     2011: byePools[0].sets, 2012: byePools[1].sets, 2013: byePools[2].sets,
     2014: cutPoolSets(1400), 2015: poolSets(1500), 2022: notStarted(cutPoolSets(2200)) };
 
+// What the set dialog shows beyond the score. Pool 2001's grand final was best of 5, has a YouTube video
+// that starts at 1:30 and was on a Twitch stream; start.gg gives the stream only to the dialog's own query.
+Object.assign(setsOf[2001].find(set => set.id === 106), { state: 3, totalGames: 5, startedAt: 1794003600, completedAt: 1794005400, vodUrl: 'https://www.youtube.com/watch?v=testvideo01&t=1m30s' });
+const setDialogFields = ['state', 'totalGames', 'startedAt', 'completedAt', 'vodUrl'];
+const streamOf = { 106: { streamName: 'teststream', streamSource: 'TWITCH' } };
+
 // The event's landing page: the top 8 of a 60-entrant event, with start.gg's tied placements (5th, 5th, 7th, 7th).
 // Alpha has a sponsor and Bravo an avatar; everyone else gets a colored initial.
 const phaseNames = { 1001: 'Pools', 1002: 'Top 4', 1003: 'Unstarted Pool', 1004: 'Later Phase', 1005: 'Three Pools', 1006: 'Single Elim', 1007: 'Single Elim, No 3rd Place', 1008: 'Round Robin' };
@@ -204,6 +210,7 @@ function kindOf(query) {
     if (query.includes('phase(id') && query.includes('slots')) return 'phaseSets';
     if (query.includes('phase(id')) return 'phase';
     if (query.includes('phaseGroup(id')) return 'sets';
+    if (query.includes('set(id') && query.includes('authorizations')) return 'setDetails';
     if (query.includes('set(id')) return 'setScores';
     return 'other';
 }
@@ -218,6 +225,7 @@ function asQueried(set, query) {
             : set.slots.map((slot, i) => `${slot.entrant.name} ${scores[i]}`).join(' - ');
     }
     if (!query.includes('standing')) for (const slot of set.slots) delete slot.standing;
+    if (!query.includes('vodUrl')) for (const field of setDialogFields) delete set[field];
     return set;
 }
 const allSets = () => Object.values(setsOf).flat();
@@ -294,6 +302,14 @@ function answer(query) {
                 .map(({ bye, unreachable, ...set }) => asQueried(set, query));
             return { data: { phaseGroup: { sets: { nodes } } } };
         }
+        case 'setDetails': {
+            // The set dialog's own query: the set's stream, and each player's X and Twitch accounts
+            const id = query.match(/set\(id: "?(\d+)"?\)/)?.[1];
+            const set = allSets().find(set => String(set.id) === id);
+            const accounts = entrantId => (socialsOf[entrantId] ?? []).filter(a => a.type !== 'DISCORD').map(({ type, externalUsername }) => ({ type, externalUsername }));
+            return { data: { set: set ? { stream: streamOf[id] ?? null, slots: set.slots.map(slot =>
+                ({ entrant: slot.entrant ? { id: slot.entrant.id, participants: [{ user: { authorizations: accounts(slot.entrant.id) } }] } : null })) } : null } };
+        }
         case 'setScores': {
             // Aliased lookups: s0: set(id: "101") { slots { standing { ... } } }
             const data = {};
@@ -329,6 +345,16 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
         localStorage.setItem('oauth_token_expiry', String(Date.now() + 7 * 86400000));
     });
     await context.route(/\/api\/auth\/(session|theme)$/, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ loggedIn }) }));
+    // YouTube stays inside the test: a drawn picture for every thumbnail (a video named nomaxres… has no
+    // sharp one) and a page that says it is the player. `outside` lists what was asked for.
+    const outside = [];
+    await context.route(/^https:\/\/([\w-]+\.)*(ytimg\.com|youtube\.com|youtube-nocookie\.com|youtu\.be)\//, route => {
+        const url = route.request().url();
+        outside.push(url);
+        if (!url.includes('ytimg.com')) return route.fulfill({ status: 200, contentType: 'text/html', body: '<body style="margin:0;height:100vh;display:grid;place-items:center;background:#111;color:#ccc;font:16px sans-serif">YouTube player</body>' });
+        if (url.includes('/nomaxres') && url.includes('maxresdefault')) return route.fulfill({ status: 404, body: '' });
+        return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"><rect width="1280" height="720" fill="#24506e"/><circle cx="330" cy="360" r="170" fill="#d98b2b"/><rect x="760" y="210" width="330" height="300" fill="#7a3fa0"/></svg>' });
+    });
     const page = await context.newPage();
     const log = [];
     let pending = 0;
@@ -358,7 +384,7 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
         }
         return false;
     };
-    return { context, page, log, quiet };
+    return { context, page, log, quiet, outside };
 }
 
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
@@ -493,11 +519,12 @@ try {
             await page.waitForTimeout(300);
             await page.locator('.set', { hasText: 'Bravo' }).filter({ hasText: 'Charlie' }).first().click();
             await page.waitForTimeout(800);
-            const dialog = await avatars('mat-dialog-container .entrant-set-image img');
+            const dialog = { pictures: await avatars('mat-dialog-container .avatar img'), initials: (await page.locator('mat-dialog-container .avatar:not(:has(img))').allTextContents()).map(t => t.trim()) };
             report.avatars = { bracket: bracket.length, search, dialog, errors };
             check('avatars: Bravo\'s profile picture, as a portrait, in each of their 4 sets, and no other picture', allBravo(bracket, 4), bracket);
             check('search: typing finds the player, with their picture', JSON.stringify(search.options) === JSON.stringify(['Bravo']) && allBravo(search.avatars, 1), search);
-            check('set dialog: Bravo\'s profile picture, and the colored initial for the other player', allBravo(dialog, 1) && !errors.length, report.avatars);
+            check('set dialog: Bravo\'s profile picture, and the colored initial for the other player',
+                dialog.pictures.length === 1 && dialog.pictures[0].src === profile && JSON.stringify(dialog.initials) === '["C"]' && !errors.length, report.avatars);
         } catch (e) {
             report.avatars = { crashed: String(e.message).slice(0, 300), errors };
             check('avatars in the bracket, the search and the set dialog', false, report.avatars);
@@ -813,8 +840,8 @@ try {
         // In the popup for set 101 (Alpha vs Delta): two icons per side in game 1, only Delta's in game 2
         await page.locator('.set', { hasText: 'Delta' }).filter({ hasText: 'Alpha' }).first().click();
         await page.waitForTimeout(800);
-        const games = await page.locator('mat-dialog-content mat-card-content > div').evaluateAll(games => games.map(game =>
-            [...game.querySelectorAll('.game-icon')].map(side => [...side.querySelectorAll('img')].map(img => img.getAttribute('src').match(/\/(\d+)-/)[1]))));
+        const games = await page.locator('mat-dialog-container .game').evaluateAll(games => games.map(game =>
+            [...game.querySelectorAll('.side')].map(side => [...side.querySelectorAll('.char img')].map(img => img.getAttribute('src').match(/\/(\d+)-/)[1]))));
         report.characterPicks = { bracket: bracket.slice(0, 3), games, errors };
         const popupOk = JSON.stringify(games) === JSON.stringify([[['1', '1'], ['4', '4']], [[], ['4']]]);
         check('character picks: each side shows its own picks, doubles shows both, missing ones skipped', bracketOk && popupOk && !errors.length, report.characterPicks);
@@ -945,15 +972,16 @@ try {
         }));
         const want = ['Alpha 2 - Delta 0', 'Bravo 0 - Charlie DQ', 'Alpha 2 - Bravo 0', 'Bravo 2 - Charlie 1', 'Delta 0 - Charlie 2', 'Alpha 3 - Bravo 1'];
         const requests = count(log);
-        // The set's dialog says DQ too, not -1
+        // The set's dialog says DQ too, not -1, with a check for the side that went through
         await page.locator('.set', { hasText: 'DQ' }).first().click();
-        const dialogScores = await page.locator('mat-dialog-container .entrant-score').allTextContents()
+        await page.locator('mat-dialog-container .num').first().waitFor();
+        const dialogScores = await page.locator('mat-dialog-container .num').allTextContents()
             .then(scores => scores.map(score => score.trim()));
         await page.keyboard.press('Escape');
         report.displayScore = { shown, requests, errors, dialogScores };
         check('scores read from displayScore; an unreadable one is looked up once; DQ shows, in the bracket and the set dialog',
             want.every(w => shown.includes(w)) && requests.setScores === 1 && requests.sets === 1 && !errors.length
-            && JSON.stringify(dialogScores) === '["0","DQ"]', report.displayScore);
+            && JSON.stringify(dialogScores) === '["check","DQ"]', report.displayScore);
         await context.close();
     }
 
@@ -1959,6 +1987,331 @@ try {
             check('light and dark themes', false, report.theme);
         }
         await context.close();
+    }
+    // 24. The set dialog. Its top line names the phase, event and tournament; the score is plain numbers
+    //     with an arrow at the winner; the players' X and Twitch arrive from one small request when it
+    //     opens; a YouTube video is a thumbnail until tapped, then YouTube's no-cookie player (allowed by
+    //     the server's Content-Security-Policy); and the footer has the start time and the stream.
+    //     Also a disqualification, sets not played yet, the light theme and the phone's bottom sheet.
+    {
+        const character = name => ({ name, images: [{ type: 'stockIcon', url: `https://icons.test/${name}.svg` }] });
+        const pick = (entrantId, name) => ({ entrant: { id: entrantId }, character: character(name) });
+        // Pool 2001 with more to show: the grand final (Alpha 3 - Bravo 1) has its games, with picks out
+        // of order, a character switch and a game without a stage. Set 101 has a video that isn't on
+        // YouTube, set 102 is a disqualification, set 103's video has no sharp thumbnail, and set 105's
+        // "video" is not a web link.
+        const dress = body => {
+            for (const set of body.data.phaseGroup.sets.nodes) {
+                if (set.id === 106) set.games = [
+                    { winnerId: 1, stage: { name: 'Battlefield' }, selections: [pick(2, 'Sheik'), pick(1, 'Fox')] },
+                    { winnerId: 2, stage: { name: 'Dream Land' }, selections: [pick(1, 'Fox'), pick(2, 'Sheik')] },
+                    { winnerId: 1, stage: null, selections: [pick(1, 'Falco'), pick(2, 'Sheik')] },
+                    { winnerId: 1, stage: { name: 'Final Destination' }, selections: [pick(1, 'Falco'), pick(2, 'Sheik')] },
+                ];
+                if (set.id === 101) Object.assign(set, { totalGames: 3, vodUrl: 'https://www.twitch.tv/videos/123456' });
+                if (set.id === 102) set.displayScore = 'DQ';
+                if (set.id === 103) set.vodUrl = 'https://youtu.be/nomaxres001';
+                if (set.id === 105) set.vodUrl = 'javascript:alert(1)';
+            }
+            return body;
+        };
+        // The details of set 101 fail
+        const respond = q => kindOf(q) === 'sets' && q.includes('phaseGroup(id: 2001)') ? { body: dress(answer(q)) }
+            : kindOf(q) === 'setDetails' && /set\(id: "?101"?\)/.test(q) ? { status: 500, body: { errors: [{ message: 'no details today' }] } } : null;
+        const icons = page => page.route('https://icons.test/**', route => route.fulfill({ status: 200, contentType: 'image/svg+xml',
+            body: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="14" fill="${route.request().url().includes('Sheik') ? '#7d8fd6' : route.request().url().includes('Falco') ? '#4a6fd0' : '#d98b2b'}"/></svg>` }));
+
+        // What the open dialog shows
+        const shown = page => page.locator('mat-dialog-container').evaluate(dialog => {
+            const all = (selector, root = dialog) => [...root.querySelectorAll(selector)];
+            const text = (selector, root = dialog) => (root.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+            const arrow = dialog.querySelector('.arrow');
+            return {
+                crumbs: text('.crumbs'), title: text('.round-name'), chip: text('.chip'), chipProjected: !!dialog.querySelector('.chip.projected'),
+                players: all('.player').map(player => ({
+                    names: all('.name', player).map(name => name.textContent.trim()), sponsor: text('.sponsor', player),
+                    result: ['won', 'lost', 'unknown', 'is-projected'].filter(name => player.classList.contains(name)).join(' '),
+                    winner: !!player.querySelector('.wintag'), seed: text('.seed', player), used: all('.used img', player).map(image => image.alt),
+                    avatars: all('.avatar', player).map(avatar => avatar.querySelector('img') ? 'picture' : avatar.textContent.trim()),
+                    links: all('.links a', player).map(link => `${link.getAttribute('aria-label')}|${link.href}`),
+                })),
+                scores: all('.num').map(score => score.textContent.trim()),
+                scoreBoxes: all('.num').map(score => getComputedStyle(score).backgroundColor + ' ' + getComputedStyle(score).borderTopWidth),
+                arrow: { icon: arrow.textContent.trim(), nudge: getComputedStyle(arrow).transform },
+                caption: text('.bestof'),
+                video: {
+                    thumbnail: dialog.querySelector('.vplayer img')?.getAttribute('src') ?? null,
+                    frame: dialog.querySelector('.vplayer iframe')?.getAttribute('src') ?? null,
+                    links: all('.pmeta a').map(link => `${link.textContent.replace('open_in_new', '').trim()}|${link.href}`),
+                },
+                games: all('.game').map(game => `${text('.g', game)}, ${text('.st', game) || 'no stage line'}: ` + all('.side', game).map(side =>
+                    all('.char img', side).map(image => image.alt).join('+') + (side.querySelector('.sw') ? ' (switch)' : '') + (side.querySelector('.won') && side.classList.contains('win') ? ' ✓' : '')).join(' | ')),
+                note: text('.note > span:last-child'),
+                foot: dialog.querySelector('.foot') ? { time: text('.foot .time').replace(/^schedule\s*/, ''), stream: text('.foot .stream'), streamLink: dialog.querySelector('a.stream')?.href ?? null } : null,
+                startggLinks: all('a[href*="start.gg"]').length,
+                mentionsStartgg: /start\.gg/i.test(dialog.textContent),
+            };
+        });
+        // The dialog's colors, and how its text reads on them: each text's contrast with what is behind it
+        const colors = page => page.locator('mat-dialog-container').evaluate(dialog => {
+            const parse = color => { const [r, g, b, a = 1] = color.match(/[\d.]+/g).map(Number); return { r, g, b, a }; };
+            const over = (top, bottom) => ({ r: top.r * top.a + bottom.r * (1 - top.a), g: top.g * top.a + bottom.g * (1 - top.a), b: top.b * top.a + bottom.b * (1 - top.a), a: 1 });
+            const luminance = ({ r, g, b }) => {
+                const [x, y, z] = [r, g, b].map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+                return 0.2126 * x + 0.7152 * y + 0.0722 * z;
+            };
+            const surface = parse(getComputedStyle(dialog.querySelector('app-set')).backgroundColor);
+            const inset = parse(getComputedStyle(dialog.querySelector('.game')).backgroundColor);
+            const contrast = (selector, background) => {
+                const el = dialog.querySelector(selector);
+                if (!el) return null;
+                const [a, b] = [luminance(over(parse(getComputedStyle(el).color), background)), luminance(background)].sort((x, y) => y - x);
+                return Math.round((a + 0.05) / (b + 0.05) * 100) / 100;
+            };
+            return {
+                surface: getComputedStyle(dialog.querySelector('app-set')).backgroundColor,
+                panel: getComputedStyle(dialog.querySelector('.mat-mdc-dialog-surface')).backgroundColor,
+                contrast: {
+                    crumbs: contrast('.crumbs', surface), title: contrast('.title', surface), winnerName: contrast('.player.won .name', surface), loserName: contrast('.player.lost .name', surface),
+                    seed: contrast('.seed', surface), winnerTag: contrast('.wintag', surface), score: contrast('.num', surface), caption: contrast('.bestof', surface),
+                    gameLabel: contrast('.mid .g', inset), stage: contrast('.mid .st', inset), losingCharacter: contrast('.side:not(.win) .cname', inset), footer: contrast('.foot', surface), footerStream: contrast('.foot b', surface),
+                },
+            };
+        });
+        const readable = contrast => Object.values(contrast).every(ratio => ratio !== null && ratio >= 4.5);
+        const open = async (page, setId) => {
+            await page.locator(`.set[data-set-id="${setId}"]`).click();
+            await page.locator('mat-dialog-container .set-dialog').waitFor();
+        };
+        const close = async page => {
+            await page.keyboard.press('Escape');
+            await page.locator('mat-dialog-container').waitFor({ state: 'detached' });
+        };
+        const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+        const video = 'testvideo01';
+        report.setDialog = {};
+
+        // Desktop, dark
+        {
+            const { context, page, log, quiet, outside } = await openPage(browser, respond, { viewport: { width: 1280, height: 1000 } }, { fonts: true });
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            page.on('console', message => { if (/Content Security Policy/i.test(message.text())) errors.push(message.text().slice(0, 200)); });
+            try {
+                await icons(page);
+                await page.goto(appUrl + eventPath + '/1001');
+                await quiet();
+                const mark = log.length;
+                await open(page, 106);
+                await quiet(600);
+                await page.waitForFunction(() => [...document.querySelectorAll('mat-dialog-container img')].every(image => image.complete), null, { timeout: 5000 }).catch(() => { });
+                const full = await shown(page);
+                const dark = await colors(page);
+                const requests = count(log, mark);
+                const beforeTap = [...outside];
+                await page.screenshot({ path: 'e2e-out/set-dialog-desktop-dark.png' }).catch(() => { });
+                report.setDialog.full = { ...full, requests, beforeTap, dark };
+
+                check('set dialog: the phase, event and tournament above the round, with the set\'s state',
+                    full.crumbs === 'Pools · Test Event · Test Tourney' && full.title === 'Grand Final' && full.chip === 'Completed', full);
+                check('set dialog: each player\'s name, picture or initial, Winner badge, seed and characters',
+                    same(full.players.map(({ links, ...player }) => player), [
+                        { names: ['Alpha'], sponsor: '', result: 'won', winner: true, seed: 'Seed 1', used: ['Fox', 'Falco'], avatars: ['A'] },
+                        { names: ['Bravo'], sponsor: '', result: 'lost', winner: false, seed: 'Seed 2', used: ['Sheik'], avatars: ['picture'] },
+                    ]), full.players);
+                check('set dialog: one small request on open brings X and Twitch, with no link to a start.gg profile',
+                    requests.total === 1 && requests.setDetails === 1 && same(full.players.map(player => player.links), [['X: AlphaSSB|https://x.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV'], []])
+                    && full.startggLinks === 0 && !full.mentionsStartgg, { requests, links: full.players.map(player => player.links) });
+                check('set dialog: plain numbers with no box, the arrow at the winner and nudged 1 px toward them, and "Final · Best of 5" under it',
+                    same(full.scores, ['3', '1']) && full.scoreBoxes.every(box => box === 'rgba(0, 0, 0, 0) 0px') && full.arrow.icon === 'arrow_left' && full.arrow.nudge === 'matrix(1, 0, 0, 1, -1, 0)'
+                    && full.caption === 'Final · Best of 5', { scores: full.scores, boxes: full.scoreBoxes, arrow: full.arrow, caption: full.caption });
+                check('set dialog: every game with its characters, stage and a check on the winning side',
+                    same(full.games, ['Game 1, Battlefield: Fox ✓ | Sheik', 'Game 2, Dream Land: Fox | Sheik ✓', 'Game 3, Stage not reported: Falco (switch) ✓ | Sheik', 'Game 4, Final Destination: Falco ✓ | Sheik']) && full.note === '', full.games);
+                check('set dialog: the footer has the start time and the stream with its link, and nothing about start.gg',
+                    /^\w{3}, Nov \d+( · |, 2026 · )\d+:\d\d [AP]M$/.test(full.foot?.time ?? '') && full.foot.stream === 'Streamed on teststream (Twitch)' && full.foot.streamLink === 'https://twitch.tv/teststream', full.foot);
+                check('set dialog: a YouTube video shows its thumbnail, and nothing else loads from YouTube before a tap',
+                    full.video.thumbnail === `https://i.ytimg.com/vi/${video}/maxresdefault.jpg` && full.video.frame === null && same(beforeTap, [`https://i.ytimg.com/vi/${video}/maxresdefault.jpg`]) && same(full.video.links, []), { video: full.video, beforeTap });
+                check('set dialog, dark: the dialog\'s own surface color and readable text (4.5 to 1)', dark.surface === 'rgb(66, 66, 66)' && dark.panel === dark.surface && readable(dark.contrast), dark);
+
+                // A tap loads YouTube's player, at the video's start time, in the thumbnail's place
+                const box = await page.locator('.vplayer').boundingBox();
+                await page.locator('.vplayer').click();
+                await page.locator('.vplayer iframe').waitFor();
+                await page.waitForTimeout(800);
+                const playing = { ...(await shown(page)).video, loaded: outside.slice(beforeTap.length), frames: page.frames().map(frame => frame.url()).filter(url => url.includes('youtube')),
+                    sameBox: same(box, await page.locator('.vplayer').boundingBox()), fullWidth: Math.round(box.width) === Math.round((await page.locator('mat-dialog-container').boundingBox()).width) };
+                await page.screenshot({ path: 'e2e-out/set-dialog-desktop-dark-playing.png' }).catch(() => { });
+                const player = `https://www.youtube-nocookie.com/embed/${video}?autoplay=1&start=90`;
+                report.setDialog.playing = playing;
+                check('set dialog: a tap swaps the thumbnail for YouTube\'s no-cookie player, which the page\'s Content-Security-Policy lets load',
+                    playing.frame === player && playing.thumbnail === null && same(playing.loaded, [player]) && same(playing.frames, [player]) && playing.sameBox && playing.fullWidth && !errors.length, { playing, errors });
+
+                // Opened again: the details are reused, and the video is a thumbnail again
+                await close(page);
+                await open(page, 106);
+                await quiet(600);
+                const again = await shown(page);
+                report.setDialog.again = { requests: count(log, mark), links: again.players[0].links, video: again.video };
+                check('set dialog: opening the same set again asks for nothing new', count(log, mark).total === 1 && again.players[0].links.length === 2 && again.video.frame === null, report.setDialog.again);
+                await close(page);
+
+                // The right-hand side won: the arrow points right, nudged the other way
+                await open(page, 104);
+                const right = await shown(page);
+                report.setDialog.rightWinner = { scores: right.scores, arrow: right.arrow, players: right.players.map(player => player.result), foot: right.foot };
+                check('set dialog: when the right side won, the arrow points right, nudged 1 px that way; with no time or stream there is no footer',
+                    same(right.scores, ['0', '2']) && right.arrow.icon === 'arrow_right' && right.arrow.nudge === 'matrix(1, 0, 0, 1, 1, 0)' && same(right.players.map(player => player.result), ['lost', 'won']) && right.foot === null
+                    && right.note === 'The tournament reported the score only, so there are no games, characters or stages to show.', report.setDialog.rightWinner);
+                await close(page);
+
+                // A disqualification
+                await open(page, 102);
+                const dq = await shown(page);
+                await page.screenshot({ path: 'e2e-out/set-dialog-dq.png' }).catch(() => { });
+                report.setDialog.dq = { scores: dq.scores, arrow: dq.arrow, caption: dq.caption, note: dq.note, chip: dq.chip };
+                check('set dialog: a disqualification shows a check and DQ, with a line saying who advances',
+                    same(dq.scores, ['check', 'DQ']) && dq.arrow.icon === 'arrow_left' && dq.caption === 'Disqualification' && dq.note === 'Charlie was disqualified. Bravo advances without playing.' && dq.chip === 'Completed', report.setDialog.dq);
+                await close(page);
+
+                // A video that isn't on YouTube is only a link, and the failed details hide the icons without a message
+                await open(page, 101);
+                await quiet(600);
+                const other = await shown(page);
+                report.setDialog.otherVideo = { video: other.video, links: other.players.map(player => player.links), caption: other.caption, snackbar: await snackText(page), errors: [...errors] };
+                check('set dialog: a video elsewhere is an "Open video" link, and when the accounts can\'t be loaded the icons stay away with no error',
+                    same(other.video, { thumbnail: null, frame: null, links: ['Open video|https://www.twitch.tv/videos/123456'] }) && other.players.every(player => !player.links.length)
+                    && other.caption === 'Final · Best of 3' && !/details|error/i.test(report.setDialog.otherVideo.snackbar) && !errors.length, report.setDialog.otherVideo);
+                await close(page);
+
+                // A video without the sharp thumbnail falls back to the one every video has
+                const seen = outside.length;
+                await open(page, 103);
+                await page.waitForFunction(() => document.querySelector('.vplayer img')?.getAttribute('src')?.includes('hqdefault'), null, { timeout: 5000 }).catch(() => { });
+                const fallback = { thumbnail: (await shown(page)).video.thumbnail, asked: outside.slice(seen) };
+                await close(page);
+                // And a "video" that is not a web link shows nothing
+                await open(page, 105);
+                const notALink = (await shown(page)).video;
+                await close(page);
+                report.setDialog.thumbnails = { fallback, notALink };
+                check('set dialog: a video without a sharp thumbnail shows the standard one, and a video that is not a web link shows nothing',
+                    fallback.thumbnail === 'https://i.ytimg.com/vi/nomaxres001/hqdefault.jpg' && same(fallback.asked, ['https://i.ytimg.com/vi/nomaxres001/maxresdefault.jpg', 'https://i.ytimg.com/vi/nomaxres001/hqdefault.jpg'])
+                    && same(notALink, { thumbnail: null, frame: null, links: [] }), report.setDialog.thumbnails);
+            } catch (e) {
+                report.setDialog.crashed = String(e.message).slice(0, 300);
+                check('the set dialog on desktop', false, { crashed: report.setDialog.crashed, errors });
+            }
+            await context.close();
+        }
+
+        // Sets not played yet (the single elimination phase's final and 3rd place match), as they are and projected
+        for (const projected of [false, true]) {
+            const { context, page, quiet } = await openPage(browser, () => null, { viewport: { width: 1280, height: 1000 } }, { fonts: true });
+            if (projected) await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            const key = projected ? 'projected' : 'unplayed';
+            try {
+                await page.goto(appUrl + eventPath + '/1006');
+                await quiet();
+                await open(page, 803);
+                await quiet(600);
+                const final = await shown(page);
+                await page.screenshot({ path: `e2e-out/set-dialog-${key}.png` }).catch(() => { });
+                await close(page);
+                await open(page, 804);
+                const third = await shown(page);
+                await close(page);
+                const brief = set => ({ crumbs: set.crumbs, title: set.title, chip: set.chip, chipProjected: set.chipProjected, names: set.players.map(player => player.names.join()), results: set.players.map(player => player.result),
+                    avatars: set.players.map(player => player.avatars.join()), scores: set.scores, arrow: set.arrow.icon, caption: set.caption, note: set.note, games: set.games.length, foot: set.foot, video: set.video.thumbnail });
+                report.setDialog[key] = { final: brief(final), third: brief(third), errors };
+                const empty = { scores: ['–', '–'], arrow: '', games: 0, foot: null, video: null };
+                const want = projected ? {
+                    final: { crumbs: 'Single Elim · Test Event · Test Tourney', title: 'Final', chip: 'Projected', chipProjected: true, names: ['Alpha', 'Bravo'], results: ['is-projected', 'is-projected'], avatars: ['A', 'picture'],
+                        ...empty, caption: 'Projected', note: 'Not played yet. Alpha and Bravo are projected to reach this set by seeding.' },
+                    third: { crumbs: 'Single Elim · Test Event · Test Tourney', title: '3rd Place Tiebreak', chip: 'Projected', chipProjected: true, names: ['Charlie', 'Delta'], results: ['is-projected', 'is-projected'], avatars: ['C', 'D'],
+                        ...empty, caption: 'Projected', note: 'Not played yet. Charlie and Delta are projected to reach this set by seeding.' },
+                } : {
+                    final: { crumbs: 'Single Elim · Test Event · Test Tourney', title: 'Final', chip: 'Not started', chipProjected: false, names: ['Winner of Semi-Final', 'Winner of Semi-Final'], results: ['unknown', 'unknown'], avatars: ['?', '?'],
+                        ...empty, caption: 'Not played', note: 'Not played yet. Neither player is known.' },
+                    third: { crumbs: 'Single Elim · Test Event · Test Tourney', title: '3rd Place Tiebreak', chip: 'Not started', chipProjected: false, names: ['Loser of Semi-Final', 'Loser of Semi-Final'], results: ['unknown', 'unknown'], avatars: ['?', '?'],
+                        ...empty, caption: 'Not played', note: 'Not played yet. Neither player is known.' },
+                };
+                const sorted = value => JSON.stringify(value, Object.keys({ ...value.final, final: 0, third: 0, errors: 0 }).sort());
+                check(projected ? 'set dialog: a projected set names its projected players, in the projected style, with dashes and no arrow'
+                    : 'set dialog: a set not played yet says who each side waits for, with dashes and no arrow',
+                    sorted({ final: brief(final), third: brief(third) }) === sorted(want) && !errors.length, report.setDialog[key]);
+            } catch (e) {
+                report.setDialog[key] = { crashed: String(e.message).slice(0, 300), errors };
+                check(`the set dialog, ${key}`, false, report.setDialog[key]);
+            }
+            await context.close();
+        }
+
+        // The light theme
+        {
+            const { context, page, quiet } = await openPage(browser, respond, { viewport: { width: 1280, height: 1000 } }, { fonts: true });
+            await context.addInitScript(() => localStorage.setItem('bgg-theme', 'light'));
+            try {
+                await icons(page);
+                await page.goto(appUrl + eventPath + '/1001');
+                await quiet();
+                await open(page, 106);
+                await quiet(600);
+                const light = await colors(page);
+                await page.screenshot({ path: 'e2e-out/set-dialog-desktop-light.png' }).catch(() => { });
+                report.setDialog.light = light;
+                check('set dialog, light: a white dialog with readable text (4.5 to 1)', light.surface === 'rgb(255, 255, 255)' && light.panel === light.surface && readable(light.contrast), light);
+            } catch (e) {
+                report.setDialog.light = { crashed: String(e.message).slice(0, 300) };
+                check('the set dialog in the light theme', false, report.setDialog.light);
+            }
+            await context.close();
+        }
+
+        // A phone: a sheet across the bottom of the screen, no wider than it, that scrolls under its own head
+        {
+            const { context, page, quiet } = await openPage(browser, respond, devices['Pixel 7'], { fonts: true });
+            try {
+                await icons(page);
+                await page.goto(appUrl + eventPath + '/1001');
+                await quiet();
+                await open(page, 106);
+                await quiet(600);
+                await page.waitForTimeout(400);
+                const sheet = await page.locator('mat-dialog-container').evaluate(dialog => {
+                    const pane = dialog.closest('.cdk-overlay-pane').getBoundingClientRect(), host = dialog.querySelector('app-set');
+                    const surface = getComputedStyle(dialog.querySelector('.mat-mdc-dialog-surface'));
+                    return {
+                        screen: [innerWidth, innerHeight], left: Math.round(pane.left), width: Math.round(pane.width), bottom: Math.round(pane.bottom), top: Math.round(pane.top),
+                        corners: [surface.borderTopLeftRadius, surface.borderTopRightRadius, surface.borderBottomLeftRadius, surface.borderBottomRightRadius].join(' '),
+                        fitsAcross: host.scrollWidth <= host.clientWidth && [...dialog.querySelectorAll('.set-dialog *')].every(el => el.getBoundingClientRect().right <= innerWidth + 0.5),
+                        scrolls: host.scrollHeight > host.clientHeight, head: getComputedStyle(dialog.querySelector('.head')).position,
+                        characterNames: [...dialog.querySelectorAll('.cname')].filter(name => name.getBoundingClientRect().width > 0).length,
+                        video: Math.round(dialog.querySelector('.vplayer').getBoundingClientRect().width),
+                    };
+                });
+                const phone = await shown(page);
+                await page.screenshot({ path: 'e2e-out/set-dialog-phone-dark.png' }).catch(() => { });
+                // Scrolled to its end, the head is still at the top of the sheet
+                await page.locator('mat-dialog-container app-set').evaluate(host => host.scrollTo({ top: host.scrollHeight, behavior: 'instant' }));
+                await page.waitForTimeout(200);
+                const scrolled = await page.locator('mat-dialog-container').evaluate(dialog => ({
+                    headAtTop: Math.abs(dialog.querySelector('.head').getBoundingClientRect().top - dialog.querySelector('app-set').getBoundingClientRect().top) < 1,
+                    footInView: dialog.querySelector('.foot').getBoundingClientRect().bottom <= innerHeight + 0.5,
+                }));
+                await page.screenshot({ path: 'e2e-out/set-dialog-phone-dark-end.png' }).catch(() => { });
+                report.setDialog.phone = { sheet, scrolled, scores: phone.scores, games: phone.games.length, foot: phone.foot };
+                check('set dialog on a phone: a sheet across the bottom of the screen with round top corners, nothing wider than the screen, the video edge to edge',
+                    sheet.left === 0 && sheet.width === sheet.screen[0] && sheet.bottom === sheet.screen[1] && sheet.top >= 44 && sheet.corners === '16px 16px 0px 0px' && sheet.fitsAcross && sheet.video === sheet.screen[0]
+                    && sheet.characterNames === 0 && same(phone.scores, ['3', '1']) && phone.games.length === 4, report.setDialog.phone);
+                check('set dialog on a phone: a tall set scrolls with its head staying in view', (!sheet.scrolls || (sheet.head === 'sticky' && scrolled.headAtTop)) && scrolled.footInView, report.setDialog.phone);
+            } catch (e) {
+                report.setDialog.phone = { crashed: String(e.message).slice(0, 300) };
+                check('the set dialog on a phone', false, report.setDialog.phone);
+            }
+            await context.close();
+        }
     }
 } finally {
     await browser.close();

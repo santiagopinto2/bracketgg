@@ -1,96 +1,187 @@
-<div mat-dialog-title style="text-align: center">{{set.fullRoundText}}</div>
-<hr style="margin: 0 20px">
-
-<mat-dialog-content class="set-dialog-content">
-
-    <div class="mb-4 d-flex justify-content-center">
-        <div class="entrant-name" style="text-align: end; padding-right: 16px">
-            <span class="entrant-sponsor">{{set.slots[0].entrant?.sponsor}}</span>
-            {{set.slots[0].entrant?.name}}
-        </div>
-        <div class="entrant-image entrant-set-image">
-            @if (getEntrantImage(set.slots[0].entrant) !== '') {
-            <img [ngClass]="getEntrantImageOrientation(set.slots[0].entrant)" [src]="getEntrantImage(set.slots[0].entrant)" />
+<div class="set-dialog" [class.doubles]="doubles" [class.has-player]="!!video">
+    <div class="head">
+        <div class="titles">
+            @if (crumbs.length) {
+            <div class="crumbs">{{ crumbs.join(' · ') }}</div>
             }
-            @if (getEntrantImage(set.slots[0].entrant) === '') {
-            <div class="entrant-set-image-default" [ngStyle]="{'background-color': $safeNavigationMigration(set.slots[0].entrant?.backgroundColor)}">
-                {{set.slots[0].entrant?.participants[0].gamerTag[0].toUpperCase()}}
+            <div class="title">
+                <span class="round-name">{{ set.fullRoundText }}</span>
+                <span class="chip" [class.projected]="state.projected">{{ state.label }}</span>
             </div>
-            }
         </div>
-        <div class="entrant-score d-flex justify-content-center" style="padding-left: 10px">
-            {{scoreText(set.slots[0])}}
-        </div>
-        <div class="d-flex justify-content-center" style="width: 64px">
-            <mat-icon style="width: 64px; height: 48px; font-size: 64px; line-height: 48px">{{getWinnerArrow()}}</mat-icon>
-        </div>
-        <div class="entrant-score d-flex justify-content-center" style="padding-right: 10px">
-            {{scoreText(set.slots[1])}}
-        </div>
-        <div class="entrant-image entrant-set-image">
-            @if (getEntrantImage(set.slots[1].entrant) !== '') {
-            <img [ngClass]="getEntrantImageOrientation(set.slots[1].entrant)" [src]="getEntrantImage(set.slots[1].entrant)" />
-            }
-            @if (getEntrantImage(set.slots[1].entrant) === '') {
-            <div class="entrant-set-image-default" [ngStyle]="{'background-color': $safeNavigationMigration(set.slots[1].entrant?.backgroundColor)}">
-                {{set.slots[1].entrant?.participants[0].gamerTag[0].toUpperCase()}}
-            </div>
-            }
-        </div>
-
-        <div class="entrant-name" style="padding-left: 16px">
-            <span class="entrant-sponsor">{{set.slots[1].entrant?.sponsor}}</span>
-            {{set.slots[1].entrant?.name}}
-        </div>
+        <button type="button" class="iconbtn" mat-dialog-close aria-label="Close"><span class="material-icons" aria-hidden="true">close</span></button>
     </div>
 
-    @if (set.games) {
-    <mat-card>
-        <mat-card-content class="mat-elevation-z3">
-            @for (game of set.games; track i; let i = $index; let lastGame = $last) {
-            <div>
-                <div style="text-align: center">
-                    Game {{i + 1}}{{game.selections && game.stage?.name ? ': ' + game.stage.name : ''}}
-                </div>
-                <div class="d-flex justify-content-center">
-                    @if (game.picks?.[0]?.length || game.picks?.[1]?.length) {
-                    <div class="game-icon d-flex justify-content-center">
-                        @for (icon of game.picks[0]; track $index) {
-                        <img style="width: 30px; height: 30px" [src]="icon">
-                        }
-                    </div>
-                    }
-                    @if (game.winnerId) {
-                    <div class="game-result-abbr" style="padding-right: 20px" [ngClass]="getResultClass(game, 0)">
-                        {{getResultAbbr(game, 0)}}
-                    </div>
-                    }
-                    <div class="d-flex justify-content-center" style="width: 32px">
-                        <mat-icon style="width: 32px; height: 30px; font-size: 32px">{{getWinnerArrow(game)}}</mat-icon>
-                    </div>
-                    @if (game.winnerId) {
-                    <div class="game-result-abbr" style="padding-left: 20px" [ngClass]="getResultClass(game, 1)">
-                        {{getResultAbbr(game, 1)}}
-                    </div>
-                    }
-                    @if (game.picks?.[0]?.length || game.picks?.[1]?.length) {
-                    <div class="game-icon d-flex justify-content-center">
-                        @for (icon of game.picks[1]; track $index) {
-                        <img style="width: 30px; height: 30px" [src]="icon">
-                        }
-                    </div>
-                    }
-                </div>
-                @if (!lastGame) {
-                <hr>
+    <div class="board">
+        <ng-container *ngTemplateOutlet="player; context: { $implicit: sides[0], links: links()[0] }" />
+        <div class="score">
+            <div class="nums">
+                <ng-container *ngTemplateOutlet="scoreCell; context: { $implicit: scores[0] }" />
+                <span class="material-icons arrow" [class.l]="winner === 0" [class.r]="winner === 1" aria-hidden="true">{{ winner === 0 ? 'arrow_left' : winner === 1 ? 'arrow_right' : '' }}</span>
+                <ng-container *ngTemplateOutlet="scoreCell; context: { $implicit: scores[1] }" />
+            </div>
+            <div class="bestof">{{ caption }}</div>
+        </div>
+        <ng-container *ngTemplateOutlet="player; context: { $implicit: sides[1], links: links()[1] }" />
+    </div>
+
+    @if (video) {
+    @if (playing()) {
+    <div class="vplayer playing">
+        <iframe [src]="playerUrl" title="Set video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    </div>
+    } @else {
+    <button type="button" class="vplayer" aria-label="Play the set's video" (click)="playing.set(true)">
+        <img [src]="thumbnail()" alt="" (error)="thumbnailFailed()" (load)="thumbnailLoaded($event)">
+        <svg class="big" viewBox="0 0 44 31" aria-hidden="true"><rect width="44" height="31" rx="8" /><path d="M18 9v13l11-6.5z" /></svg>
+    </button>
+    }
+    } @else if (otherVideo) {
+    <div class="pmeta">
+        <a [href]="otherVideo" target="_blank" rel="noopener noreferrer">Open video <span class="material-icons" aria-hidden="true">open_in_new</span></a>
+    </div>
+    }
+
+    @if (games.length) {
+    <div class="games">
+        @for (game of games; track game.number) {
+        <div class="game">
+            <ng-container *ngTemplateOutlet="gameSide; context: { $implicit: game.sides[0], first: true }" />
+            <div class="mid">
+                <div class="g">Game {{ game.number }}</div>
+                @if (game.stage) {
+                <div class="st">{{ game.stage }}</div>
+                } @else if (game.hasPicks) {
+                <div class="st none">Stage not reported</div>
+                }
+            </div>
+            <ng-container *ngTemplateOutlet="gameSide; context: { $implicit: game.sides[1], first: false }" />
+        </div>
+        }
+    </div>
+    }
+
+    @if (note) {
+    <div class="note"><span class="material-icons" aria-hidden="true">{{ note.icon }}</span><span>{{ note.text }}</span></div>
+    }
+
+    @if (time || stream()) {
+    <div class="foot">
+        @if (time) {
+        <span class="fact time" [title]="time.title"><span class="material-icons" aria-hidden="true">schedule</span>{{ time.text }}</span>
+        }
+        @if (stream(); as on) {
+        @if (on.url) {
+        <a class="fact stream" [href]="on.url" target="_blank" rel="noopener noreferrer">
+            <ng-container *ngTemplateOutlet="streamLine; context: { $implicit: on }" />
+        </a>
+        } @else {
+        <span class="fact stream"><ng-container *ngTemplateOutlet="streamLine; context: { $implicit: on }" /></span>
+        }
+        }
+    </div>
+    }
+</div>
+
+<!-- One side of the scoreboard: a player, a doubles team, or who the slot waits for -->
+<ng-template #player let-side let-links="links">
+    @if (!side.known) {
+    <div class="player unknown">
+        <div class="avatars">
+            <div class="avatar unknown">?</div>
+        </div>
+        <div class="name">{{ side.waiting }}</div>
+        <div class="meta"></div>
+    </div>
+    } @else {
+    <div class="player" [class.won]="side.won" [class.lost]="side.lost" [class.is-projected]="side.projected">
+        <div class="avatars">
+            @for (person of side.players; track $index) {
+            <div class="avatar" [style.background-color]="person.image ? null : side.color">
+                @if (person.image) {
+                <img [src]="person.image" alt="" (error)="person.image = ''">
+                } @else {
+                {{ person.initial }}
                 }
             </div>
             }
-        </mat-card-content>
-    </mat-card>
+        </div>
+        @for (person of side.players; track $index) {
+        @if (person.sponsor) {
+        <div class="sponsor">{{ person.sponsor }}</div>
+        }
+        <div class="name">{{ person.name }}</div>
+        }
+        <div class="meta">
+            @if (side.won) {
+            <span class="wintag"><span class="material-icons" aria-hidden="true">emoji_events</span>Winner</span>
+            }
+            @if (side.seed !== null) {
+            <span class="seed">Seed {{ side.seed }}</span>
+            }
+            @if (side.used.length) {
+            <span class="used">
+                @for (character of side.used; track character.icon) {
+                <img [src]="character.icon" [alt]="character.name" [title]="character.name">
+                }
+            </span>
+            }
+        </div>
+        @if (links.length) {
+        <div class="links">
+            @for (link of links; track link.name) {
+            <a [href]="link.url" target="_blank" rel="noopener noreferrer" [title]="link.label" [attr.aria-label]="link.label">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="link.icon" /></svg>
+            </a>
+            }
+        </div>
+        }
+    </div>
     }
+</ng-template>
 
-</mat-dialog-content>
-<mat-dialog-actions align="end">
-    <button mat-button mat-dialog-close>Close</button>
-</mat-dialog-actions>
+<ng-template #scoreCell let-score>
+    <div class="num" [class.dq]="score.kind === 'dq'" [class.empty]="score.kind === 'empty'">
+        @if (score.kind === 'check') {
+        <span class="material-icons" role="img" aria-label="Won">check</span>
+        } @else {
+        {{ score.text }}
+        }
+    </div>
+</ng-template>
+
+<!-- One side of a game: its characters, and a check if it won -->
+<ng-template #gameSide let-side let-first="first">
+    <div class="side" [class.a]="first" [class.b]="!first" [class.win]="side.win">
+        <div class="chars">
+            @for (character of side.chars; track $index) {
+            <div class="char">
+                <img [src]="character.icon" [alt]="character.name" [title]="character.name">
+                @if (character.switched) {
+                <span class="sw" title="Switched character"><span class="material-icons" aria-hidden="true">swap_horiz</span></span>
+                }
+            </div>
+            }
+        </div>
+        <div class="cname">{{ side.names }}@if (side.switched) {<small>switch</small>}</div>
+        <div class="grow"></div>
+        @if (side.win) {
+        <span class="material-icons won" role="img" aria-label="Won">check</span>
+        }
+    </div>
+</ng-template>
+
+<ng-template #streamLine let-on>
+    @switch (on.source) {
+    @case ('TWITCH') {
+    <svg class="twitch" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" /></svg>
+    }
+    @case ('YOUTUBE') {
+    <svg class="youtube" viewBox="0 0 24 17" aria-hidden="true"><rect width="24" height="17" rx="4.5" /><path d="M9.7 4.8v7.4l6.4-3.7z" /></svg>
+    }
+    @default {
+    <span class="material-icons" aria-hidden="true">live_tv</span>
+    }
+    }
+    <span>{{ on.verb }} <b>{{ on.name }}</b>@if (on.platform) { ({{ on.platform }})}</span>
+</ng-template>

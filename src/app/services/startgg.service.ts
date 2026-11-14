@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
-import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
+import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, setDetailsQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -391,6 +391,12 @@ export class StartggService {
             const data = await this.query(setScoresQuery(chunk.length), variables).catch(error => { console.warn('Could not load scores', error); return null; });
             chunk.forEach((set, k) => set.slots.forEach((slot, j) => slot.standing = data?.[`s${k}`]?.slots?.[j]?.standing ?? null));
         }
+    }
+
+    // What the set dialog adds when it opens: the stream the set was on and its players' X and Twitch
+    // accounts, as start.gg's set (or null if it has none). Reused for a few minutes.
+    getSetDetails(setId): Promise<any> {
+        return this.cached(`set-details:${setId}`, async () => (await this.query(setDetailsQuery, { id: String(setId) }))?.set ?? null);
     }
 
     // One page of sets from a pool

@@ -150,6 +150,10 @@ try {
         check('the page has a CSP (scripts by hash, frame-ancestors none) and nosniff, a referrer policy, no x-powered-by and no CORS',
             /script-src 'self'/.test(csp) && /frame-ancestors 'none'/.test(csp) && /style-src [^;]*'unsafe-inline'/.test(csp) && !/script-src[^;]*'unsafe-inline'/.test(csp)
             && headers['x-content-type-options'] === 'nosniff' && headers['referrer-policy'] && !headers['x-powered-by'] && !headers['access-control-allow-origin'], report.headers);
+        // The set dialog's video: YouTube's no-cookie player is the only frame allowed, thumbnails load as https images
+        const directive = name => csp.split('; ').find(d => d.startsWith(name + ' ')) ?? '';
+        check("the CSP allows only YouTube's no-cookie player in a frame, and https images for its thumbnail",
+            directive('frame-src') === 'frame-src https://www.youtube-nocookie.com' && /(^| )https:( |$)/.test(directive('img-src')) && directive('default-src') === "default-src 'self'", report.headers);
         check('index.html is no-cache, hashed files are immutable, a missing file is 404 and an app route gets the page',
             headers['cache-control'] === 'no-cache' && /immutable/.test(asset?.headers.get('cache-control') ?? '') && missing.status === 404 && deep.status === 200 && deep.text.includes('<app-root'), report.headers);
     }

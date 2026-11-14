@@ -17,3 +17,28 @@ body {
     margin-left: 0;
     margin-right: 0;
 }
+
+// The set dialog's panel (src/app/components/set). Material draws the panel outside the component,
+// so its corners and the phone's bottom sheet are here.
+.set-dialog-panel {
+    .mat-mdc-dialog-surface,
+    .mdc-dialog__surface {
+        background: var(--dialog-bg);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 600px) {
+    // A sheet across the bottom of the screen: the sizes Material writes on the panel give way
+    .cdk-overlay-pane.set-dialog-panel {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        align-self: flex-end;
+
+        .mat-mdc-dialog-surface,
+        .mdc-dialog__surface {
+            border-radius: 16px 16px 0 0;
+        }
+    }
+}

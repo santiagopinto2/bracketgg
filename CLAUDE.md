@@ -12,6 +12,7 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 - From a pool, a set costs 9 objects (no characters reported) and each aliased `phaseGroup` 1, even when its page is empty (measured 2026-11-13).
 - Progression (where a pool's players go in a later phase) is read from the next phase's seeds, not from the sets: `Phase.seeds { entrant { id } phaseGroup { id displayIdentifier } progressionSource { originPlacement originOrder originPhaseGroup { id } } }` (`phaseProgressionsQuery`) costs 4 objects per seed, 240 seeds a request (Genesis X R2 Pools' 384 seeds: 961 and 577; measured 2026-11-13). The bracket view asks it of each phase that names the shown phase in `Phase.progressingInData { origin }` (in `eventPhasesQuery`; filled in before an event starts), alongside the sets. `Set.winnerProgressionSeed` and `loserProgressionSeed` say the same per set but cost 2 objects on every set, so the set queries leave them out.
 - A seed's `entrant` is null until start.gg places a player in it. A placed player's tag goes on their last set in the pool (found from the slots' `prereqId` links); an unplaced seed says only a placement, so the pool's exit sets get a tag with the phase's name. A player keeps their entrant id in every phase of an event, so a tag's link names them as `?player=<entrant id>`.
+- The set dialog (`src/app/components/set/`) reads `state`, `totalGames`, `startedAt`, `completedAt` and `vodUrl` from the bracket's own set fields: scalars, which cost nothing (Genesis X top 8: 393 objects with and without them). `stream` costs 1 object for every set, streamed or not (measured 2026-11-14), so it isn't in the bracket's queries: the dialog asks for it when it opens, with the players' X and Twitch, in `setDetailsQuery` (18 objects for a singles set).
 - All queries go through the site's own cache, `POST /api/gql` (`server/gql-cache.js`), via `src/app/services/startgg.service.ts`.
 - Query texts live in `src/app/services/startgg-queries.ts`, with GraphQL variables for slugs, ids and pages. The server runs only those exact texts (`server/gql-allowlist.js` loads the same file), so a new or changed query goes there and nowhere else.
 
@@ -26,6 +27,10 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 - Dark is the default; `<html data-theme="light">` is the light theme. `src/index.html` sets it from localStorage (`bgg-theme`) before the first paint, `src/app/services/theme.service.ts` after that.
 - Every color is a token in `src/styles/_tokens.scss`, with a dark and a light value. Components use `var(--name)`, never a color of their own. Material's colors for both themes are in `src/styles/_material.scss`.
 - `e2e/screenshots.mjs` takes every page in both themes.
+
+## Set dialog video
+
+A set's YouTube `vodUrl` shows as a thumbnail (`i.ytimg.com`); a tap loads YouTube's player from `www.youtube-nocookie.com`, the only frame the Content-Security-Policy allows (`server/http-security.js`). Any other web link is an "Open video" link.
 
 ## Building and testing
 

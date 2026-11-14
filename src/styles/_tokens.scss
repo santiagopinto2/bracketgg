@@ -81,12 +81,24 @@ $dark: (
     upset-9: purple,
     upset-10: rgb(63, 0, 63),
 
-    // The set dialog
+    // The set dialog. inset: a game's row or a note. faint: labels and the losing side. win: the
+    // winner's ring and a won game's edge, with win-text for the same green as text and win-tint
+    // for the fade across a won game. The video colors lie over a thumbnail, so both themes share them.
+    dialog-bg: #424242,
+    dialog-inset: #383838,
+    dialog-line: rgba(255, 255, 255, 0.1),
     dialog-text: #ffffff,
     dialog-text-muted: rgb(197, 197, 197),
-    dialog-card-bg: rgb(87, 87, 87),
-    game-win: #00a800,
-    game-loss: #ff2020,
+    dialog-text-faint: rgba(255, 255, 255, 0.6),
+    dialog-hover: rgba(255, 255, 255, 0.08),
+    dialog-win: #00a800,
+    dialog-win-text: #46d646,
+    dialog-win-tint: rgba(0, 168, 0, 0.26),
+    video-bg: #000,
+    video-shade: rgba(0, 0, 0, 0.34),
+    video-play: #f00,
+    video-play-icon: #fff,
+    twitch: #a970ff,
 
     // The loading notice (Material draws it light on the dark theme and dark on the light one)
     snackbar-spinner: #f21a1a,
@@ -162,11 +174,21 @@ $light: (
     upset-9: #d9a0e8,
     upset-10: #bfa0ea,
 
+    dialog-bg: #fff,
+    dialog-inset: #f1f2f4,
+    dialog-line: rgba(0, 0, 0, 0.1),
     dialog-text: #1c1e21,
-    dialog-text-muted: #5f6672,
-    dialog-card-bg: #f3f4f6,
-    game-win: #146c34,
-    game-loss: #c62828,
+    dialog-text-muted: #4b515c,
+    dialog-text-faint: #646b78,
+    dialog-hover: rgba(16, 24, 40, 0.06),
+    dialog-win: #17803d,
+    dialog-win-text: #146c34,
+    dialog-win-tint: rgba(23, 128, 61, 0.16),
+    video-bg: #000,
+    video-shade: rgba(0, 0, 0, 0.34),
+    video-play: #f00,
+    video-play-icon: #fff,
+    twitch: #7c3aed,
 
     snackbar-spinner: #ff6b63,
     snackbar-success: #4cc38a,
