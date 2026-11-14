@@ -64,8 +64,8 @@ export const tournamentQuery = `query Tournament($slug: String!) {
             }`;
 
 // What a bracket page needs to know of its event: about 10 objects. `progressingInData` names the
-// phases each phase takes players from (one object per phase it names), which tells whether a phase's
-// sets send anyone on; start.gg fills it in before the event starts (checked 2026-11-13).
+// phases each phase takes players from, and how many (one object per phase it names). It tells which
+// later phases a phase sends players on to; start.gg fills it in before the event starts (checked 2026-11-13).
 export const eventPhasesQuery = `query EventPhases($slug: String!) {
                 event(slug: $slug) {
                     id
@@ -78,6 +78,38 @@ export const eventPhasesQuery = `query EventPhases($slug: String!) {
                         groupCount
                         progressingInData {
                             origin
+                            numProgressing
+                        }
+                    }
+                }
+            }`;
+
+// One page of a phase's seeds with where each comes from: the pool of an earlier phase, and the
+// placement there, that fills it (`progressionSource`), the pool of this phase it plays in, and the
+// entrant once start.gg has placed one. The bracket view asks this of the phases that take players
+// from the shown phase, to draw the tags that say where a pool's players go next. 4 objects per seed
+// (Genesis X R2 Pools: 240 seeds cost 961, the other 144 cost 577; measured 2026-11-13).
+export const phaseProgressionsQuery = `query PhaseProgressions($phaseId: ID!, $page: Int!, $perPage: Int!) {
+                phase(id: $phaseId) {
+                    seeds(query: {
+                        page: $page
+                        perPage: $perPage
+                    }) {
+                        nodes {
+                            entrant {
+                                id
+                            }
+                            phaseGroup {
+                                id
+                                displayIdentifier
+                            }
+                            progressionSource {
+                                originPlacement
+                                originOrder
+                                originPhaseGroup {
+                                    id
+                                }
+                            }
                         }
                     }
                 }
@@ -241,22 +273,7 @@ const setGamesQuery = `games {
             }
         }`;
 
-// Where a set's winner or loser goes in a later phase: the phase and the pool
-const progressionSeedFields = `{
-                                phase {
-                                    id
-                                    name
-                                }
-                                phaseGroup {
-                                    id
-                                    displayIdentifier
-                                }
-                            }`;
-
-// What the app reads of each set, the same from a pool or a pool slice. The two progression seeds are
-// asked for only when $progression is true. They cost 2 objects per set, even where both are null, and
-// 2 more for each seed there is; left out with @include they cost nothing (Genesis X Melee R1 Pools,
-// 40 sets with 6 seeds: 361 objects without, 453 with; measured 2026-11-13).
+// What the app reads of each set, the same from a pool or a pool slice
 const setFields = `id
                             round
                             fullRoundText
@@ -272,13 +289,11 @@ const setFields = `id
                                     name
                                     initialSeedNum
                                 }
-                            }
-                            winnerProgressionSeed @include(if: $progression) ${progressionSeedFields}
-                            loserProgressionSeed @include(if: $progression) ${progressionSeedFields}`;
+                            }`;
 
 // One page of a pool's sets (variable $id). Always asks for games: where no characters were reported
-// they come back empty and cost little. $progression adds where each set's winner and loser go next.
-export const poolSetsQuery = `query PoolSets($id: ID!, $page: Int!, $perPage: Int!, $progression: Boolean!) {
+// they come back empty and cost little.
+export const poolSetsQuery = `query PoolSets($id: ID!, $page: Int!, $perPage: Int!) {
                 phaseGroup(id: $id) {
                     sets(
                         page: $page
@@ -292,8 +307,8 @@ export const poolSetsQuery = `query PoolSets($id: ID!, $page: Int!, $perPage: In
                   }
             }`;
 
-// The most pool slices one request asks for (poolSlicesQuery). Two variables each, plus two for the
-// request, under the server's cap of 120 variables per request.
+// The most pool slices one request asks for (poolSlicesQuery). Two variables each, under the
+// server's cap of 120 variables per request.
 export const MAX_POOL_SLICES = 50;
 
 // `count` slices of pools' sets in one request, as s0 … s<count-1>: slice k is page $p<k> of pool
@@ -302,7 +317,7 @@ export const MAX_POOL_SLICES = 50;
 // two requests and can be drawn while later pools load.
 export function poolSlicesQuery(count: number): string {
     const slices = Array.from({ length: count }, (_, k) => k);
-    return `query PoolSlices(${slices.map(k => `$g${k}: ID!, $p${k}: Int!`).join(', ')}, $perPage: Int!, $progression: Boolean!) {
+    return `query PoolSlices(${slices.map(k => `$g${k}: ID!, $p${k}: Int!`).join(', ')}, $perPage: Int!) {
                 ${slices.map(k => `s${k}: phaseGroup(id: $g${k}) { sets(page: $p${k}, perPage: $perPage, sortType: ROUND) { nodes { ...PoolSet } } }`).join('\n                ')}
             }
             fragment PoolSet on Set {
@@ -329,6 +344,7 @@ export function allQueries(): string[] {
         tournamentQuery,
         eventPhasesQuery,
         phaseEntrantsQuery,
+        phaseProgressionsQuery,
         ...overviews,
         phaseQuery,
         poolSetsQuery,

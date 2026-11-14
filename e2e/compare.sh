@@ -46,7 +46,7 @@ echo "live displayScore: ok"
 # With the token: a phase's players, profile pictures only, and the top 8's losses, from the real start.gg
 node --experimental-strip-types e2e/live-players.mjs > $out/live-players.json 2> $out/live-players.err || { cat $out/live-players.json $out/live-players.err; echo "live players check failed"; exit 1; }
 echo "live players: ok"
-# With the token: where a real pool's sets send their players, what asking costs, and that a player keeps their entrant id in the next phase
+# With the token: the next phase's seeds for a real pool, what asking costs, each player's last set, and that a player keeps their entrant id in the next phase
 node --experimental-strip-types e2e/live-progression.mjs > $out/live-progression.json 2> $out/live-progression.err || { cat $out/live-progression.json $out/live-progression.err; echo "live progression check failed"; exit 1; }
 echo "live progression: ok"
 

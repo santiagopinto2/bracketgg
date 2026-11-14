@@ -184,10 +184,10 @@
                                         }
                                     </div>
                                     }
-                                    @if (set.progression?.length) {
-                                    <!-- Where the set's winner, loser or both go in a later phase: beside a set in its side's last round, under any other -->
+                                    @if (tagsOf(set); as tags) {
+                                    <!-- Where the set's players go in a later phase: beside a set in its side's last round, under any other -->
                                     <div class="progression-tags" [class.progression-tags-below]="j / 3 + 1 < maxRounds[i][side]" (click)="$event.stopPropagation()">
-                                        @for (tag of set.progression; track tag.who) {
+                                        @for (tag of tags; track tag.key) {
                                         <a class="progression-tag" draggable="false" [attr.href]="tag.href" [attr.title]="tag.title" [attr.aria-label]="tag.title"
                                             (mousedown)="$event.stopPropagation()" (click)="followProgression($event, phaseGroup, set, tag)">
                                             @if (tag.short) {

@@ -45,7 +45,7 @@ for (const slice of slices) {
 const sliced = new Map(pools.map(group => [group.id, []]));
 const splitPools = new Set();
 for (const request of requests) {
-    const variables = { perPage: sliceSize, progression: false };
+    const variables = { perPage: sliceSize };
     request.forEach((slice, k) => Object.assign(variables, { [`g${k}`]: slice.group, [`p${k}`]: slice.page }));
     const data = await ask(poolSlicesQuery(request.length), variables);
     request.forEach((slice, k) => sliced.get(slice.group).push(...data[`s${k}`].sets.nodes.map(pick)));

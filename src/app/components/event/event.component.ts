@@ -50,6 +50,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     private userMoved = false;
     // What the bracket scrolled to for the link: a set, centered, or a pool, at the top of the view
     private arrivedAt: HTMLElement | null = null;
+    // The seeds that later phases take from this phase's pools, by pool id, each with its `phase`.
+    // Null until they are in: they load alongside the sets, and the tags are drawn when both are there.
+    private progressionSeeds: Map<string, any[]> | null = null;
+    // The tags beside the sets that send a player to a later phase, by set id
+    private progressionTags = new Map<string, any[]>();
     // The set the bracket scrolled to, outlined for a few seconds
     highlightedSetId: string | null = null;
     private highlightTimer: any;
@@ -113,6 +118,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             this.maxRoundsPhase = -1;
             this.entrants.set([]);
             this.playerHovered = -1;
+            this.progressionSeeds = null;
+            this.progressionTags = new Map();
             this.arrival = null;
             this.arrivedAt = null;
             this.userMoved = false;
@@ -267,6 +274,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
     async getPhase(phaseId) {
         const loadId = ++this.loadId;
+        this.loadProgressions(phaseId, loadId);
         try {
             let phase = await this.startggService.getPhase(phaseId);
             if (loadId !== this.loadId) return;
@@ -282,7 +290,6 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             // as soon as that pool is drawn (arrive), without waiting for the others.
             const groups = phase.phaseGroups.nodes;
             const phaseGroupPromises = [];
-            const progression = this.sendsPlayersOn(phaseId);
             for (let i = 0; i < groups.length; i++) this.maxRounds.push([]);
             if (groups.length > 1) {
                 const indexOf = new Map<any, number>(groups.map((group, i): [any, number] => [group.id, i]));
@@ -293,9 +300,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                     if (loadId !== this.loadId) return;
                     const i = indexOf.get(poolId);
                     phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId, sets));
-                }, progression);
+                });
             } else {
-                for (let i = 0; i < groups.length; i++) phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId, null, progression));
+                for (let i = 0; i < groups.length; i++) phaseGroupPromises.push(this.getPhaseGroup(groups[i], i, loadId));
             }
             if (loadId !== this.loadId) return;
 
@@ -311,12 +318,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         }
     }
 
-    // `prefetched` is this pool's sets from the phase's pool slices, or null to fetch the pool alone,
-    // with where its sets send their players if `progression`
-    async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId, prefetched = null, progression = false) {
+    // `prefetched` is this pool's sets from the phase's pool slices, or null to fetch the pool alone
+    async getPhaseGroup(phaseGroup, phaseGroupIndex, loadId, prefetched = null) {
         let phaseGroupSetsRes = prefetched
             ? { nodes: prefetched }
-            : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total, progression);
+            : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total);
         if (loadId !== this.loadId || phaseGroupSetsRes.nodes.length == 0) return;
 
         phaseGroup.sets = phaseGroupSetsRes;
@@ -399,9 +405,6 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             }
         });
 
-        // The tags beside the sets that send a player to a later phase
-        phaseGroupSets.forEach(set => set.progression = this.progressionTags(set));
-
         // Calculate the number of players per phase group
         phaseGroup.numPlayers = this.getNumberOfPlayers(phaseGroup);
 
@@ -415,6 +418,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         // Finally set the phase group
+        this.tagPool(phaseGroup);
         this.drawPool(phaseGroupIndex, phaseGroup);
         if (phaseGroup.id == this.arrival?.poolId) this.arrive();
 
@@ -423,38 +427,131 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         });
     }
 
-    // Whether the phase's sets can send players to a later phase: some phase of the event names it as
-    // where its players come from. Only then are the sets asked where their players go, which costs 2
-    // of start.gg's objects per set. A phase the event's list doesn't have is asked, to be safe.
-    sendsPlayersOn(phaseId): boolean {
-        if (!this.phases.some(phase => phase.id == phaseId)) return true;
-        return this.phases.some(phase => phase.progressingInData?.some(source => source?.origin == phaseId));
+    // Asks each phase that takes players from this one (the event's phases say which) for its seeds:
+    // which pool and placement of this phase fills each, which of its pools the seed plays in, and the
+    // entrant once start.gg has placed one. It runs alongside the sets and costs 4 of start.gg's
+    // objects per seed, so the sets themselves are asked nothing more. Without it the bracket still
+    // draws, with no tags.
+    private async loadProgressions(phaseId, loadId) {
+        const next = this.phases.filter(phase => phase.id != phaseId && phase.progressingInData?.some(source => source?.origin == phaseId));
+        if (!next.length) return;
+        try {
+            const byPool = new Map<string, any[]>();
+            await Promise.all(next.map(async phase => {
+                const progressing = phase.progressingInData.reduce((sum, source) => sum + (Number(source?.numProgressing) || 0), 0);
+                const seeds = await this.startggService.getPhaseProgressions(phase.id, Math.max(Number(phase.numSeeds) || 0, progressing));
+                for (const seed of seeds) {
+                    // Only the seeds filled from a pool; the pools of other phases are never looked up
+                    const poolId = seed?.progressionSource?.originPhaseGroup?.id;
+                    if (poolId == null) continue;
+                    if (!byPool.has(String(poolId))) byPool.set(String(poolId), []);
+                    byPool.get(String(poolId)).push({ ...seed, phase });
+                }
+            }));
+            if (loadId !== this.loadId) return;
+            this.progressionSeeds = byPool;
+            this.phaseGroups.forEach(phaseGroup => phaseGroup && this.tagPool(phaseGroup));
+        } catch (error) {
+            if (loadId === this.loadId) console.warn('Could not load where this phase\'s players go next', error);
+        }
     }
 
-    // The tags of a set that sends its winner, its loser or both to a later phase: where each goes and
-    // the link there. Once the set is played the link carries the player (?player=<entrant id>, the
-    // same id in every phase of an event), for the next phase to scroll to them.
-    progressionTags(set) {
-        const seeds = [['Winner', set.winnerProgressionSeed], ['Loser', set.loserProgressionSeed]].filter(([, seed]) => seed?.phase?.id != null && seed.phase.id != this.phaseId);
-        return seeds.map(([who, seed]) => {
-            const listed = this.phases.find(phase => phase.id == seed.phase.id);
-            const phaseName = seed.phase.name || listed?.name || 'Next phase';
+    // Works out a pool's progression tags from the seeds later phases take from it.
+    //
+    // A seed with an entrant is exact: the tag goes on that player's last set in the pool, "W" if they
+    // won it and "L" if they lost it, with the phase and pool they go to, and its link carries the
+    // player (?player=<entrant id>, the same id in every phase of an event) for the next phase to
+    // scroll to them.
+    //
+    // A seed without an entrant only says a placement, which can't be matched to a set that hasn't
+    // been played. So the pool's exit sets (see exitSets) that have no exact tag get one with the
+    // phase's name, and the pool's name only when every seed from this pool goes to the same pool.
+    // Its link names no player, so the next phase opens at the top.
+    private tagPool(phaseGroup) {
+        const seeds = this.progressionSeeds?.get(String(phaseGroup.id));
+        if (!seeds?.length) return;
+        const sets = phaseGroup.sets.nodes.flat(2);
+        const tags = new Map<string, any[]>();
+        const add = (set, tag) => tags.set(String(set.id), [...(tags.get(String(set.id)) ?? []), tag]);
+
+        // In the order of the event's phases, so a set's tags always come in the same order
+        for (const phase of this.phases.filter(phase => seeds.some(seed => seed.phase === phase))) {
+            const phaseSeeds = seeds.filter(seed => seed.phase === phase);
+            const link = `/${this.eventSlug}/brackets/${phase.id}`;
+            const phaseName = phase.name || 'Next phase';
             // A phase with one pool needs no pool name
-            const poolName = seed.phaseGroup?.displayIdentifier && listed?.groupCount != 1 ? `Pool ${seed.phaseGroup.displayIdentifier}` : '';
-            let entrantId = null;
-            if (set.winnerId && set.slots.every(slot => slot?.entrant)) {
-                entrantId = set.slots.find(slot => (slot.entrant.id == set.winnerId) == (who == 'Winner'))?.entrant.id ?? null;
+            const poolName = pool => pool?.displayIdentifier && phase.groupCount != 1 ? `Pool ${pool.displayIdentifier}` : '';
+            let unplaced = 0;
+            for (const seed of phaseSeeds) {
+                const playerId = seed.entrant?.id;
+                const last = playerId == null ? null : this.lastSetOf(playerId, sets);
+                if (!last?.winnerId) {
+                    unplaced++;
+                    continue;
+                }
+                const won = last.winnerId == playerId;
+                const pool = poolName(seed.phaseGroup);
+                add(last, {
+                    key: `${phase.id}:${playerId}`,
+                    exact: true,
+                    order: won ? 0 : 1,
+                    short: won ? 'W' : 'L',
+                    label: pool ? `${phaseName} · ${pool}` : phaseName,
+                    title: `${won ? 'Winner' : 'Loser'} goes to ${phaseName}${pool ? ', ' + pool : ''}`,
+                    href: `${link}${seed.phaseGroup?.id != null ? '/' + seed.phaseGroup.id : ''}?player=${playerId}`,
+                });
             }
-            return {
-                who,
-                // "W" and "L" tell the two tags apart when both players go on
-                short: seeds.length > 1 ? who[0] : '',
-                label: poolName ? `${phaseName} · ${poolName}` : phaseName,
-                title: `${who} goes to ${phaseName}${poolName ? ', ' + poolName : ''}`,
-                entrantId,
-                href: `/${this.eventSlug}/brackets/${seed.phase.id}${seed.phaseGroup?.id != null ? '/' + seed.phaseGroup.id : ''}${entrantId != null ? '?player=' + entrantId : ''}`,
-            };
-        });
+            if (!unplaced) continue;
+            const pools = new Set(phaseSeeds.map(seed => seed.phaseGroup?.id));
+            const onlyPool = pools.size == 1 ? phaseSeeds[0].phaseGroup : null;
+            const pool = poolName(onlyPool);
+            for (const set of this.exitSets(sets)) {
+                if (tags.get(String(set.id))?.some(tag => tag.exact && tag.key.startsWith(phase.id + ':'))) continue;
+                add(set, {
+                    key: String(phase.id),
+                    order: 2,
+                    short: '',
+                    label: pool ? `${phaseName} · ${pool}` : phaseName,
+                    title: `Players from this pool go on to ${phaseName}${pool ? ', ' + pool : ''}`,
+                    href: `${link}${onlyPool?.id != null ? '/' + onlyPool.id : ''}`,
+                });
+            }
+        }
+        for (const set of sets) this.progressionTags.delete(String(set.id));
+        tags.forEach((setTags, setId) => this.progressionTags.set(setId, setTags.sort((a, b) => a.order - b.order)));
+    }
+
+    // A set's progression tags, if it has any
+    tagsOf(set) {
+        return this.progressionTags.get(String(set.id)) ?? null;
+    }
+
+    // The last set a player plays in a pool: the one of theirs that none of their others is reached
+    // from (each slot names the set its player comes from). Where the sets carry no such links, a
+    // player who dropped to the losers side ends in their latest losers round, anyone else in their
+    // latest winners round.
+    private lastSetOf(playerId, sets) {
+        const slotOf = set => set.slots.find(slot => slot?.entrant?.id == playerId);
+        const theirs = sets.filter(set => slotOf(set));
+        if (!theirs.length) return null;
+        const left = new Set(theirs.map(set => slotOf(set)).filter(slot => slot.prereqType === 'set').map(slot => String(slot.prereqId)));
+        const ends = theirs.filter(set => !left.has(String(set.id)));
+        if (ends.length == 1) return ends[0];
+        const losers = theirs.filter(set => set.round < 0);
+        return (losers.length ? losers : theirs).reduce((last, set) => Math.abs(set.round) > Math.abs(last.round) ? set : last);
+    }
+
+    // The sets a pool's players leave it from: those whose winner has no next set in the pool. Where
+    // the sets carry no links, the last round of each side.
+    private exitSets(sets) {
+        const links = sets.flatMap(set => set.slots).filter(slot => slot?.prereqType === 'set');
+        if (!links.length) {
+            const rounds = sets.map(set => set.round);
+            const lastWinners = Math.max(...rounds), lastLosers = Math.min(...rounds);
+            return sets.filter(set => set.round == lastWinners || (lastLosers < 0 && set.round == lastLosers));
+        }
+        const winnerPlaysOn = new Set(links.filter(slot => slot.prereqPlacement == 1).map(slot => String(slot.prereqId)));
+        return sets.filter(set => !winnerPlaysOn.has(String(set.id)));
     }
 
     // A click on a progression tag opens the phase it names. The history entry left behind names this

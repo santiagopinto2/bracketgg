@@ -52,6 +52,10 @@ try {
         try {
             await page.goto(appUrl + brackets + '/1465054/2341829?set=70842734');
             report.steps.r1Pools = { ...await arrival(page), errors };
+            // The tags come from R2 Pools' seeds, asked for alongside the sets, so they can come a moment later
+            const tags = page.locator('[data-set-id="70842734"] .progression-tag');
+            await tags.first().waitFor({ timeout: 60000 });
+            report.steps.r1Pools.tags = await tags.evaluateAll(all => all.map(tag => [[...tag.children].map(part => part.textContent.trim()).join(' '), tag.getAttribute('href')]));
             await page.screenshot({ path: `${outDir}/tags-r1-pools.png` });
         } catch (e) {
             report.steps.r1Pools = { failed: String(e.message).slice(0, 300), errors };
@@ -70,7 +74,8 @@ try {
 
             await loaded(page);
             await page.waitForTimeout(4000); // the outline has gone
-            const tag = page.locator('#pool-2357765 .set:has(.set-tag) .progression-tag').first();
+            const tag = page.locator('#pool-2357765 .progression-tag').first();
+            await tag.waitFor({ timeout: 60000 });
             const tagged = await tag.evaluate(el => {
                 const set = el.closest('.set');
                 set.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });

@@ -61,26 +61,34 @@ function singleElimSets(idBase, withThirdPlace) {
     return sets;
 }
 
-// Progression: where a set sends its winner or loser in a later phase, as start.gg's
-// winnerProgressionSeed and loserProgressionSeed give it
-const seedTo = (phaseId, phaseName, groupId, identifier) => ({ phase: { id: phaseId, name: phaseName }, phaseGroup: { id: groupId, displayIdentifier: identifier } });
-// A pool that stops before its grand final. The winners final sends its winner to pool D of "Top Cut"
-// (phase 1011) and its loser to pool F, which hasn't started; the losers final sends its winner to
-// "Top 4" (phase 1002), which has one pool.
+// Progression: "Progress Pools" (phase 1010, opened by its URL only, like 1009) sends players on to
+// "Three Pools" (1005) and "Top 4" (1002). start.gg tells it from the next phase's side: each of that
+// phase's seeds names the pool and placement it is filled from, the pool it plays in, and its entrant
+// once one is placed.
+const seedFrom = (originPool, placement, entrantId, groupId, identifier) => ({ entrant: entrantId ? { id: entrantId } : null, phaseGroup: { id: groupId, displayIdentifier: identifier },
+    progressionSource: { originPlacement: placement, originOrder: 1, originPhaseGroup: { id: originPool } } });
+const progressionSeedsOf = {
+    // From pool A (2014): Alpha to pool C and Bravo to pool A. From pool B (2015): Alpha to pool B.
+    // From pool C (2022), which hasn't started: two seeds, both to pool C. And one from a pool of some other phase.
+    1005: [seedFrom(2014, 1, 1, 2007, 'C'), seedFrom(2014, 2, 2, 2005, 'A'), seedFrom(2015, 1, 1, 2006, 'B'), seedFrom(2022, 1, null, 2007, 'C'), seedFrom(2022, 2, null, 2007, 'C'), seedFrom(9999, 1, 4, 2005, 'A')],
+    // From pool A: Charlie. From pool B: Delta. From pool C: one seed, nobody placed.
+    1002: [seedFrom(2014, 3, 3, 2002, 'A'), seedFrom(2015, 4, 4, 2002, 'A'), seedFrom(2022, 3, null, 2002, 'A')],
+};
+// A pool that stops before its grand final, with start.gg's links between sets (each slot names the
+// set its player comes from, as its winner, 1, or its loser, 2)
 function cutPoolSets(idBase) {
     const sets = poolSets(idBase).filter(set => set.fullRoundText !== 'Grand Final');
-    Object.assign(sets.find(set => set.fullRoundText === 'Winners Final'), { winnerProgressionSeed: seedTo(1011, 'Top Cut', 2019, 'D'), loserProgressionSeed: seedTo(1011, 'Top Cut', 2021, 'F') });
-    Object.assign(sets.find(set => set.fullRoundText === 'Losers Final'), { winnerProgressionSeed: seedTo(1002, 'Top 4', 2002, 'A') });
+    const link = (id, feeders) => sets.find(set => set.id === idBase + id).slots.forEach((slot, i) =>
+        Object.assign(slot, { prereqType: 'set', prereqId: String(idBase + feeders[i][0]), prereqPlacement: feeders[i][1] }));
+    link(3, [[1, 1], [2, 1]]); // winners final: the semi-finals' winners
+    link(4, [[1, 2], [2, 2]]); // losers round 1: the semi-finals' losers
+    link(5, [[3, 2], [4, 1]]); // losers final: the winners final's loser and losers round 1's winner
     return sets;
 }
-// A whole pool whose winners final, which is not its last round, sends its winner to pool A of "Top Cut"
-function midProgressionSets(idBase) {
-    const sets = poolSets(idBase);
-    sets.find(set => set.fullRoundText === 'Winners Final').winnerProgressionSeed = seedTo(1011, 'Top Cut', 2016, 'A');
-    return sets;
-}
-// The same sets before anyone is placed in them: no players, no results
-const notStarted = sets => sets.map(set => ({ ...set, winnerId: null, slots: set.slots.map(() => ({ prereqType: 'seed', prereqId: '1', prereqPlacement: null, entrant: null, standing: null })) }));
+// The same sets before anyone is placed in them: no players, no results, the links kept
+const notStarted = sets => sets.map(set => ({ ...set, winnerId: null, slots: set.slots.map(slot => slot.prereqType === 'set'
+    ? { prereqType: 'set', prereqId: slot.prereqId, prereqPlacement: slot.prereqPlacement, entrant: null, standing: null }
+    : { prereqType: 'seed', prereqId: '1', prereqPlacement: null, entrant: null, standing: null }) }));
 
 // A real pool that hasn't started (empty slots), where only the top 8 progress, with three guesses
 // at what start.gg's GraphQL returns for it: every preview set, no bye sets, or no byes and no
@@ -98,15 +106,15 @@ const byePools = JSON.parse(readFileSync(new URL('./fixtures/bye-pools.json', im
 const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004, 1006: 2008, 1007: 2009, 1008: 2010 };
 // Phase 1005 has three pools, which the app fetches as one phase. Phase 1009 (the pools with byes) is
 // opened by its URL only: it isn't in the event's phase list, so the landing page and phase menu stay the same.
-// Phases 1010 ("Progress Pools", whose sets send players on) and 1011 ("Top Cut", six pools, the last one not started) too.
-const poolsOf = { 1005: [2005, 2006, 2007], 1009: [2011, 2012, 2013], 1010: [2014, 2015, 2022], 1011: [2016, 2017, 2018, 2019, 2020, 2021] };
+// Phase 1010 ("Progress Pools", whose players go on to phases 1005 and 1002) too: a cut pool with links
+// between its sets, a whole pool without links, and a cut pool that hasn't started.
+const poolsOf = { 1005: [2005, 2006, 2007], 1009: [2011, 2012, 2013], 1010: [2014, 2015, 2022] };
 // Phases are double elimination unless listed here. 1008's sets are never asked for: the type is refused first.
 const bracketTypeOf = { 1006: 'SINGLE_ELIMINATION', 1007: 'SINGLE_ELIMINATION', 1008: 'ROUND_ROBIN' };
 const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700),
     2008: singleElimSets(800, true), 2009: singleElimSets(900, false), 2010: singleElimSets(1000, false),
     2011: byePools[0].sets, 2012: byePools[1].sets, 2013: byePools[2].sets,
-    2014: cutPoolSets(1400), 2015: midProgressionSets(1500), 2022: notStarted(cutPoolSets(2200)),
-    2016: poolSets(3100), 2017: poolSets(3200), 2018: poolSets(3300), 2019: poolSets(3400), 2020: poolSets(3500), 2021: notStarted(poolSets(3600)) };
+    2014: cutPoolSets(1400), 2015: poolSets(1500), 2022: notStarted(cutPoolSets(2200)) };
 
 // The event's landing page: the top 8 of a 60-entrant event, with start.gg's tied placements (5th, 5th, 7th, 7th).
 // Alpha has a sponsor and Bravo an avatar; everyone else gets a colored initial.
@@ -189,6 +197,7 @@ function kindOf(query) {
     if (query.includes('...PoolSet')) return 'poolSlices';
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
+    if (query.includes('progressionSource')) return 'progressions';
     if (query.includes('seeds(query')) return 'seeds';
     if (query.includes('event(slug') && query.includes('numSeeds') && !query.includes('standings(')) return 'eventPhases';
     if (query.includes('event(slug') && query.includes('phases')) return 'overview';
@@ -209,12 +218,6 @@ function asQueried(set, query) {
             : set.slots.map((slot, i) => `${slot.entrant.name} ${scores[i]}`).join(' - ');
     }
     if (!query.includes('standing')) for (const slot of set.slots) delete slot.standing;
-    // The progression seeds, null where a set sends no one on, only when asked for and not switched off (@include)
-    const progression = query.includes('winnerProgressionSeed') && !query.includes('@include(if: false)');
-    for (const seed of ['winnerProgressionSeed', 'loserProgressionSeed']) {
-        if (progression) set[seed] = set[seed] ?? null;
-        else delete set[seed];
-    }
     return set;
 }
 const allSets = () => Object.values(setsOf).flat();
@@ -236,9 +239,9 @@ function answer(query) {
             return { data: { event: { id: 10, name: 'Test Event', phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name })),
                 entrants: { nodes: structuredClone(entrants).map(e => ({ ...e, participants: e.participants.map(p => ({ ...p, user: userAsQueried(p.user, query) })) })) } } } };
         case 'eventPhases':
-            // "Top 4" takes its players from "Pools", so of the listed phases only "Pools" sends players on
+            // The phases that have seeds filled from "Progress Pools" (1010) name it as where their players come from
             return { data: { event: { id: 10, name: 'Test Event', type: 1, phases: Object.entries(phaseNames).map(([id, name]) => ({ id: Number(id), name, numSeeds: entrants.length * (poolsOf[id] ?? [1]).length,
-                groupCount: (poolsOf[id] ?? [1]).length, progressingInData: id == 1002 ? [{ origin: 1001 }] : [] })) } } };
+                groupCount: (poolsOf[id] ?? [1]).length, progressingInData: progressionSeedsOf[id] ? [{ origin: 1010, numProgressing: progressionSeedsOf[id].length }] : [] })) } } };
         case 'seeds': {
             // A phase's players in seed order: the entrants who play in its pools
             const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
@@ -248,6 +251,13 @@ function answer(query) {
             const nodes = entrants.filter(e => ids.has(e.id)).slice((page - 1) * perPage, page * perPage).map(e =>
                 ({ entrant: { id: e.id, participants: e.participants.map(p => ({ gamerTag: p.gamerTag, user: userAsQueried(structuredClone(p.user), query) })) } }));
             return { data: { phase: { seeds: { nodes } } } };
+        }
+        case 'progressions': {
+            // One page of a phase's seeds with where each comes from
+            const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
+            const page = Number(query.match(/page: (\d+)/)[1]);
+            const perPage = Number(query.match(/perPage: (\d+)/)[1]);
+            return { data: { phase: { seeds: { nodes: structuredClone(progressionSeedsOf[phaseId] ?? []).slice((page - 1) * perPage, page * perPage) } } } };
         }
         case 'overview':
             return { data: { event: overview(query) } };
@@ -1108,13 +1118,14 @@ try {
             await context.close();
         }
     }
-    // 16c. Progression: a set that sends a player to a later phase has a tag beside it that says where
+    // 16c. Progression: a set a player leaves for a later phase has a tag beside it that says where
     // and links there; following it opens that phase with the player's pool loaded first, scrolled to
-    // the player's first set, which is outlined for a few seconds. Dark mode, for the screenshots.
+    // the player's first set, which is outlined for a few seconds. Where they go comes from the next
+    // phases' seeds, asked for alongside the sets. Dark theme, for the screenshots.
     {
         const dark = { colorScheme: 'dark', viewport: { width: 1280, height: 700 } };
         // Once `costly`, start.gg counts 150 objects per set, so each request holds one pool, and every
-        // request without pool D (2019) waits for `release`
+        // request without pool C of "Three Pools" (2007) waits for `release`
         let costly = false, release;
         const held = new Promise(r => release = r);
         const { context, page, log, quiet } = await openPage(browser, q => {
@@ -1123,7 +1134,7 @@ try {
             const body = answer(q);
             const actual = slices.reduce((sum, s) => sum + 1 + body.data[s.alias].sets.nodes.length * 150, 0);
             if (actual > 1000) return { body: { errors: [{ message: `Your query complexity is too high. A maximum of 1000 objects may be returned by each request. (actual: ${actual})` }] } };
-            return { body, wait: slices.some(s => s.groupId === 2019) ? null : held };
+            return { body, wait: slices.some(s => s.groupId === 2007) ? null : held };
         }, dark, { fonts: true });
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
@@ -1164,19 +1175,28 @@ try {
                 }) };
             }));
             const want = [
-                { set: '1403', tags: [['W → Top Cut · Pool D', eventPath + '/1011/2019?player=1', 'Winner goes to Top Cut, Pool D', 'right', 20], ['L → Top Cut · Pool F', eventPath + '/1011/2021?player=2', 'Loser goes to Top Cut, Pool F', 'right', 20]] },
-                { set: '1405', tags: [['→ Top 4', eventPath + '/1002/2002?player=2', 'Winner goes to Top 4', 'right', 20]] },
-                { set: '1503', tags: [['→ Top Cut · Pool A', eventPath + '/1011/2016?player=1', 'Winner goes to Top Cut, Pool A', 'below', 20]] },
-                { set: '2203', tags: [['W → Top Cut · Pool D', eventPath + '/1011/2019', 'Winner goes to Top Cut, Pool D', 'right', 20], ['L → Top Cut · Pool F', eventPath + '/1011/2021', 'Loser goes to Top Cut, Pool F', 'right', 20]] },
-                { set: '2205', tags: [['→ Top 4', eventPath + '/1002/2002', 'Winner goes to Top 4', 'right', 20]] },
+                // Pool A, with links between its sets. Alpha's last set is the winners final, which they won. Bravo lost
+                // it and then won the losers final, their last set, against Charlie, who goes to the one-pool "Top 4".
+                { set: '1403', tags: [['W → Three Pools · Pool C', eventPath + '/1005/2007?player=1', 'Winner goes to Three Pools, Pool C', 'right', 20]] },
+                { set: '1405', tags: [['W → Three Pools · Pool A', eventPath + '/1005/2005?player=2', 'Winner goes to Three Pools, Pool A', 'right', 20], ['L → Top 4', eventPath + '/1002/2002?player=3', 'Loser goes to Top 4', 'right', 20]] },
+                // Pool B, without links. Alpha's last set is the grand final; Delta's is losers round 1, which is not its side's last round.
+                { set: '1506', tags: [['W → Three Pools · Pool B', eventPath + '/1005/2006?player=1', 'Winner goes to Three Pools, Pool B', 'right', 20]] },
+                { set: '1504', tags: [['L → Top 4', eventPath + '/1002/2002?player=4', 'Loser goes to Top 4', 'below', 20]] },
+                // Pool C hasn't started: its two exit sets name each phase, and the pool where all its seeds go to the same one
+                ...['2203', '2205'].map(set => ({ set, tags: [['→ Top 4', eventPath + '/1002/2002', 'Players from this pool go on to Top 4', 'right', 20],
+                    ['→ Three Pools · Pool C', eventPath + '/1005/2007', 'Players from this pool go on to Three Pools, Pool C', 'right', 20]] })),
             ];
-            const asked = log.filter(r => r.kind === 'poolSlices').map(r => r.query.includes('@include(if: true)'));
+            const asked = {
+                progressions: log.filter(r => r.kind === 'progressions').map(r => Number(r.query.match(/phase\(id: (\d+)\)/)[1])).sort(),
+                setsAskedMore: log.filter(r => r.kind === 'poolSlices' || r.kind === 'sets').some(r => /ProgressionSeed|progressionSource/.test(r.query)),
+            };
             report.progression = { shown, sets: await page.locator('.set').count(), asked, theme: await page.evaluate(() => document.documentElement.getAttribute('data-theme')) };
-            check('progression tags: only the sets that send a player on have one, right of a last-round set and under any other, with where the player goes, a link there that carries a played set\'s player, and no pool name for a one-pool phase',
-                JSON.stringify(shown) === JSON.stringify(want) && report.progression.sets === 16 && asked.length > 0 && asked.every(Boolean) && report.progression.theme === 'dark', report.progression);
+            check('progression tags: a placed player\'s last set in the pool says W or L and where they go, with a link that carries them; a pool not placed yet tags its exit sets with the phase, no player; right of a last-round set and under any other; from one seeds request per next phase',
+                JSON.stringify(shown) === JSON.stringify(want) && report.progression.sets === 16 && JSON.stringify(asked) === JSON.stringify({ progressions: [1002, 1005], setsAskedMore: false })
+                && report.progression.theme === 'dark', report.progression);
             await page.screenshot({ path: 'e2e-out/progression-tags.png' }).catch(() => { });
 
-            // Follow the winner's tag while every pool but the player's is held back
+            // Follow Alpha's tag while every pool but theirs is held back
             costly = true;
             let mark = log.length;
             await page.locator('[data-set-id="1403"] .progression-tag').first().click();
@@ -1188,18 +1208,18 @@ try {
             release();
             await quiet();
             await page.waitForTimeout(500);
-            const after = { place: await placeOf(3401), pools: await poolsDrawn(), sets: await page.locator('.set').count() };
+            const after = { place: await placeOf(701), pools: await poolsDrawn(), sets: await page.locator('.set').count(), tags: await page.locator('.progression-tag').count() };
             await page.waitForTimeout(4000);
-            after.outlinedLater = (await placeOf(3401))?.outlined;
+            after.outlinedLater = (await placeOf(701))?.outlined;
             report.progression.follow = { whileHeld, after, requests: count(log, mark) };
-            // Alpha's first set in pool D is 3401, and they play 3403 and 3406 there too
+            // Alpha's first set in pool C is 701, and they play 703 and 706 there too
             check('following a tag: opens the phase and pool it names with the player in the link, asks for that pool first, and scrolls to the player\'s first set, centered and outlined, while the other pools are still loading; the set is not opened',
-                whileHeld.url === eventPath + '/1011/2019?player=1' && early?.set === '3401' && Math.abs(early.offCenter) <= 2 && early.inView
-                && JSON.stringify(whileHeld.pools) === '["pool-2019"]' && whileHeld.firstPoolAsked === 2019 && whileHeld.dialog === 0 && whileHeld.spinner
-                && JSON.stringify(whileHeld.hovered) === '["3401","3403","3406"]', report.progression.follow);
-            check('following a tag: the set stays in the middle of the view as the pools above it are drawn, and its outline goes after a few seconds',
-                after.place && Math.abs(after.place.offCenter) <= 2 && after.sets === 36 && after.outlinedLater === false
-                && JSON.stringify(after.pools) === JSON.stringify(poolsOf[1011].map(id => 'pool-' + id)) && !errors.length, report.progression.follow);
+                whileHeld.url === eventPath + '/1005/2007?player=1' && early?.set === '701' && Math.abs(early.offCenter) <= 2 && early.inView
+                && JSON.stringify(whileHeld.pools) === '["pool-2007"]' && whileHeld.firstPoolAsked === 2007 && whileHeld.dialog === 0 && whileHeld.spinner
+                && JSON.stringify(whileHeld.hovered) === '["701","703","706"]', report.progression.follow);
+            check('following a tag: the set stays in the middle of the view as the pools above it are drawn, and its outline goes after a few seconds; a phase no phase takes players from has no tags and asks for no seeds',
+                after.place && Math.abs(after.place.offCenter) <= 2 && after.sets === 18 && after.outlinedLater === false && after.tags === 0 && !report.progression.follow.requests.progressions
+                && JSON.stringify(after.pools) === JSON.stringify(poolsOf[1005].map(id => 'pool-' + id)) && !errors.length, report.progression.follow);
 
             // Back returns to the set the tag was on, forward to the player
             costly = false;
@@ -1210,47 +1230,42 @@ try {
             await page.goForward();
             const forward = { arrived: await waitForArrival(), url: at() };
             await quiet();
-            forward.place = await placeOf(3401);
+            forward.place = await placeOf(701);
             report.progression.history = { back, forward };
             check('following a tag: Back returns to the set the tag was on, in its pool, and Forward to the player\'s set',
                 back.url === eventPath + '/1010/2014?set=1403' && back.arrived?.set === '1403' && back.arrived.inView && back.place?.offCenter === back.arrived.offCenter
-                && forward.url === eventPath + '/1011/2019?player=1' && forward.arrived?.set === '3401' && Math.abs(forward.place?.offCenter) <= 2 && !errors.length, report.progression.history);
+                && forward.url === eventPath + '/1005/2007?player=1' && forward.arrived?.set === '701' && Math.abs(forward.place?.offCenter) <= 2 && !errors.length, report.progression.history);
 
-            // A player who isn't placed in the next phase yet: its pool opens, scrolled to, and nothing is outlined
+            // The tag of a pool not placed yet names no player: the phase opens at the top with that pool asked for first, and nothing is outlined
             await page.goto(appUrl + eventPath + '/1010');
             await quiet();
             mark = log.length;
-            await page.locator('[data-set-id="1403"] .progression-tag').nth(1).click();
+            await page.locator('[data-set-id="2203"] .progression-tag').nth(1).click();
             await quiet();
             await page.waitForTimeout(500);
-            const unplaced = await page.evaluate(() => {
-                const box = document.querySelector('mat-sidenav-content'), pool = document.getElementById('pool-2021');
-                return { outlined: document.querySelectorAll('.set-arrived').length, scrollTop: Math.round(box.scrollTop), viewHeight: box.clientHeight,
-                    top: pool ? Math.round(pool.getBoundingClientRect().top - box.getBoundingClientRect().top) : null, sets: document.querySelectorAll('.set').length };
-            });
+            const unplaced = await page.evaluate(() => ({ outlined: document.querySelectorAll('.set-arrived').length, scrollTop: Math.round(document.querySelector('mat-sidenav-content').scrollTop), sets: document.querySelectorAll('.set').length }));
             Object.assign(unplaced, { url: at(), firstPoolAsked: firstPoolAsked(mark), snackbar: await snackText(page), spinner: await spinnerShown(page) });
             report.progression.unplaced = unplaced;
-            check('following a tag for a player who isn\'t placed yet: the pool opens first and is scrolled to, nothing is outlined, and no error shows',
-                unplaced.url === eventPath + '/1011/2021?player=2' && unplaced.firstPoolAsked === 2021 && unplaced.outlined === 0 && unplaced.scrollTop > 0 && unplaced.top !== null && unplaced.top >= 0
-                && unplaced.top < unplaced.viewHeight - 100 && unplaced.sets === 36 && !unplaced.snackbar.includes('rror') && !unplaced.spinner && !errors.length, unplaced);
+            check('following the tag of a pool not placed yet: the phase opens at the top, its pool asked for first, nothing outlined, and no error shows',
+                unplaced.url === eventPath + '/1005/2007' && unplaced.firstPoolAsked === 2007 && unplaced.outlined === 0 && unplaced.scrollTop === 0
+                && unplaced.sets === 18 && !unplaced.snackbar.includes('rror') && !unplaced.spinner && !errors.length, unplaced);
 
             // A link with a player and no pool: their first set in the phase, once all of it is drawn
-            await page.goto(appUrl + eventPath + '/1011?player=3');
+            await page.goto(appUrl + eventPath + '/1005?player=3');
             const noPool = await waitForArrival();
             await quiet();
             report.progression.noPool = noPool;
-            check('a link with a player and no pool scrolls to their first set in the phase', noPool?.set === '3102' && noPool.inView && !errors.length, noPool);
+            check('a link with a player and no pool scrolls to their first set in the phase', noPool?.set === '502' && noPool.inView && !errors.length, noPool);
 
-            // The sets of a phase no other phase takes players from are not asked where they send them
-            const askedOf = async phase => {
-                const from = log.length;
-                await page.goto(appUrl + eventPath + '/' + phase);
-                await quiet();
-                return log.slice(from).filter(r => r.kind === 'sets' || r.kind === 'poolSlices').map(r => r.query.includes('@include(if: true)') ? 'asked' : r.query.includes('@include(if: false)') ? 'not asked' : 'no switch');
-            };
-            report.progression.askedByPhase = { 1001: await askedOf(1001), 1002: await askedOf(1002), 1005: await askedOf(1005) };
-            check('sets are asked where they send players only in a phase another phase takes players from',
-                JSON.stringify(report.progression.askedByPhase) === JSON.stringify({ 1001: ['asked'], 1002: ['not asked'], 1005: ['not asked'] }) && !errors.length, report.progression.askedByPhase);
+            // The seeds request fails: the bracket draws without tags and shows no error
+            await page.route(/\/api\/gql$|api\.start\.gg\/gql\/alpha/, (route, request) =>
+                request.method() === 'POST' && kindOf(request.postDataJSON().query) === 'progressions' ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"oops"}' }) : route.fallback());
+            await page.goto(appUrl + eventPath + '/1010');
+            await quiet();
+            await page.waitForTimeout(500);
+            const failed = { sets: await page.locator('.set').count(), tags: await page.locator('.progression-tag').count(), snackbar: await snackText(page), spinner: await spinnerShown(page) };
+            report.progression.seedsFailed = failed;
+            check('the seeds request fails: every set is still drawn, without tags, and no error shows', failed.sets === 16 && failed.tags === 0 && !failed.snackbar.includes('rror') && !failed.spinner && !errors.length, failed);
         } catch (e) {
             report.progression = { ...report.progression, crashed: String(e.message).slice(0, 300), errors };
             check('progression tags', false, report.progression);
@@ -1272,7 +1287,7 @@ try {
                     return { theme: document.documentElement.getAttribute('data-theme'), background: style.backgroundColor, text: style.color, border: style.borderTopColor };
                 });
                 if (theme === 'light') await themed.page.screenshot({ path: 'e2e-out/progression-tags-light.png' }).catch(() => { });
-                await themed.page.goto(appUrl + eventPath + '/1011/2019?player=1');
+                await themed.page.goto(appUrl + eventPath + '/1005/2007?player=1');
                 await themed.page.locator('.set-arrived').waitFor({ timeout: 15000 });
                 const outline = await themed.page.evaluate(() => getComputedStyle(document.querySelector('.set-arrived')).boxShadow);
                 if (theme === 'light') await themed.page.screenshot({ path: 'e2e-out/progression-arrival-light.png' }).catch(() => { });
@@ -1306,9 +1321,10 @@ try {
                     return [...document.querySelectorAll('.set')].some(set => { const s = set.getBoundingClientRect(); return t.left < s.right && t.right > s.left && t.top < s.bottom && t.bottom > s.top; });
                 }).length,
             }));
-            await phone.page.locator('[data-set-id="1503"] .progression-tag').scrollIntoViewIfNeeded();
+            // Delta's tag, under losers round 1 of pool B
+            await phone.page.locator('[data-set-id="1504"] .progression-tag').scrollIntoViewIfNeeded();
             await phone.page.screenshot({ path: 'e2e-out/progression-tags-phone.png' }).catch(() => { });
-            await phone.page.locator('[data-set-id="1503"] .progression-tag').tap();
+            await phone.page.locator('[data-set-id="1504"] .progression-tag').tap();
             for (const start = Date.now(); Date.now() - start < 15000; await phone.page.waitForTimeout(100)) if (await phone.page.locator('.set-arrived').count()) break;
             const tapped = await phone.page.evaluate(() => {
                 const set = document.querySelector('.set-arrived');
@@ -1320,8 +1336,8 @@ try {
             await phone.quiet();
             report.progressionPhone = { layout, tapped, errors: phoneErrors };
             check('phone: the tags are drawn clear of every set and the page is no wider than the screen; a tap follows the tag to the player\'s set, in view',
-                layout.tags === 7 && layout.pageWidth <= layout.windowWidth && JSON.stringify(layout.heights) === '[20]' && layout.covering === 0
-                && tapped.path === eventPath + '/1011/2016?player=1' && tapped.set === '3101' && tapped.inView && tapped.dialog === 0 && !phoneErrors.length, report.progressionPhone);
+                layout.tags === 9 && layout.pageWidth <= layout.windowWidth && JSON.stringify(layout.heights) === '[20]' && layout.covering === 0
+                && tapped.path === eventPath + '/1002/2002?player=4' && tapped.set === '201' && tapped.inView && tapped.dialog === 0 && !phoneErrors.length, report.progressionPhone);
         } catch (e) {
             report.progressionPhone = { crashed: String(e.message).slice(0, 300), errors: phoneErrors };
             check('phone: progression tags', false, report.progressionPhone);
