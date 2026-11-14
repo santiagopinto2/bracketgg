@@ -20,7 +20,14 @@ const open = async () => {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
-    return { context, page, errors };
+    // The requests the page sends to start.gg (through /api/gql), by the query's name
+    const requests = {};
+    page.on('request', request => {
+        if (request.method() !== 'POST' || !request.url().endsWith('/api/gql')) return;
+        const name = request.postDataJSON()?.query?.match(/query (\w+)/)?.[1] ?? 'other';
+        requests[name] = (requests[name] ?? 0) + 1;
+    });
+    return { context, page, errors, requests };
 };
 // Waits for the set the bracket scrolled to, and says which it is and where it sits in the view
 const arrival = async (page, timeout = 120000) => {
@@ -66,13 +73,15 @@ try {
     // 2. R2 Pools (16 pools), opened the way a tag in R1 Pools links to it: pool H517 and a player
     //    who came from pool A505. Then the tag beside one of H517's sets is followed to Top 64.
     {
-        const { context, page, errors } = await open();
+        const { context, page, errors, requests } = await open();
         try {
             await page.goto(appUrl + brackets + '/1572545/2357765?player=15484977');
             report.steps.r2Pools = { ...await arrival(page), errors };
             await page.screenshot({ path: `${outDir}/arrival-r2-pools.png` });
 
             await loaded(page);
+            // What all of R2 Pools cost: its 16 pools' sets in pool slices, and Top 64's seeds for the tags
+            report.steps.r2Requests = { ...requests };
             await page.waitForTimeout(4000); // the outline has gone
             const tag = page.locator('#pool-2357765 .progression-tag').first();
             await tag.waitFor({ timeout: 60000 });
