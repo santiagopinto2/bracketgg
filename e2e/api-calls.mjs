@@ -104,6 +104,8 @@ const unstartedVariants = {
 const laterPhase = JSON.parse(readFileSync(new URL('./fixtures/later-phase-pool.json', import.meta.url)));
 // Three real pools with byes (20, 19 and 21 players), where start.gg's set ids skip the hidden bye sets
 const byePools = JSON.parse(readFileSync(new URL('./fixtures/bye-pools.json', import.meta.url))).pools;
+// A real pool start.gg seeded but made no sets for (phase 1013, opened by its URL only): only its seeds come back
+const seededPool = JSON.parse(readFileSync(new URL('./fixtures/seeded-pool-without-sets.json', import.meta.url)));
 // Real pools that haven't started, whose Losers Round 1 links to a round start.gg doesn't send (phase 1011, and
 // 1012 with byes, both opened by their URL only)
 const key2 = pair => [...pair].sort().join(' vs ');
@@ -113,13 +115,13 @@ const phaseGroupOf = { 1001: 2001, 1002: 2002, 1003: 2003, 1004: 2004, 1006: 200
 // opened by its URL only: it isn't in the event's phase list, so the landing page and phase menu stay the same.
 // Phase 1010 ("Progress Pools", whose players go on to phases 1005 and 1002) too: a cut pool with links
 // between its sets, a whole pool without links, and a cut pool that hasn't started.
-const poolsOf = { 1005: [2005, 2006, 2007], 1009: [2011, 2012, 2013], 1010: [2014, 2015, 2022], 1011: [2023], 1012: [2024] };
+const poolsOf = { 1005: [2005, 2006, 2007], 1009: [2011, 2012, 2013], 1010: [2014, 2015, 2022], 1011: [2023], 1012: [2024], 1013: [2025] };
 // Phases are double elimination unless listed here. 1008's sets are never asked for: the type is refused first.
 const bracketTypeOf = { 1006: 'SINGLE_ELIMINATION', 1007: 'SINGLE_ELIMINATION', 1008: 'ROUND_ROBIN' };
 const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVariants.noByes, 2004: laterPhase.sets, 2005: poolSets(500), 2006: poolSets(600), 2007: poolSets(700),
     2008: singleElimSets(800, true), 2009: singleElimSets(900, false), 2010: singleElimSets(1000, false),
     2011: byePools[0].sets, 2012: byePools[1].sets, 2013: byePools[2].sets,
-    2014: cutPoolSets(1400), 2015: poolSets(1500), 2022: notStarted(cutPoolSets(2200)), 2023: hiddenLosers.sets, 2024: hiddenLosers.byes.sets };
+    2014: cutPoolSets(1400), 2015: poolSets(1500), 2022: notStarted(cutPoolSets(2200)), 2023: hiddenLosers.sets, 2024: hiddenLosers.byes.sets, 2025: [] };
 
 // What the set dialog shows beyond the score. Pool 2001's grand final was best of 5, has a YouTube video
 // that starts at 1:30 and was on a Twitch stream; start.gg gives the stream only to the dialog's own query.
@@ -209,6 +211,7 @@ function kindOf(query) {
     const attendees = attendeeKind(query);
     if (attendees) return attendees;
     if (query.includes('...PoolSet')) return 'poolSlices';
+    if (query.includes('seedMap')) return 'poolSeeds';
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
     if (query.includes('progressionSource')) return 'progressions';
@@ -308,6 +311,8 @@ function answer(query) {
                     .map(({ bye, unreachable, ...set }) => asQueried(set, query)) } };
             return { data };
         }
+        case 'poolSeeds':
+            return { data: { phaseGroup: structuredClone(seededPool.phaseGroup) } };
         case 'sets': {
             const groupId = Number(query.match(/phaseGroup\(id: (\d+)\)/)[1]);
             const page = Number(query.match(/page: (\d+)/)[1]);
@@ -719,6 +724,28 @@ try {
         report.hiddenLosersRound[name] = { sets: pairs.length, missing, errors };
         check(`unstarted pool (${name}): Show Projected fills the losers side from winners round 1's losers`, !missing.length && !errors.length, report.hiddenLosersRound[name]);
         await page.screenshot({ path: `e2e-out/hidden-losers-round-${name.replace(' ', '-')}.png`, fullPage: true }).catch(() => { });
+        await context.close();
+    }
+
+    // 9c. A pool start.gg seeded but made no sets for is built from its seeds, and Show Projected draws
+    //     every set start.gg's own page draws for it
+    {
+        const { context, page, quiet } = await openPage(browser);
+        await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1013');
+        await quiet();
+        await page.waitForTimeout(1000);
+        const pairs = await page.locator('.set').evaluateAll(sets => sets.map(set =>
+            [...set.querySelectorAll('.set-tag')].map(tag => tag.textContent.replace(/\u200e/g, '').trim()).filter(Boolean)));
+        const key = pair => [...pair].sort().join(' vs ');
+        const left = pairs.filter(p => p.length == 2).map(key);
+        const missing = seededPool.expectedProjectedPairs.map(key).filter(want => { const i = left.indexOf(want); if (i == -1) return true; left.splice(i, 1); return false; });
+        const rounds = await page.locator('.round-name, .round-title, p').evaluateAll(els => [...new Set(els.map(e => e.textContent.trim()).filter(t => /^(Winners|Losers) /.test(t)))]);
+        report.seededPool = { sets: pairs.length, missing, extra: left, rounds, errors };
+        check('a pool start.gg made no sets for: built from its seeds, projected the same as start.gg draws it', pairs.length === 26 && !missing.length && !errors.length, report.seededPool);
+        await page.screenshot({ path: 'e2e-out/seeded-pool-projected.png', fullPage: true }).catch(() => { });
         await context.close();
     }
 

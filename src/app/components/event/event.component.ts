@@ -79,6 +79,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     currentPhaseIndex = -1;
     phaseGroups = [];
     projected = [];
+    // The shown phase's bracket type, for building a pool start.gg made no sets for
+    bracketType = 'DOUBLE_ELIMINATION';
     maxRounds = [];
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
@@ -281,6 +283,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         try {
             let phase = await this.startggService.getPhase(phaseId);
             if (loadId !== this.loadId) return;
+            this.bracketType = phase.bracketType ?? 'DOUBLE_ELIMINATION';
 
             // Only elimination brackets can be drawn. Round robin and Swiss get a message, not a spinner.
             if (phase.bracketType && !['SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION'].includes(phase.bracketType)) {
@@ -326,7 +329,17 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         let phaseGroupSetsRes = prefetched
             ? { nodes: prefetched }
             : await this.startggService.getPhaseGroupSets(phaseGroup.id, phaseGroup.sets.pageInfo.total);
-        if (loadId !== this.loadId || phaseGroupSetsRes.nodes.length == 0) return;
+        if (loadId !== this.loadId) return;
+        // A pool start.gg has seeded but made no sets for is built from its seeds, as start.gg's own page does
+        if (phaseGroupSetsRes.nodes.length == 0) {
+            try {
+                phaseGroupSetsRes = { nodes: await this.startggService.getGeneratedPoolSets(phaseGroup.id, this.bracketType) };
+            } catch (error) {
+                console.warn('Could not build this pool from its seeds', error);
+                return;
+            }
+            if (loadId !== this.loadId || phaseGroupSetsRes.nodes.length == 0) return;
+        }
 
         phaseGroup.sets = phaseGroupSetsRes;
         let phaseGroupSets = phaseGroup.sets.nodes;

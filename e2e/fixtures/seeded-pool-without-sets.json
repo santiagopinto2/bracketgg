@@ -1,0 +1,293 @@
+{
+ "source": "start.gg GraphQL for phaseGroup 3246484 (Port Priority DX Melee Singles pool E43, 2026-11-14): seeded, seedMap and progressionsOut filled in, but no sets at all, while start.gg's own page draws the bracket from the seeds. expectedProjectedPairs is every pair start.gg's Show Projected drew for it. Players renamed G<seed>.",
+ "expectedProjectedPairs": [
+  [
+   "G32",
+   "G97"
+  ],
+  [
+   "G33",
+   "G96"
+  ],
+  [
+   "G32",
+   "G225"
+  ],
+  [
+   "G97",
+   "G160"
+  ],
+  [
+   "G33",
+   "G224"
+  ],
+  [
+   "G96",
+   "G161"
+  ],
+  [
+   "G32",
+   "G481"
+  ],
+  [
+   "G225",
+   "G288"
+  ],
+  [
+   "G97",
+   "G416"
+  ],
+  [
+   "G160",
+   "G353"
+  ],
+  [
+   "G33",
+   "G480"
+  ],
+  [
+   "G224",
+   "G289"
+  ],
+  [
+   "G96",
+   "G417"
+  ],
+  [
+   "G161",
+   "G352"
+  ],
+  [
+   "G97",
+   "G161"
+  ],
+  [
+   "G96",
+   "G160"
+  ],
+  [
+   "G161",
+   "G224"
+  ],
+  [
+   "G160",
+   "G225"
+  ],
+  [
+   "G161",
+   "G288"
+  ],
+  [
+   "G224",
+   "G353"
+  ],
+  [
+   "G160",
+   "G289"
+  ],
+  [
+   "G225",
+   "G352"
+  ],
+  [
+   "G481",
+   "G288"
+  ],
+  [
+   "G416",
+   "G353"
+  ],
+  [
+   "G480",
+   "G289"
+  ],
+  [
+   "G417",
+   "G352"
+  ]
+ ],
+ "phaseGroup": {
+  "seedMap": {
+   "1": [
+    1,
+    16,
+    8,
+    9,
+    4,
+    13,
+    5,
+    12,
+    2,
+    15,
+    7,
+    10,
+    3,
+    14,
+    6,
+    11
+   ]
+  },
+  "progressionsOut": [
+   {
+    "originPlacement": 3
+   },
+   {
+    "originPlacement": 3
+   },
+   {
+    "originPlacement": 4
+   },
+   {
+    "originPlacement": 4
+   }
+  ],
+  "seeds": {
+   "nodes": [
+    {
+     "groupSeedNum": 3,
+     "entrant": {
+      "id": 7096,
+      "name": "G96",
+      "initialSeedNum": 96
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 10,
+     "entrant": {
+      "id": 7289,
+      "name": "G289",
+      "initialSeedNum": 289
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 9,
+     "entrant": {
+      "id": 7288,
+      "name": "G288",
+      "initialSeedNum": 288
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 2,
+     "entrant": {
+      "id": 7033,
+      "name": "G33",
+      "initialSeedNum": 33
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 7,
+     "entrant": {
+      "id": 7224,
+      "name": "G224",
+      "initialSeedNum": 224
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 16,
+     "entrant": {
+      "id": 7481,
+      "name": "G481",
+      "initialSeedNum": 481
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 5,
+     "entrant": {
+      "id": 7160,
+      "name": "G160",
+      "initialSeedNum": 160
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 1,
+     "entrant": {
+      "id": 7032,
+      "name": "G32",
+      "initialSeedNum": 32
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 15,
+     "entrant": {
+      "id": 7480,
+      "name": "G480",
+      "initialSeedNum": 480
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 6,
+     "entrant": {
+      "id": 7161,
+      "name": "G161",
+      "initialSeedNum": 161
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 13,
+     "entrant": {
+      "id": 7416,
+      "name": "G416",
+      "initialSeedNum": 416
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 4,
+     "entrant": {
+      "id": 7097,
+      "name": "G97",
+      "initialSeedNum": 97
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 12,
+     "entrant": {
+      "id": 7353,
+      "name": "G353",
+      "initialSeedNum": 353
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 14,
+     "entrant": {
+      "id": 7417,
+      "name": "G417",
+      "initialSeedNum": 417
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 8,
+     "entrant": {
+      "id": 7225,
+      "name": "G225",
+      "initialSeedNum": 225
+     },
+     "progressionSource": null
+    },
+    {
+     "groupSeedNum": 11,
+     "entrant": {
+      "id": 7352,
+      "name": "G352",
+      "initialSeedNum": 352
+     },
+     "progressionSource": null
+    }
+   ]
+  }
+ }
+}

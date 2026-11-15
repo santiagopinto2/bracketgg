@@ -4,7 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
-import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuery, attendeesQuery, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSetsQuery, poolSlicesQuery, seededAttendeesQuery, setDetailsQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
+import { generatePoolSets } from './generated-bracket';
+import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuery, attendeesQuery, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSeedsQuery, poolSetsQuery, poolSlicesQuery, seededAttendeesQuery, setDetailsQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -467,6 +468,15 @@ export class StartggService {
     // accounts, as start.gg's set (or null if it has none). Reused for a few minutes.
     getSetDetails(setId): Promise<any> {
         return this.cached(`set-details:${setId}`, async () => (await this.query(setDetailsQuery, { id: String(setId) }))?.set ?? null);
+    }
+
+    // The sets of a pool start.gg has seeded but made no sets for, built from its seeds
+    // (generated-bracket.ts), or [] if it can't be built
+    async getGeneratedPoolSets(phaseGroupId, bracketType): Promise<any[]> {
+        return this.cached(`generated:${phaseGroupId}`, async () => {
+            const data = await this.query(poolSeedsQuery, { id: Number(phaseGroupId) });
+            return generatePoolSets(phaseGroupId, bracketType, data?.phaseGroup) ?? [];
+        });
     }
 
     // One page of sets from a pool
