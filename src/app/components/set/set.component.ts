@@ -171,7 +171,8 @@ export class SetComponent {
             const who = out.map(side => side.name).join(' and ');
             return { icon: 'block', text: `${who} ${out.length > 1 ? 'were' : 'was'} disqualified.${through ? ` ${through.name} advances without playing.` : ''}` };
         }
-        if (this.done) return this.games.length ? null : { icon: 'info_outline', text: 'The tournament reported the score only, so there are no games, characters, or stages to show.' };
+        // A finished set with no games listed shows only its score (Santi, 2026-11-15)
+        if (this.done) return null;
         if (this.live) return null;
         if (this.projected) {
             const who = this.sides.filter(side => side.projected).map(side => side.name);
