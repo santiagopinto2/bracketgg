@@ -963,9 +963,11 @@ try {
         // In the bracket: each slot's icon belongs to that slot's entrant
         const bracket = await page.locator('.set').evaluateAll(sets => sets.map(set => ({
             ids: [...set.querySelectorAll('[entrantid]')].map(slot => slot.getAttribute('entrantid')),
-            icons: [...set.querySelectorAll('img.set-image')].map(img => img.getAttribute('src')),
+            icons: [...set.querySelectorAll('#char-images .set-row')].map(row => [...row.querySelectorAll('img')].map(img => img.getAttribute('src'))),
         })));
-        const bracketOk = bracket.length > 0 && bracket.every(set => set.icons.length === 2 && set.icons.every((src, k) => src.includes(`/${set.ids[k]}-`)));
+        // Both of a team's picks, in start.gg's order
+        const bracketOk = bracket.length > 0 && bracket.every(set => set.icons.length === 2
+            && set.icons.every((side, k) => side.length === 2 && side.every((src, n) => src.includes(`/${set.ids[k]}-${n + 1}.`))));
         // In the popup for set 101 (Alpha vs Delta): two icons per side in game 1, only Delta's in game 2
         await page.locator('.set', { hasText: 'Delta' }).filter({ hasText: 'Alpha' }).first().click();
         await page.waitForTimeout(800);
@@ -976,6 +978,136 @@ try {
         check('character picks: each side shows its own picks, doubles shows both, missing ones skipped', bracketOk && popupOk && !errors.length, report.characterPicks);
         await page.screenshot({ path: 'e2e-out/character-picks.png' }).catch(() => { });
         await context.close();
+    }
+
+    // 13b. Several characters on a set's card. A side that used more than one character in the set (a
+    //      switch, a doubles team, or both) shows them small on a diagonal inside the same 28px column,
+    //      with a count past two; a side with one character keeps its 18px icon where it was; and no
+    //      card or tag column changes width.
+    {
+        const character = name => ({ name, images: [{ type: 'stockIcon', url: `https://icons.test/${name.replace(/ /g, '')}.svg` }] });
+        const pick = (entrantId, name) => ({ entrant: { id: entrantId }, character: character(name) });
+        // A game from each side's characters: [top side's, bottom side's], listed bottom side first
+        const game = (set, top, bottom) => {
+            const [a, b] = set.slots.map(slot => slot.entrant.id);
+            return { winnerId: set.winnerId, stage: { name: 'Battlefield' }, selections: [...bottom.map(name => pick(b, name)), ...top.map(name => pick(a, name))] };
+        };
+        const gamesOf = {
+            // Singles, a switch: Alpha's two characters tie at two games, and the earlier one is the lineup
+            106: [[['Fox'], ['Sheik']], [['Fox'], ['Sheik']], [['Falco'], ['Sheik']], [['Falco'], ['Sheik']]],
+            // Doubles: Alpha's team both play Fox; Bravo's played Fox and Jigglypuff once, then Peach and Jigglypuff twice
+            103: [[['Fox', 'Fox'], ['Fox', 'Jigglypuff']], [['Fox', 'Fox'], ['Peach', 'Jigglypuff']], [['Fox', 'Fox'], ['Peach', 'Jigglypuff']]],
+            // Singles, three characters: Delta played Peach twice, then Fox, then Marth
+            101: [[['Captain Falcon'], ['Peach']], [['Captain Falcon'], ['Peach']], [['Captain Falcon'], ['Fox']], [['Captain Falcon'], ['Marth']]],
+            // Doubles, both players switched: Charlie's team, with Sheik in two games and Jigglypuff in one
+            105: [[['Falco', 'Fox'], ['Fox', 'Donkey Kong']], [['Falco', 'Fox'], ['Sheik', 'Donkey Kong']], [['Falco', 'Fox'], ['Sheik', 'Jigglypuff']]],
+            // Plain singles
+            102: [[['Falco'], ['Marth']], [['Falco'], ['Marth']], [['Falco'], ['Marth']]],
+            // Delta reported no character in game 1
+            104: [[[], ['Fox']], [['Marth'], ['Fox']]],
+        };
+        const withGames = body => {
+            for (const set of body.data.phaseGroup.sets.nodes) set.games = gamesOf[set.id].map(([top, bottom]) => game(set, top, bottom));
+            return body;
+        };
+        const respond = q => kindOf(q) === 'sets' && q.includes('phaseGroup(id: 2001)') ? { body: withGames(answer(q)) } : null;
+        const hue = name => [...name].reduce((sum, letter) => sum + letter.charCodeAt(0) * 37, 0) % 360;
+        const icons = page => page.route('https://icons.test/**', route => {
+            const name = route.request().url().match(/([^/]+)\.svg/)[1];
+            return route.fulfill({ status: 200, contentType: 'image/svg+xml',
+                body: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="15" fill="hsl(${hue(name)} 65% 55%)"/><text x="16" y="22" font-size="18" font-family="sans-serif" text-anchor="middle" fill="#000">${name[0]}</text></svg>` });
+        });
+        // Each card: its width, its columns' widths, and each side's icons with their boxes [left, top,
+        // width, height] measured from the corner of the side's row in the character column
+        const measure = page => page.locator('.set').evaluateAll(sets => Object.fromEntries(sets.map(set => {
+            const round = n => Math.round(n * 100) / 100;
+            const width = selector => round(set.querySelector(selector)?.getBoundingClientRect().width ?? -1);
+            const column = set.querySelector('#char-images');
+            const sides = [...column.querySelectorAll('.set-row')].map(row => {
+                const corner = row.getBoundingClientRect();
+                const inside = el => { const box = el.getBoundingClientRect(); return box.left >= corner.left - 0.01 && box.right <= corner.right + 0.01 && box.top >= corner.top - 0.01 && box.bottom <= corner.bottom + 0.01; };
+                const more = row.querySelector('.set-chars-more');
+                return {
+                    icons: [...row.querySelectorAll('img')].map(img => {
+                        const box = img.getBoundingClientRect();
+                        return { place: img.className.match(/set-char-([\w-]+)/)?.[1] ?? (img.classList.contains('set-image') ? 'solo' : '?'), name: img.alt, title: img.title,
+                            box: [box.left - corner.left, box.top - corner.top, box.width, box.height].map(round), inside: inside(img) };
+                    }),
+                    more: more ? { text: more.textContent.trim(), title: more.title, inside: inside(more), color: getComputedStyle(more).color } : null,
+                    row: round(corner.width),
+                };
+            });
+            return [set.getAttribute('data-set-id'), { card: round(set.getBoundingClientRect().width), names: width('#names'), characters: width('#char-images'),
+                tagColor: getComputedStyle(set.querySelector('.set-tag')).color, sides }];
+        })));
+        const places = side => side.icons.map(icon => `${icon.place} ${icon.name} [${icon.box.join(', ')}] ${icon.title}`).join(' | ') + (side.more ? ` | ${side.more.text} ${side.more.title}` : '');
+        const boxes = { solo: '[5, 4, 18, 18]', 'pair-1': '[2, 1, 14, 14]', 'pair-2': '[12, 11, 14, 14]', main: '[2, 2, 16, 16]', sub: '[15, 12, 12, 12]' };
+        const settled = page => page.waitForFunction(() => [...document.querySelectorAll('#char-images img')].every(image => image.complete), null, { timeout: 5000 }).catch(() => { });
+        report.setCharacters = {};
+        try {
+            const { context, page, quiet } = await openPage(browser, respond, { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 }, { fonts: true });
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            await icons(page);
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            await settled(page);
+            const cards = await measure(page);
+            const drawn = Object.fromEntries(Object.entries(cards).map(([id, card]) => [id, card.sides.map(places)]));
+            report.setCharacters.dark = { cards, drawn, errors };
+            await page.screenshot({ path: 'e2e-out/set-characters-dark.png' }).catch(() => { });
+
+            check('set characters: a side that switched shows its character and, smaller, the switch on a diagonal; the other side is unchanged',
+                JSON.stringify(drawn['106']) === JSON.stringify([`main Fox ${boxes.main} Fox, games 1-2 | sub Falco ${boxes.sub} Falco, games 3-4`, `solo Sheik ${boxes.solo} Sheik, games 1-4`]), drawn['106']);
+            check('set characters: a doubles side shows both of its characters, and a character from another game as a count',
+                JSON.stringify(drawn['103']) === JSON.stringify([`pair-1 Fox ${boxes['pair-1']} Fox, games 1-3 | pair-2 Fox ${boxes['pair-2']} Fox, games 1-3`,
+                    `pair-1 Peach ${boxes['pair-1']} Peach, games 2-3 | pair-2 Jigglypuff ${boxes['pair-2']} Jigglypuff, games 1-3 | +1 Fox, game 1`]), drawn['103']);
+            check('set characters: a third character in singles is a count beside the first switch',
+                JSON.stringify(drawn['101']) === JSON.stringify([`solo Captain Falcon ${boxes.solo} Captain Falcon, games 1-4`,
+                    `main Peach ${boxes.main} Peach, games 1-2 | sub Fox ${boxes.sub} Fox, game 3 | +1 Marth, game 4`]), drawn['101']);
+            check('set characters: a team whose players both switched shows its lineup and counts the switches, most played first',
+                JSON.stringify(drawn['105']) === JSON.stringify([`pair-1 Falco ${boxes['pair-1']} Falco, games 1-3 | pair-2 Fox ${boxes['pair-2']} Fox, games 1-3`,
+                    `pair-1 Fox ${boxes['pair-1']} Fox, game 1 | pair-2 Donkey Kong ${boxes['pair-2']} Donkey Kong, games 1-2 | +2 Sheik, games 2-3; Jigglypuff, game 3`]), drawn['105']);
+            check('set characters: a side with one character keeps one 18px icon in the same place, also when game 1 has no pick',
+                JSON.stringify(drawn['102']) === JSON.stringify([`solo Falco ${boxes.solo} Falco, games 1-3`, `solo Marth ${boxes.solo} Marth, games 1-3`])
+                && JSON.stringify(drawn['104']) === JSON.stringify([`solo Marth ${boxes.solo} Marth, game 2`, `solo Fox ${boxes.solo} Fox, games 1-2`]), { 102: drawn['102'], 104: drawn['104'] });
+            const all = Object.values(cards);
+            const widths = all.map(card => [card.card, card.names, card.characters].join(' '));
+            check('set characters: every card stays 204px wide with a 108px tag column and a 28px character column, and every icon and count is inside its row of that column',
+                all.length === 6 && widths.every(w => w === '204 108 28')
+                && all.every(card => card.sides.every(side => side.row === 28 && side.icons.every(icon => icon.inside) && (!side.more || side.more.inside))) && !errors.length, { widths, errors });
+            await context.close();
+
+            // The light theme and a phone: the same places, and the count in the color of the tags
+            const light = await openPage(browser, respond, { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 }, { fonts: true });
+            await light.page.addInitScript(() => localStorage.setItem('bgg-theme', 'light'));
+            await icons(light.page);
+            await light.page.goto(appUrl + eventPath + '/1001');
+            await light.quiet();
+            await settled(light.page);
+            const lightCards = await measure(light.page);
+            await light.page.screenshot({ path: 'e2e-out/set-characters-light.png' }).catch(() => { });
+            await light.context.close();
+            const phone = await openPage(browser, respond, { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }, { fonts: true });
+            await icons(phone.page);
+            await phone.page.goto(appUrl + eventPath + '/1001');
+            await phone.quiet();
+            await settled(phone.page);
+            const phoneCards = await measure(phone.page);
+            await phone.page.screenshot({ path: 'e2e-out/set-characters-phone.png' }).catch(() => { });
+            await phone.context.close();
+            const drawnIn = measured => JSON.stringify(Object.fromEntries(Object.entries(measured).map(([id, card]) => [id, card.sides.map(places)])));
+            const counts = measured => Object.values(measured).flatMap(card => card.sides.filter(side => side.more).map(side => side.more.color === card.tagColor));
+            report.setCharacters.light = { tagColor: Object.values(lightCards)[0]?.tagColor, counts: counts(lightCards) };
+            report.setCharacters.phone = { same: drawnIn(phoneCards) === JSON.stringify(drawn) };
+            check('set characters: the light theme and a phone draw the same icons in the same places, and the count takes the tags\' color in both themes',
+                drawnIn(lightCards) === JSON.stringify(drawn) && drawnIn(phoneCards) === JSON.stringify(drawn)
+                && counts(cards).length === 3 && counts(cards).every(Boolean) && counts(lightCards).length === 3 && counts(lightCards).every(Boolean)
+                && Object.values(lightCards)[0].tagColor !== all[0].tagColor, report.setCharacters);
+        } catch (e) {
+            report.setCharacters.crashed = String(e.message).slice(0, 300);
+            check('set characters on the bracket\'s cards', false, report.setCharacters);
+        }
     }
 
     // 14. A phase with three pools: one request of pool slices (as many requests as the old whole-phase

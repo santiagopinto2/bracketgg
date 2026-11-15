@@ -164,8 +164,18 @@
                                     <div class="col p-0 set-middle" id="char-images">
                                         @for (slot of set.slots; track slot; let firstSlot = $first; let k = $index) {
                                         <div class="row set-row gx-0" [ngClass]="getSlotBackgroundColor(slot, set)" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
-                                            @if (getCharIcon(set, k)) {
-                                            <img [src]="getCharIcon(set, k)" class="set-image">
+                                            @if (set.chars[k].icons.length > 1) {
+                                            <!-- More than one character: small icons on a diagonal, in the same 28px -->
+                                            <div class="set-chars">
+                                                @for (char of set.chars[k].icons; track $index) {
+                                                <img [src]="char.icon" [alt]="char.name" [title]="char.title" [class]="'set-char-' + char.place">
+                                                }
+                                                @if (set.chars[k].more) {
+                                                <span class="set-chars-more" [title]="set.chars[k].moreTitle">+{{set.chars[k].more}}</span>
+                                                }
+                                            </div>
+                                            } @else if (set.chars[k].icons.length) {
+                                            <img [src]="set.chars[k].icons[0].icon" [alt]="set.chars[k].icons[0].name" [title]="set.chars[k].icons[0].title" class="set-image">
                                             } @else {
                                             <div class="set-image"></div>
                                             }
