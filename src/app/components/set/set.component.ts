@@ -163,22 +163,16 @@ export class SetComponent {
         }).filter(game => game.stage || game.hasPicks || game.sides.some(side => side.win));
     }
 
-    // A line under the score for a set with no games to list, saying why
+    // A line under the score for a disqualification, saying who was out
     private noteText() {
-        const [a, b] = this.sides;
         if (this.dq) {
             const out = this.sides.filter(side => side.value === -1), through = this.sides.find(side => side.won && side.value !== -1);
             const who = out.map(side => side.name).join(' and ');
             return { icon: 'block', text: `${who} ${out.length > 1 ? 'were' : 'was'} disqualified.${through ? ` ${through.name} advances without playing.` : ''}` };
         }
-        // A finished set with no games listed shows only its score (Santi, 2026-11-15)
-        if (this.done) return null;
-        if (this.live) return null;
-        // A projected set says so in its caption, with no note (Santi, 2026-11-15)
-        if (this.projected) return null;
-        if (!a.known && !b.known) return { icon: 'hourglass_empty', text: 'Not played yet. Neither player is known.' };
-        if (!a.known || !b.known) return { icon: 'hourglass_empty', text: `Not played yet. ${(a.known ? a : b).name} is waiting for an opponent.` };
-        return { icon: 'hourglass_empty', text: 'Not played yet.' };
+        // Any other set shows only its score and caption: Santi had the notes for score-only, projected, and
+        // unplayed sets removed (2026-11-15)
+        return null;
     }
 
     // When the set started, or ended if start.gg has no start, in the viewer's own time zone

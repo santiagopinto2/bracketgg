@@ -2340,9 +2340,9 @@ try {
                         ...empty, caption: 'Projected', note: '' },
                 } : {
                     final: { crumbs: 'Single Elim · Test Event · Test Tourney', title: 'Final', chip: 'Not started', chipProjected: false, names: ['Winner of Semi-Final', 'Winner of Semi-Final'], results: ['unknown', 'unknown'], avatars: ['?', '?'],
-                        ...empty, caption: 'Not played', note: 'Not played yet. Neither player is known.' },
+                        ...empty, caption: 'Not played', note: '' },
                     third: { crumbs: 'Single Elim · Test Event · Test Tourney', title: '3rd Place Tiebreak', chip: 'Not started', chipProjected: false, names: ['Loser of Semi-Final', 'Loser of Semi-Final'], results: ['unknown', 'unknown'], avatars: ['?', '?'],
-                        ...empty, caption: 'Not played', note: 'Not played yet. Neither player is known.' },
+                        ...empty, caption: 'Not played', note: '' },
                 };
                 const sorted = value => JSON.stringify(value, Object.keys({ ...value.final, final: 0, third: 0, errors: 0 }).sort());
                 check(projected ? 'set dialog: a projected set names its projected players, in the projected style, with dashes and no arrow'
