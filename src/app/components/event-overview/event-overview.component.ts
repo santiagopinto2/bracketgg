@@ -79,15 +79,26 @@ export class EventOverviewComponent {
         standing.sponsor = singles ? this.splitName(name).sponsor : '';
         standing.tag = singles ? this.splitName(name).tag : name;
 
-        if (!this.getStandingProfile(standing)) {
-            const key = standing.entrant?.id;
-            if (!this.colors.has(key)) {
+        // One picture per player: a team shows each teammate's, overlapping (start.gg sends them all with
+        // the standings). A player without one gets the first letter of their tag on a random color.
+        const participants: any[] = standing.entrant?.participants ?? [];
+        const tags = singles ? [standing.tag] : name.split(' / ');
+        standing.avatars = (singles ? participants.slice(0, 1) : participants.slice(0, 4)).map((participant, i) => {
+            const profile = participant?.user?.images?.[0] ?? null;
+            const key = `${standing.entrant?.id}-${i}`;
+            if (!profile && !this.colors.has(key)) {
                 const hue = Math.floor(Math.random() * 361);
                 const sat = Math.floor(Math.random() * 101);
                 this.colors.set(key, `hsl(${hue}, ${sat}%, 40%)`);
             }
-            standing.backgroundColor = this.colors.get(key);
-        }
+            return {
+                url: profile?.url ?? '',
+                portrait: !!profile && profile.height > profile.width,
+                initial: (tags[i] ?? tags[0] ?? '')[0]?.toUpperCase() ?? '',
+                color: profile ? null : this.colors.get(key),
+            };
+        });
+        if (!standing.avatars.length) standing.avatars = [{ url: '', portrait: false, initial: standing.tag[0]?.toUpperCase() ?? '', color: 'var(--avatar-bg)' }];
 
         // "Cody Schwab ×2, Zain": oldest loss first, as start.gg lists them, with a repeat counted
         const losses = new Map<string, number>();
@@ -140,24 +151,5 @@ export class EventOverviewComponent {
     getOrdinalSuffix(placement: number): string {
         if (placement % 100 >= 11 && placement % 100 <= 13) return 'th';
         return ['th', 'st', 'nd', 'rd'][placement % 10] ?? 'th';
-    }
-
-    getStandingInitial(standing: any): string {
-        return standing.tag[0]?.toUpperCase() ?? '';
-    }
-
-    getStandingProfileImage(standing: any): string {
-        const profile = this.getStandingProfile(standing);
-        return profile ? profile.url : '';
-    }
-
-    getStandingProfileImageOrientation(standing: any): string {
-        const profile = this.getStandingProfile(standing);
-        return profile && profile.height > profile.width ? 'portrait' : '';
-    }
-
-    // The profile picture: the only image asked for (images(type: "profile"))
-    private getStandingProfile(standing: any): any {
-        return standing.entrant?.participants?.[0]?.user?.images?.[0] ?? null;
     }
 }
