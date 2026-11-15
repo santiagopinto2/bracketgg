@@ -7,6 +7,8 @@
 $dark: (
     // The page and the header
     page-bg: #303030,
+    // Behind the phone menu
+    scrim: rgba(0, 0, 0, 0.6),
     text-muted: darkgray,
     divider: rgba(128, 128, 128, 0.3),
     link: #4a9eff,
@@ -111,6 +113,7 @@ $dark: (
 
 $light: (
     page-bg: #f3f4f6,
+    scrim: rgba(0, 0, 0, 0.4),
     text-muted: #5f6672,
     divider: #dde0e5,
     // Dark enough to keep 4.5 to 1 on the page at the 75% opacity of the line it sits in

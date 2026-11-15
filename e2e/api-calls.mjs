@@ -1884,6 +1884,8 @@ try {
                         opened: sidenav.classList.contains('mat-drawer-opened'),
                         mode: sidenav.classList.contains('mat-drawer-over') ? 'over' : 'side',
                         backdrop: !!document.querySelector('.mat-drawer-backdrop.mat-drawer-shown'),
+                        // The backdrop dims the page: black, never Material's dark-theme white
+                        backdropColor: getComputedStyle(document.querySelector('.mat-drawer-backdrop') ?? document.body).backgroundColor,
                         contentLeft: Math.round(box(document.querySelector('mat-sidenav-content')).left),
                         contentWidth: Math.round(box(document.querySelector('mat-sidenav-content')).width),
                         windowWidth: innerWidth,
@@ -1903,6 +1905,7 @@ try {
                 phone.closedByBackdrop = await page.locator('mat-sidenav.mat-drawer-opened').count() === 0;
                 report.loginUi[`phone, ${state}`] = phone;
                 check(`phone, ${state}: the menu has "${want}" and the header does not`, phone.button === want && !phone.otherButton && !phone.inHeader && phone.buttonOnScreen, phone);
+                check(`phone, ${state}: the menu's backdrop dims the page instead of turning it white`, /^rgba\(0, 0, 0, 0\.\d+\)$/.test(phone.backdropColor), phone.backdropColor);
                 check(`phone, ${state}: the menu lies over the page with a backdrop, does not push the page sideways or focus the search box, and a tap beside it closes it`,
                     phone.opened && phone.mode === 'over' && phone.backdrop && phone.contentLeft === 0 && phone.contentWidth === phone.windowWidth && phone.pageWidth <= phone.windowWidth
                     && !phone.focusedInput && phone.closedByBackdrop, phone);
