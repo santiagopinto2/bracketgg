@@ -13,11 +13,11 @@ export class StartggError extends Error { }
 // The page size to try after start.gg refused `perPage` items as too many objects. start.gg sometimes
 // gives the real count (actual: 1235), and the page shrinks to fit it. Sometimes it stops counting at
 // the cap and says "actual: 1000" (a Melee Doubles Top 24, 2026-11-14), which says nothing about the real
-// size, so the page halves.
-export function nextPageSize(perPage: number, actual: number | null): number {
+// size, so the page halves, from `total` (the items there are) when that is smaller.
+export function nextPageSize(perPage: number, actual: number | null, total = Infinity): number {
     return actual && actual > 1000
-        ? Math.max(1, Math.min(perPage - 1, Math.floor(perPage * 980 / actual)))
-        : Math.max(1, Math.floor(perPage / 2));
+        ? Math.max(1, Math.min(perPage - 1, total, Math.floor(perPage * 980 / actual)))
+        : Math.max(1, Math.floor(Math.min(perPage, total) / 2));
 }
 
 // start.gg refused a query for asking for more than 1000 objects. `actual` is the count it gave, if any.
@@ -161,7 +161,7 @@ export class StartggService {
                 return [first, ...rest].flat();
             } catch (error) {
                 if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
-                perPage = nextPageSize(Math.min(perPage, Number(total) || perPage), error.actual);
+                perPage = nextPageSize(perPage, error.actual, Number(total) || Infinity);
             }
         }
     }

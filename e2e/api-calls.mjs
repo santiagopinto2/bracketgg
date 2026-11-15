@@ -825,7 +825,7 @@ try {
 
     // 11. Doubles: start.gg refuses pages that pass the 1000-object cap. Here a set costs 50 objects and
     //     the refusal gives the count, so one retry fits; player refusals give no count (more than 50),
-    //     so those pages halve
+    //     so those pages halve, starting from the number of players
     {
         const normal = await openPage(browser);
         await normal.page.goto(appUrl + eventPath + '/1001');
@@ -848,7 +848,8 @@ try {
         const text = await snackText(page);
         const seedPages = log.filter(r => r.kind === 'seeds').map(r => perPage(r.query));
         report.doublesComplexity = { want, got, snackbar: text, requests: count(log), seedPages, errors };
-        check('doubles: a refused players page halves until it fits, and the pictures still show', seedPages.at(-1) <= 50 && seedPages.slice(0, -1).every(n => n > 50)
+        // A refused page of 300 halves from the phase's 4 players, so one refusal, then pages that fit
+        check('doubles: a refused players page halves from the players there are, and the pictures still show', seedPages[0] > 50 && seedPages.slice(1).length >= 1 && seedPages.slice(1).every(n => n <= 50)
             && (await page.locator('#entrant-images img').count()) === 4, report.doublesComplexity);
         check('doubles: oversized pages are retried smaller (sets in one retry) and the bracket draws',
             want > 0 && got === want && report.doublesComplexity.requests.sets === 2 && !text.includes('complexity') && !errors.length, report.doublesComplexity);
