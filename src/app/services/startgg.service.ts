@@ -10,6 +10,16 @@ import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuer
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
 
+// The page size to try after start.gg refused `perPage` items as too many objects. start.gg sometimes
+// gives the real count (actual: 1235), and the page shrinks to fit it. Sometimes it stops counting at
+// the cap and says "actual: 1000" (a Melee Doubles Top 24, 2026-11-14), which says nothing about the real
+// size, so the page halves, from `total` (the items there are) when that is smaller.
+export function nextPageSize(perPage: number, actual: number | null, total = Infinity): number {
+    return actual && actual > 1000
+        ? Math.max(1, Math.min(perPage - 1, total, Math.floor(perPage * 980 / actual)))
+        : Math.max(1, Math.floor(Math.min(perPage, total) / 2));
+}
+
 // start.gg refused a query for asking for more than 1000 objects. `actual` is the count it gave, if any.
 export class TooComplexError extends StartggError {
     constructor(message: string, public actual: number | null) { super(message); }
@@ -138,6 +148,7 @@ export class StartggService {
     // Loads `total` items in pages of `perPage`. Sets with characters reported (more so best of 5 and
     // doubles) can pass start.gg's 1000-object cap. When a page does, this shrinks the page size to fit
     // the count start.gg gave (or halves it), tries again, and remembers the size that worked under `key`.
+    // After a refusal the page starts from `total`, since shrinking a page past what exists changes nothing.
     private async loadPages(key: string, total: number, perPage: number, loadPage: (page: number, perPage: number) => Promise<any[]>): Promise<any[]> {
         perPage = Math.min(perPage, this.pageSizes.get(key) ?? perPage);
         for (; ;) {
@@ -150,9 +161,7 @@ export class StartggService {
                 return [first, ...rest].flat();
             } catch (error) {
                 if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
-                perPage = error.actual
-                    ? Math.max(1, Math.min(perPage - 1, Math.floor(perPage * 980 / error.actual)))
-                    : Math.floor(perPage / 2);
+                perPage = nextPageSize(perPage, error.actual, Number(total) || Infinity);
             }
         }
     }
@@ -244,9 +253,7 @@ export class StartggService {
                 return { nodes, total, done: all.length < perPage || offset + nodes.length >= total };
             } catch (error) {
                 if (!(error instanceof TooComplexError) || perPage <= 1) throw error;
-                perPage = error.actual
-                    ? Math.max(1, Math.min(perPage - 1, Math.floor(perPage * 980 / error.actual)))
-                    : Math.floor(perPage / 2);
+                perPage = nextPageSize(perPage, error.actual);
             }
         }
     }
@@ -413,8 +420,9 @@ export class StartggService {
             for (const { error, request } of refused) {
                 const sets = request.reduce((n, slice) => n + slice.sets, 0);
                 if (request.length === 1 && size === 1) throw error;
-                // start.gg's count, less one object per slice, spread over the sets asked for
-                const counted = error.actual && sets ? Math.ceil((error.actual - request.length) / sets) : perSet * 2;
+                // start.gg's count, less one object per slice, spread over the sets asked for. A count of
+                // 1000 is only the cap (see nextPageSize), so the guess doubles instead.
+                const counted = error.actual > 1000 && sets ? Math.ceil((error.actual - request.length) / sets) : perSet * 2;
                 perSet = Math.max(perSet + 1, counted);
             }
             // A slice must fit in a request on its own. A smaller slice moves every page boundary, so the

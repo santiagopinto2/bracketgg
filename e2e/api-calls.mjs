@@ -749,6 +749,20 @@ try {
         await context.close();
     }
 
+    // 9d. start.gg refuses a pool's sets saying only "actual: 1000", its cap (a Melee Doubles Top 24 of 31
+    //     sets did, 2026-11-14): the page drops to the pool's size and halves, instead of shrinking 2% a try
+    {
+        const capOnly = { body: { errors: [{ message: 'Your query complexity is too high. A maximum of 1000 objects may be returned by each request. (actual: 1000)' }] } };
+        const { context, page, log, quiet } = await openPage(browser, q => kindOf(q) === 'sets' && Number(q.match(/perPage: (\d+)/)?.[1]) > 3 ? capOnly : null);
+        await page.goto(appUrl + eventPath + '/1001');
+        await quiet();
+        const sets = log.filter(r => r.kind === 'sets').map(r => Number(r.query.match(/perPage: (\d+)/)?.[1]));
+        report.capOnlyRefusal = { perPage: sets, tags: await tags(page) };
+        check('a refusal that gives only start.gg\'s cap (actual: 1000) halves the page from the pool\'s size: 3 requests for 6 sets',
+            sets.length === 3 && sets[1] === 3 && (await tags(page)).includes('Alpha'), report.capOnlyRefusal);
+        await context.close();
+    }
+
     // 10. Phone: searching an entrant scrolls the bracket to them, even as the keyboard closes
     report.phoneSearch = {};
     const safari2 = await webkit.launch();
@@ -811,7 +825,7 @@ try {
 
     // 11. Doubles: start.gg refuses pages that pass the 1000-object cap. Here a set costs 50 objects and
     //     the refusal gives the count, so one retry fits; player refusals give no count (more than 50),
-    //     so those pages halve
+    //     so those pages halve, starting from the number of players
     {
         const normal = await openPage(browser);
         await normal.page.goto(appUrl + eventPath + '/1001');
@@ -834,7 +848,8 @@ try {
         const text = await snackText(page);
         const seedPages = log.filter(r => r.kind === 'seeds').map(r => perPage(r.query));
         report.doublesComplexity = { want, got, snackbar: text, requests: count(log), seedPages, errors };
-        check('doubles: a refused players page halves until it fits, and the pictures still show', seedPages.at(-1) <= 50 && seedPages.slice(0, -1).every(n => n > 50)
+        // A refused page of 300 halves from the phase's 4 players, so one refusal, then pages that fit
+        check('doubles: a refused players page halves from the players there are, and the pictures still show', seedPages[0] > 50 && seedPages.slice(1).length >= 1 && seedPages.slice(1).every(n => n <= 50)
             && (await page.locator('#entrant-images img').count()) === 4, report.doublesComplexity);
         check('doubles: oversized pages are retried smaller (sets in one retry) and the bracket draws',
             want > 0 && got === want && report.doublesComplexity.requests.sets === 2 && !text.includes('complexity') && !errors.length, report.doublesComplexity);
