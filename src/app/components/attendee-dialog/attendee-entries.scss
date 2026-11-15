@@ -126,6 +126,11 @@
         background: var(--chip-active-bg);
         color: var(--chip-active-text);
     }
+
+    &.upcoming {
+        background: var(--chip-upcoming-bg);
+        color: var(--chip-upcoming-text);
+    }
 }
 
 .dlg-phases {
