@@ -1,124 +1,131 @@
-import { Component, computed, effect, signal, ChangeDetectionStrategy } from '@angular/core';
-import { NgClass, NgStyle } from '@angular/common';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewEncapsulation, computed, effect, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MatIconModule } from '@angular/material/icon';
+import { StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
+import { EventCard, EventKind, EventSort, PlayerRow, filterEvents, finalRows, buildView } from './tournament-view';
 
+// The tournament's page: a header tinted by its banner, the biggest events' results, every event as a
+// card, when and where it is, its streams, and when each event starts. tournament-view.ts works out
+// what each part says.
 @Component({
     selector: 'app-tournament',
-    imports: [MatIconModule, RouterLink, NgClass, NgStyle],
+    imports: [RouterLink, NgTemplateOutlet],
     templateUrl: './tournament.component.html',
     changeDetection: ChangeDetectionStrategy.Eager,
     styleUrl: './tournament.component.scss',
+    // The styles are all under .tp-page, and unscoped so they stay small
+    encapsulation: ViewEncapsulation.None,
 })
-export class TournamentComponent {
+export class TournamentComponent implements AfterViewInit, OnDestroy {
+
+    // Event cards shown before "Show all"
+    readonly eventLimit = 8;
 
     tournament = signal<any>(null);
-    private standingColorMap = new Map<number, string>();
-
-    profileImage = computed(() => {
+    view = computed(() => {
         const t = this.tournament();
-        if (!t?.images?.length) return '';
-        return (t.images.find((i: any) => i.type === 'profile') ?? t.images[0]).url ?? '';
+        return t ? buildView(t, Date.now() / 1000) : null;
     });
 
-    bannerImage = computed(() => {
-        const t = this.tournament();
-        if (!t?.images?.length) return '';
-        return (t.images.find((i: any) => i.type === 'banner') ?? t.images[0]).url ?? '';
-    });
+    // The events list: its filter, order, and whether every card is shown
+    kind = signal<EventKind>('all');
+    sort = signal<EventSort>('size');
+    showAll = signal(false);
+    listedEvents = computed(() => filterEvents(this.view()?.events ?? [], this.kind(), this.sort()));
+    shownEvents = computed(() => this.showAll() ? this.listedEvents() : this.listedEvents().slice(0, this.eventLimit));
 
-    formattedDate = computed(() => {
-        const t = this.tournament();
-        if (!t?.startAt) return '';
-        return new Date(t.startAt * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    });
+    // The result shown on a phone, and the tab last jumped to
+    resultTab = signal(0);
+    activeTab = signal('tp-top');
+    // What was just copied: 'link', 'address', or ''
+    copied = signal('');
 
-    // "4,786"
-    attendeeCount = computed(() => Number(this.tournament()?.numAttendees ?? 0).toLocaleString('en-US'));
+    // Each result event's top 8 by event id, once loaded; until then its card shows the top 3
+    private topEight = signal<Record<string, any[]>>({});
+    private topEightKey = '';
+    private scroller: HTMLElement | null = null;
 
-    googleMapsUrl = computed(() => {
-        const t = this.tournament();
-        if (!t?.venueAddress) return '';
-        return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(t.venueAddress);
-    });
-
-    getGameImage(images: any[]): string {
-        if (!images?.length) return '';
-        return (images.find(i => i.type === 'primary') ?? images[0]).url ?? '';
-    }
-
-    getEventDate(startAt: number): string {
-        if (!startAt) return '';
-        return new Date(startAt * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    }
-
-    hasTopThree(event: any): boolean {
-        const nodes = event.standings?.nodes;
-        return nodes?.length === 3 && nodes[0].placement === 1 && nodes[1].placement === 2 && nodes[2].placement === 3;
-    }
-
-    getStandingName(standing: any): string {
-        return standing.entrant.name;
-    }
-
-    getStandingInitial(standing: any): string {
-        const name: string = standing.entrant.name;
-        const pipeIndex = name.indexOf('|');
-        const initial = pipeIndex !== -1 ? name[pipeIndex + 2] : name[0];
-        return initial?.toUpperCase() ?? '';
-    }
-
-    getOrdinalSuffix(placement: number): string {
-        if (placement === 1) return 'st';
-        if (placement === 2) return 'nd';
-        if (placement === 3) return 'rd';
-        return 'th';
-    }
-
-    getStandingProfileImage(standing: any): string {
-        const profile = this.getStandingProfile(standing);
-        return profile ? profile.url : '';
-    }
-
-    getStandingProfileImageOrientation(standing: any): string {
-        const profile = this.getStandingProfile(standing);
-        return profile && profile.height > profile.width ? 'portrait' : '';
-    }
-
-    // The profile picture: the only image asked for (images(type: "profile"))
-    private getStandingProfile(standing: any): any {
-        return standing.entrant?.participants?.[0]?.user?.images?.[0] ?? null;
-    }
-
-    private randomColor(): string {
-        const hue = Math.floor(Math.random() * 361);
-        const sat = Math.floor(Math.random() * 101);
-        return `hsl(${hue}, ${sat}%, 40%)`;
-    }
-
-    constructor(private tournamentDataService: TournamentDataService) {
+    constructor(
+        private tournamentDataService: TournamentDataService,
+        private startggService: StartggService,
+        private host: ElementRef<HTMLElement>
+    ) {
         effect(() => {
             const data = this.tournamentDataService.tournamentSource();
-            if (data?.name) {
-                data.events?.forEach((event: any) => {
-                    event.standings?.nodes?.forEach((standing: any) => {
-                        if (!this.getStandingProfile(standing)) {
-                            const participants = standing.entrant?.participants;
-                            if (participants?.length === 1) {
-                                const pid = participants[0].id;
-                                if (!this.standingColorMap.has(pid)) {
-                                    this.standingColorMap.set(pid, this.randomColor());
-                                }
-                                standing.backgroundColor = this.standingColorMap.get(pid);
-                            } else {
-                                standing.backgroundColor = this.randomColor();
-                            }
-                        }
-                    });
-                });
+            const next = data?.name ? data : null;
+            if (next?.slug !== untracked(this.tournament)?.slug) {
+                this.kind.set('all');
+                this.showAll.set(false);
+                this.resultTab.set(0);
             }
-            this.tournament.set(data?.name ? data : null);
+            this.tournament.set(next);
         });
+
+        // The top 8 of the events in Results: one request, only when there are results to show
+        effect(() => {
+            const ids = (this.view()?.results ?? []).map(event => event.id);
+            const key = ids.join(',');
+            if (!ids.length || key === this.topEightKey) return;
+            this.topEightKey = key;
+            this.startggService.getTournamentResults(ids)
+                .then(standings => { if (this.topEightKey === key) this.topEight.set(standings); })
+                // The cards keep the top 3 they already show
+                .catch(error => console.error(error));
+        });
+    }
+
+    ngAfterViewInit() {
+        this.scroller = this.host.nativeElement.closest('mat-sidenav-content');
+        this.scroller?.addEventListener('scroll', this.onScroll, { passive: true });
+    }
+
+    ngOnDestroy() {
+        this.scroller?.removeEventListener('scroll', this.onScroll);
+    }
+
+    // Back at the top, the first tab is the chosen one again
+    private onScroll = () => {
+        if (this.scroller && this.scroller.scrollTop < 40 && this.activeTab() !== 'tp-top') this.activeTab.set('tp-top');
+    };
+
+    // The rows of a result card: the champion first, then up to 2nd to 8th
+    rowsOf(event: EventCard): PlayerRow[] {
+        const rows = finalRows(this.topEight()[event.id], event.teams, true);
+        return rows.length ? rows : event.podium;
+    }
+
+    // Scrolls to a section of the page
+    go(id: string) {
+        this.activeTab.set(id);
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.host.nativeElement.querySelector('#' + id)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    }
+
+    setKind(kind: EventKind) {
+        this.kind.set(kind);
+    }
+
+    setSort(event: Event) {
+        this.sort.set((event.target as HTMLSelectElement).value as EventSort);
+    }
+
+    // The phone's share sheet where there is one; otherwise the page's link is copied
+    share(title: string) {
+        const url = window.location.href;
+        if (typeof navigator.share === 'function') navigator.share({ title, url }).catch(() => { });
+        else this.copy(url, 'link');
+    }
+
+    copy(text: string, what: string) {
+        navigator.clipboard?.writeText(text).then(() => {
+            this.copied.set(what);
+            setTimeout(() => { if (this.copied() === what) this.copied.set(''); }, 1500);
+        }).catch(() => { });
+    }
+
+    // A picture that failed to load gives way to the initials or the plain box behind it
+    hide(event: Event) {
+        (event.target as HTMLElement).style.display = 'none';
     }
 }

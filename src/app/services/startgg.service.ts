@@ -5,7 +5,7 @@ import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore } from './display-score';
 import { generatePoolSets } from './generated-bracket';
-import { MAX_POOL_SLICES, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuery, attendeesQuery, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSeedsQuery, poolSetsQuery, poolSlicesQuery, seededAttendeesQuery, setDetailsQuery, setScoresQuery, tournamentQuery } from './startgg-queries';
+import { MAX_POOL_SLICES, MAX_RESULT_EVENTS, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuery, attendeesQuery, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSeedsQuery, poolSetsQuery, poolSlicesQuery, seededAttendeesQuery, setDetailsQuery, setScoresQuery, tournamentLiteQuery, tournamentQuery, tournamentResultsQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
 export class StartggError extends Error { }
@@ -178,9 +178,26 @@ export class StartggService {
 
     getTournamentEvents(tourneySlug): Promise<any> {
         return this.cached(`tournament:${tourneySlug}`, async () => {
-            const data = await this.query(tournamentQuery, { slug: String(tourneySlug) });
+            let data: any;
+            try {
+                data = await this.query(tournamentQuery, { slug: String(tourneySlug) });
+            } catch (error) {
+                // More events than fit in one request with their top 3 and phases: the events alone
+                if (!(error instanceof TooComplexError)) throw error;
+                data = await this.query(tournamentLiteQuery, { slug: String(tourneySlug) });
+            }
             if (!data?.tournament) throw new StartggError('Tournament not found on start.gg.');
             return data.tournament;
+        });
+    }
+
+    // The top 8 of up to MAX_RESULT_EVENTS events, by event id, for the tournament page's Results.
+    // Reused for a few minutes.
+    getTournamentResults(eventIds: number[]): Promise<Record<string, any[]>> {
+        const ids = eventIds.slice(0, MAX_RESULT_EVENTS).map(Number);
+        return this.cached(`results:${ids.join(',')}`, async () => {
+            const data = await this.query(tournamentResultsQuery(ids.length), Object.fromEntries(ids.map((id, k) => [`id${k}`, id])));
+            return Object.fromEntries(ids.map((id, k) => [id, data?.[`e${k}`]?.standings?.nodes ?? []]));
         });
     }
 

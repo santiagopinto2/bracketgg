@@ -1,109 +1,362 @@
-@if (tournament()) {
-<div class="banner-container">
-    @if (bannerImage()) {
-    <img class="banner-img" [src]="bannerImage()" [alt]="tournament().name" />
-    }
-</div>
+<!-- A round picture with the initials behind it, for when there is none or it fails to load -->
+<ng-template #avatar let-pic="pic" let-initials="initials" let-size="size">
+    <span class="av" [class]="size" [attr.data-i]="initials">
+        @if (pic) {
+        <img [src]="pic" alt="" loading="lazy" (error)="hide($event)" />
+        }
+    </span>
+</ng-template>
 
-<div class="page-content">
-    <div class="info-section">
-        <div class="info-header">
-            @if (profileImage()) {
-            <img class="profile-img" [src]="profileImage()" [alt]="tournament().name" />
+<!-- A player's or team's name, the sponsor dimmed -->
+<ng-template #who let-row="row">
+    @if (row.team) {
+    <span class="team">{{ row.team }}</span>
+    }
+    <b>{{ row.tag }}</b>
+</ng-template>
+
+<ng-template #arrow>
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+</ng-template>
+
+<ng-template #pin>
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.200 7-11.500A7 7 0 0 0 5 9.500C5 14.800 12 21 12 21Z" /><circle cx="12" cy="9.500" r="2.500" /></svg>
+</ng-template>
+
+@let v = view();
+@if (v) {
+<div class="tp-page">
+    <!-- The banner, blurred, tints the top of the page with the tournament's own colors -->
+    @if (v.banner) {
+    <div class="ambient" aria-hidden="true"><img [src]="v.banner" alt="" /></div>
+    }
+
+    <div class="wrap">
+        <section class="hero" id="tp-top" [class.no-banner]="!v.banner">
+            @if (v.banner) {
+            <div class="banner"><img [src]="v.banner" [alt]="v.name + ' banner'" (error)="hide($event)" /></div>
             }
-            <div>
-                <h1 class="tournament-name">{{ tournament().name }}</h1>
-                <div class="meta-row">
-                    @if (tournament().startAt) {
-                    <span class="meta-item">
-                        <mat-icon>calendar_today</mat-icon>
-                        {{ formattedDate() }}
-                    </span>
-                    }
-                    @if (tournament().venueAddress) {
-                    <span class="meta-item">
-                        <mat-icon>location_on</mat-icon>
-                        <a [href]="googleMapsUrl()" target="_blank" rel="noopener">{{ tournament().venueAddress }}</a>
-                    </span>
-                    }
-                    @if (tournament().numAttendees) {
-                    <span class="meta-item">
-                        <mat-icon>group</mat-icon>
-                        <a class="attendees-link" [routerLink]="'/' + tournament().slug + '/attendees'">{{ attendeeCount() }} {{ tournament().numAttendees == 1 ? 'attendee' : 'attendees' }}</a>
-                    </span>
-                    }
-                    @if (tournament().primaryContact) {
-                    <span class="meta-item">
-                        <mat-icon>email</mat-icon>
-                        <a [href]="'mailto:' + tournament().primaryContact">{{ tournament().primaryContact }}</a>
-                    </span>
-                    }
+            <div class="hero-body">
+                @if (v.profile) {
+                <img class="t-logo" [src]="v.profile" alt="" (error)="hide($event)" />
+                }
+                <div class="hero-text">
+                    <div class="hero-chips">
+                        <span class="chip status" [class.done]="v.status === 'done'" [class.live]="v.status === 'live'"><i></i>{{ v.statusLabel }}</span>
+                        @if (v.mode) {
+                        <span class="chip mode">{{ v.mode }}</span>
+                        }
+                        @if (v.hashtag) {
+                        <span class="chip">#{{ v.hashtag }}</span>
+                        }
+                    </div>
+                    <h1 class="tournament-name">{{ v.name }}</h1>
+                    <ul class="hero-meta">
+                        @if (v.dateRange) {
+                        <li>
+                            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.500" y="5" width="17" height="15" rx="3" /><path d="M3.500 10h17M8 3v4M16 3v4" /></svg>
+                            <span>{{ v.dateRange }}</span>
+                        </li>
+                        }
+                        @if (v.place) {
+                        <li>
+                            <ng-container [ngTemplateOutlet]="pin"></ng-container>
+                            <span>{{ v.place }}</span>
+                        </li>
+                        }
+                        @if (v.owner; as owner) {
+                        <li class="org">
+                            <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: owner.pic, initials: owner.initials, size: 'xs' }"></ng-container>
+                            <span>Run by <b>{{ owner.tag }}</b></span>
+                        </li>
+                        }
+                    </ul>
+                </div>
+                <div class="hero-actions">
+                    <button type="button" class="tbtn share" (click)="share(v.name)">
+                        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 7.500 12 4l4 3.500M6 12v6.500A1.500 1.500 0 0 0 7.500 20h9a1.500 1.500 0 0 0 1.500-1.500V12" /></svg>
+                        <span>{{ copied() === 'link' ? 'Link copied' : 'Share' }}</span>
+                    </button>
+                    <a class="tbtn" [href]="v.startggUrl" target="_blank" rel="noopener">
+                        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M10 6H6.500A1.500 1.500 0 0 0 5 7.500v10A1.500 1.500 0 0 0 6.500 19h10a1.500 1.500 0 0 0 1.500-1.500V14" /></svg>
+                        <span>start.gg</span>
+                    </a>
                 </div>
             </div>
-        </div>
-    </div>
 
-    @if (tournament().events?.length) {
-    <div class="events-section">
-        <h2 class="events-heading">Events</h2>
-        <div class="events-grid">
-            @for (event of tournament().events; track event.slug) {
-            <div class="event-card">
-                <a class="event-game-img-wrap" [routerLink]="'/' + event.slug">
-                    @if (getGameImage($safeNavigationMigration(event.videogame?.images))) {
-                    <img class="event-game-img" [src]="getGameImage($safeNavigationMigration(event.videogame?.images))" [alt]="$safeNavigationMigration(event.videogame?.name)" />
-                    } @else {
-                    <div class="event-game-img-placeholder"><mat-icon>videogame_asset</mat-icon></div>
-                    }
-                </a>
-                <div class="event-info">
-                    <a class="event-name" [routerLink]="'/' + event.slug">{{ event.name }}</a>
-                    @if (hasTopThree(event)) {
-                    <div class="event-row event-standings-row">
-                        @for (standing of event.standings.nodes; track standing.placement) {
-                        <span class="event-meta-item">
-                            <span class="standing-placement placement-{{ standing.placement }}">{{ standing.placement }}<sup>{{ getOrdinalSuffix(standing.placement) }}</sup></span>
-                            <div class="standing-profile-image">
-                                @if (getStandingProfileImage(standing) !== '') {
-                                <img [ngClass]="getStandingProfileImageOrientation(standing)" [src]="getStandingProfileImage(standing)" />
-                                } @else {
-                                <div class="standing-profile-image-default" [ngStyle]="{'background-color': standing.backgroundColor}">{{ getStandingInitial(standing) }}</div>
+            <div class="stats">
+                @if (v.numAttendees) {
+                <a class="attendees-link" [routerLink]="v.attendeesLink"><b>{{ v.attendees }}</b><span>{{ v.numAttendees === 1 ? 'Attendee' : 'Attendees' }}</span></a>
+                }
+                <button type="button" (click)="go('tp-events')"><b>{{ v.events.length }}</b><span>{{ v.events.length === 1 ? 'Event' : 'Events' }}</span></button>
+                <button type="button" (click)="go('tp-events')"><b>{{ v.games }}</b><span>{{ v.games === 1 ? 'Game' : 'Games' }}</span></button>
+                @if (v.streams.length) {
+                <button type="button" (click)="go('tp-streams')"><b>{{ v.streams.length }}</b><span>{{ v.streams.length === 1 ? 'Stream' : 'Streams' }}</span></button>
+                }
+            </div>
+        </section>
+
+        <nav class="tabs" aria-label="Tournament sections">
+            <button type="button" [class.on]="activeTab() === 'tp-top'" (click)="go('tp-top')">Overview</button>
+            @if (v.results.length) {
+            <button type="button" [class.on]="activeTab() === 'tp-results'" (click)="go('tp-results')">Results</button>
+            }
+            @if (v.events.length) {
+            <button type="button" [class.on]="activeTab() === 'tp-events'" (click)="go('tp-events')">Events <em>{{ v.events.length }}</em></button>
+            }
+            <a class="tab-attendees" [routerLink]="v.attendeesLink">
+                <span>Attendees</span>
+                @if (v.numAttendees) {
+                <em>{{ v.attendees }}</em>
+                }
+            </a>
+            @if (v.streams.length) {
+            <button type="button" [class.on]="activeTab() === 'tp-streams'" (click)="go('tp-streams')">Streams <em>{{ v.streams.length }}</em></button>
+            }
+            @if (v.schedule.days.length) {
+            <button type="button" [class.on]="activeTab() === 'tp-schedule'" (click)="go('tp-schedule')">Schedule</button>
+            }
+            @if (v.when || v.address) {
+            <button type="button" [class.on]="activeTab() === 'tp-where'" (click)="go('tp-where')">Location</button>
+            }
+        </nav>
+
+        <div class="layout">
+            <div class="main">
+                @if (v.results.length) {
+                @let tab = resultTab() < v.results.length ? resultTab() : 0;
+                <section id="tp-results" class="block">
+                    <div class="block-head">
+                        <h2 class="h2">Results</h2>
+                        @if (v.results.length > 1) {
+                        <div class="seg only-phone" role="tablist" aria-label="Event">
+                            @for (event of v.results; track event.id; let i = $index) {
+                            <button type="button" role="tab" [class.on]="tab === i" [attr.aria-selected]="tab === i" (click)="resultTab.set(i)">{{ event.short }}</button>
+                            }
+                        </div>
+                        }
+                        @if (v.events.length > v.results.length) {
+                        <button type="button" class="jump not-phone" (click)="go('tp-events')">Results for all {{ v.events.length }} events <ng-container [ngTemplateOutlet]="arrow"></ng-container></button>
+                        }
+                    </div>
+                    <div class="results" [class.single]="v.results.length === 1">
+                        @for (event of v.results; track event.id; let i = $index) {
+                        @let rows = rowsOf(event);
+                        <article class="result" [class.shown]="tab === i">
+                            <header>
+                                @if (event.art) {
+                                <img class="game" [src]="event.art" alt="" (error)="hide($event)" />
+                                }
+                                <div class="result-title">
+                                    <h3><a [routerLink]="event.link">{{ event.name }}</a></h3>
+                                    <p>{{ event.count }} {{ event.unit }}{{ event.phaseCount ? ' · ' + event.phaseCount + (event.phaseCount === 1 ? ' phase' : ' phases') : '' }}</p>
+                                </div>
+                                @if (event.bracketLink) {
+                                <a class="jump" [routerLink]="event.bracketLink">{{ event.lastPhase }} bracket <ng-container [ngTemplateOutlet]="arrow"></ng-container></a>
+                                }
+                            </header>
+                            @if (rows[0]; as champion) {
+                            <div class="champ">
+                                @if (champion.pic) {
+                                <img class="champ-bg" [src]="champion.pic" alt="" (error)="hide($event)" />
+                                }
+                                <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: champion.pic, initials: champion.initials, size: 'xl' }"></ng-container>
+                                <div class="champ-text">
+                                    <span class="label">
+                                        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H4.500c0 3 1.500 4.500 3.700 4.700M16 6h3.500c0 3-1.500 4.500-3.700 4.700M12 13v4M8.500 20h7M10 17h4" /></svg>
+                                        Champion
+                                    </span>
+                                    <strong><ng-container [ngTemplateOutlet]="who" [ngTemplateOutletContext]="{ row: champion }"></ng-container></strong>
+                                </div>
+                            </div>
+                            }
+                            <ol class="places">
+                                @for (row of rows.slice(1); track $index) {
+                                <li>
+                                    <span class="pl" [class.p2]="row.placement === 2" [class.p3]="row.placement === 3">{{ row.place }}</span>
+                                    <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: row.pic, initials: row.initials, size: 'sm' }"></ng-container>
+                                    <span class="who"><ng-container [ngTemplateOutlet]="who" [ngTemplateOutletContext]="{ row: row }"></ng-container></span>
+                                </li>
+                                }
+                            </ol>
+                        </article>
+                        }
+                    </div>
+                </section>
+                }
+
+                @if (v.events.length) {
+                <section id="tp-events" class="block">
+                    <div class="block-head">
+                        <h2 class="h2">Events <em class="ev-count">{{ listedEvents().length }}</em></h2>
+                        @if (v.events.length > 1) {
+                        <div class="controls">
+                            @if (v.hasSingles && v.hasTeams) {
+                            <div class="seg kinds" role="group" aria-label="Filter events">
+                                <button type="button" [class.on]="kind() === 'all'" (click)="setKind('all')">All</button>
+                                <button type="button" [class.on]="kind() === 'singles'" (click)="setKind('singles')">Singles</button>
+                                <button type="button" [class.on]="kind() === 'teams'" (click)="setKind('teams')">Teams</button>
+                            </div>
+                            }
+                            <label class="sort">
+                                <span>Sort</span>
+                                <span class="sort-box">
+                                    <select aria-label="Sort events" (change)="setSort($event)">
+                                        <option value="size" [selected]="sort() === 'size'">Most entrants</option>
+                                        <option value="time" [selected]="sort() === 'time'">Start time</option>
+                                        <option value="name" [selected]="sort() === 'name'">Name</option>
+                                    </select>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z" /></svg>
+                                </span>
+                            </label>
+                        </div>
+                        }
+                    </div>
+                    <div class="events">
+                        @for (event of shownEvents(); track event.id) {
+                        <a class="ev" [routerLink]="event.link">
+                            @if (event.art) {
+                            <img class="ev-art" [src]="event.art" alt="" loading="lazy" (error)="hide($event)" />
+                            } @else {
+                            <span class="ev-art"></span>
+                            }
+                            <div class="ev-top">
+                                <div>
+                                    <h3 class="ev-name event-name">{{ event.name }}</h3>
+                                    <p class="ev-game">{{ event.game ? event.game + ' · ' : '' }}{{ event.teams ? 'Teams' : 'Singles' }}</p>
+                                </div>
+                                <div class="ev-n"><b>{{ event.count }}</b><span>{{ event.unit }}</span></div>
+                            </div>
+                            <div class="ev-mid">
+                                @if (event.podium.length) {
+                                <ol class="pod">
+                                    @for (row of event.podium; track $index) {
+                                    <li>
+                                        <span class="place" [class]="'p' + row.placement">{{ row.place }}</span>
+                                        <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: row.pic, initials: row.initials, size: 'xs' }"></ng-container>
+                                        <span class="nm"><ng-container [ngTemplateOutlet]="who" [ngTemplateOutletContext]="{ row: row }"></ng-container></span>
+                                    </li>
+                                    }
+                                </ol>
+                                } @else if (event.note) {
+                                <p class="pod-none">{{ event.note }}</p>
                                 }
                             </div>
-                            {{ getStandingName(standing) }}
-                        </span>
+                            @if (event.phaseCount || event.when) {
+                            <div class="ev-foot">
+                                <span class="trail">
+                                    @if (event.trail.length) {
+                                    @for (phase of event.trail; track $index) {
+                                    @if ($index) {
+                                    <i>›</i>
+                                    }
+                                    <span>{{ phase }}</span>
+                                    }
+                                    } @else if (event.phaseCount) {
+                                    {{ event.phaseCount }} phases
+                                    }
+                                </span>
+                                @if (event.when) {
+                                <span class="ev-when">
+                                    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.500" /><path d="M12 7.500V12l3 2" /></svg>
+                                    {{ event.when }}
+                                </span>
+                                }
+                            </div>
+                            }
+                        </a>
                         }
+                    </div>
+                    @if (listedEvents().length > eventLimit) {
+                    <button type="button" class="tbtn more" (click)="showAll.set(!showAll())">{{ showAll() ? 'Show fewer' : 'Show all ' + listedEvents().length + ' events' }}</button>
+                    }
+                </section>
+                }
+            </div>
+
+            <aside class="side">
+                @if (v.when || v.address || v.contact) {
+                <section id="tp-where" class="panel where">
+                    <h2 class="panel-title">When and Where</h2>
+                    @if (v.when; as when) {
+                    <div class="when">
+                        <div class="cal"><span>{{ when.month }}</span><b>{{ when.day }}</b></div>
+                        <div>
+                            <strong>{{ v.dateRange }}</strong>
+                            <p>{{ when.times }}</p>
+                            @if (when.zone) {
+                            <p class="dim">{{ when.zone }}</p>
+                            }
+                        </div>
                     </div>
                     }
-                    <div class="event-row">
-                        @if (event.videogame?.name) {
-                        <span class="event-meta-item">
-                            <mat-icon>sports_esports</mat-icon>
-                            {{ event.videogame.name }}
-                        </span>
-                        }
-                        <span class="event-meta-item">
-                            <mat-icon>person</mat-icon>
-                            {{ event.type === 1 ? 'Singles' : 'Teams' }}
-                        </span>
+                    @if (v.address; as address) {
+                    <div class="addr">
+                        <div>
+                            <strong>{{ address.title }}</strong>
+                            @if (address.rest) {
+                            <p>{{ address.rest }}</p>
+                            }
+                        </div>
+                        <button type="button" class="icon-btn" [class.ok]="copied() === 'address'" (click)="copy(address.full, 'address')" [attr.aria-label]="copied() === 'address' ? 'Address copied' : 'Copy address'" [title]="copied() === 'address' ? 'Address copied' : 'Copy address'">
+                            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="8.500" y="8.500" width="11" height="11" rx="2.500" /><path d="M15.500 5.500v-.5A1.500 1.500 0 0 0 14 3.500H6A1.500 1.500 0 0 0 4.500 5v8A1.500 1.500 0 0 0 6 14.500h.5" /></svg>
+                        </button>
                     </div>
-                    <div class="event-row">
-                        @if (event.startAt) {
-                        <span class="event-meta-item">
-                            <mat-icon>calendar_today</mat-icon>
-                            {{ getEventDate(event.startAt) }}
-                        </span>
+                    <a class="tbtn wide directions" [href]="address.directions" target="_blank" rel="noopener"><ng-container [ngTemplateOutlet]="pin"></ng-container>Get directions</a>
+                    } @else if (v.mode === 'Online') {
+                    <p class="online">This tournament is played online.</p>
+                    }
+                    @if (v.contact; as contact) {
+                    <p class="contact">
+                        Contact:
+                        @if (contact.href) {
+                        <a [href]="contact.href" target="_blank" rel="noopener">{{ contact.text }}</a>
+                        } @else {
+                        {{ contact.text }}
                         }
-                        <span class="event-meta-item">
-                            <mat-icon>group</mat-icon>
-                            {{ event.numEntrants }} entrants
-                        </span>
+                    </p>
+                    }
+                </section>
+                }
+
+                @if (v.streams.length) {
+                <section id="tp-streams" class="panel">
+                    <h2 class="panel-title">Streams <em>{{ v.streams.length }}</em></h2>
+                    <ul class="streams">
+                        @for (stream of v.streams; track $index) {
+                        <li>
+                            <a [attr.href]="stream.href || null" target="_blank" rel="noopener">
+                                <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: stream.logo, initials: stream.initials, size: 'md' }"></ng-container>
+                                <span class="s-name"><b>{{ stream.name }}</b><small>{{ stream.detail }}</small></span>
+                                <span class="s-state" [class.on]="stream.live">{{ stream.live ? 'Live' : 'Offline' }}</span>
+                            </a>
+                        </li>
+                        }
+                    </ul>
+                </section>
+                }
+
+                @if (v.schedule.days.length) {
+                <section id="tp-schedule" class="panel schedule">
+                    <h2 class="panel-title">Schedule</h2>
+                    <p class="panel-note">{{ v.schedule.note }}</p>
+                    @for (day of v.schedule.days; track day.label) {
+                    <h3 class="sday">{{ day.label }}</h3>
+                    @for (slot of day.slots; track slot.time) {
+                    <div class="slot">
+                        <time>{{ slot.time }}</time>
+                        <ul>
+                            @for (event of slot.events; track event.link) {
+                            <li><a [routerLink]="event.link">{{ event.name }}</a></li>
+                            }
+                        </ul>
                     </div>
-                </div>
-            </div>
-            }
+                    }
+                    }
+                </section>
+                }
+            </aside>
         </div>
     </div>
-    }
 </div>
 }

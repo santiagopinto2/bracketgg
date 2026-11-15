@@ -18,6 +18,9 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 - Attendees (`/tournament/<slug>/attendees`): `Tournament.participants` sorts by `sortBy: "<column> asc"` for id, createdAt, checkedInAt, prefix, userId, and playerId, ignores other names, and returns nothing for "gamerTag asc". Its search (`filter.search`, `fieldsToSearch: ["gamerTag"]`) looks in tags only; a null `searchString` filters nothing, but `eventIds: [null]` matches nobody. A row's data costs about 11 objects per attendee (50 cost 555 at the top of Genesis X's list; measured 2026-11-14).
 - Seed order comes only from `Phase.seeds` with `sortBy: "seedNum"`, spelled without a direction: the default order is the order the seeds were made, "seedNum asc" shuffles them, and `Event.entrants` can't be sorted by seed. The Attendees page uses the phase that holds every entrant, and falls back to the tournament's list (no seed order) for an event where no phase does. With the row data a singles seed costs up to 18 objects and a two-player team 32.
 - An attendee's seeds and pools (`Participant.entrants.seeds`) cost 10 to 20 objects per event entered, so only the attendee dialog asks for them, one attendee per request (`attendeeDetailsQuery`). A variable sent to `/api/gql` can't be null (`server/gql-cache.js` takes plain values only): leave it out instead.
+- The tournament page (`/tournament/<slug>`, `src/app/components/tournament/`; `tournament-view.ts` works out what it says) reads one `tournamentQuery`, which the menu and every other page share: Genesis X (30 events, 76 phases, 8 streams) costs 582 objects, about 19 per event with its top 3 and phases; without those (`tournamentLiteQuery`, the fallback when start.gg refuses the full one) it costs 133. Results' top 8s come from `tournamentResultsQuery`, asked only of the two biggest events with final results: 33 objects per singles event, 49 per two-player team event (measured 2026-11-15).
+- `Tournament.state` stays 1 while its events are being played (The Roundtable 12, 2026-11-15), and an event can stay `CREATED` in a finished tournament (Genesis X's Classic Tetris). So the page reads "Live" from the events' states and the dates, and shows results only from standings that start at 1st and are final (`isFinal`, or the event is `COMPLETED`): before an event ends everyone still in shares one placement.
+- `Tournament.streams` is null when there are none. A stream's `streamName` is the Twitch channel; other sources' addresses aren't known, so only Twitch streams are links. start.gg's map of the venue isn't in the API (`lat`, `lng`, and `mapsPlaceId` only), and the page draws none.
 - All queries go through the site's own cache, `POST /api/gql` (`server/gql-cache.js`), via `src/app/services/startgg.service.ts`.
 - Query texts live in `src/app/services/startgg-queries.ts`, with GraphQL variables for slugs, ids and pages. The server runs only those exact texts (`server/gql-allowlist.js` loads the same file), so a new or changed query goes there and nowhere else.
 
@@ -32,6 +35,7 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 - Dark is the default; `<html data-theme="light">` is the light theme. `src/index.html` sets it from localStorage (`bgg-theme`) before the first paint, `src/app/services/theme.service.ts` after that.
 - Every color is a token in `src/styles/_tokens.scss`, with a dark and a light value. Components use `var(--name)`, never a color of their own. Material's colors for both themes are in `src/styles/_material.scss`.
 - `e2e/screenshots.mjs` takes every page in both themes.
+- The tournament page's styles are unscoped (`ViewEncapsulation.None`, everything under `.tp-page`) and its layout follows its own width with container queries, since the menu takes 250px beside it. Its text is in Archivo (`src/index.html`).
 
 ## Set dialog video
 
@@ -39,7 +43,7 @@ A set's YouTube `vodUrl` shows as a thumbnail (`i.ytimg.com`); a tap loads YouTu
 
 ## Building and testing
 
-CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and push to main. `e2e/api-calls.mjs` runs the app against a fake start.gg (`e2e/attendees.mjs` holds the Attendees page's part of it). `e2e/gql-cache.mjs` tests the cache, allowlist and site gate; `e2e/auth.mjs` runs the real server against a fake start.gg for login, sessions and security headers. `e2e/live-bracket.mjs` walks real Genesis X brackets in a browser for the progression tags and saves dark-theme screenshots to the `e2e-out` artifact (`live-bracket/`); it reports and never fails a run.
+CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and push to main. `e2e/api-calls.mjs` runs the app against a fake start.gg (`e2e/attendees.mjs` holds the Attendees page's part of it, `e2e/tournament-page.mjs` the tournament page's, which also saves the whole page in both themes to `e2e-out/tournament-page/`). `e2e/gql-cache.mjs` tests the cache, allowlist and site gate; `e2e/auth.mjs` runs the real server against a fake start.gg for login, sessions and security headers. `e2e/live-bracket.mjs` walks real Genesis X brackets in a browser for the progression tags and saves dark-theme screenshots to the `e2e-out` artifact (`live-bracket/`); it reports and never fails a run.
 
 ## Where things live (for whoever picks this up next)
 
