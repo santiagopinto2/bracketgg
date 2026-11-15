@@ -820,8 +820,13 @@ try {
                 check(`${name}: maximum-scale=1 on iOS only, so tapping a text box doesn't zoom and Android keeps pinch zoom`, viewport.includes('maximum-scale=1') === (name === 'iPhone 13'), viewport);
                 await page.screenshot({ path: `e2e-out/phone-search-${name.replace(/ /g, '-')}.png` }).catch(() => { });
 
-                // A tap on the bracket's background, away from every set, takes the highlight off the player
+                // A tap on the bracket's background, away from every set, takes the highlight off the player.
+                // The search highlights them again first: by now a resting pointer may have moved it.
                 const highlighted = () => page.locator('.slot-hover, .slot-hover-rounded-corners').count();
+                await page.locator('.search-entrant-form input').fill(target.tag);
+                await page.waitForTimeout(400);
+                await page.locator('mat-option', { hasText: target.tag }).first().tap();
+                for (const start = Date.now(); Date.now() - start < 3000 && !(await highlighted()); ) await page.waitForTimeout(100);
                 const highlightedBefore = await highlighted();
                 const spot = await page.evaluate(() => {
                     const box = document.querySelector('mat-sidenav-content').getBoundingClientRect();
