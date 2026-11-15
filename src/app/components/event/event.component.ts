@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
@@ -1224,6 +1224,16 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
     onSlotLeave() {
         if (this.canHover) this.playerHovered = -1;
+    }
+
+    // A phone has no mouse to leave a slot, so a highlighted player (from a tap, a search, or a link) stays
+    // highlighted. A tap on the bracket's background, away from the sets and controls, takes it off.
+    @HostListener('pointerdown', ['$event'])
+    onBackgroundPointerDown(event: PointerEvent) {
+        if (this.playerHovered === -1) return;
+        const target = event.target as Element | null;
+        if (target?.closest?.('.set, .progression-tags, button, input, a, mat-form-field, mat-checkbox')) return;
+        this.playerHovered = -1;
     }
 
     getSlotBackgroundColor(slot, set, needsRoundedCorners = false) {
