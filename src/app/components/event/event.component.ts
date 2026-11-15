@@ -580,7 +580,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         if (this.phaseId != null && phaseGroup?.id != null) {
-            rememberArrival(this.location, `/${this.eventSlug}/brackets/${this.phaseId}/${phaseGroup.id}`, '', { setId: set.id });
+            rememberArrival(this.location, `/${this.eventSlug}/brackets/${this.phaseId}/${phaseGroup.id}`, '', { setId: String(set.id) });
         }
         this.router.navigateByUrl(tag.href);
     }

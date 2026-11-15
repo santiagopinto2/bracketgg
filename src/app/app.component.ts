@@ -111,7 +111,7 @@ export class AppComponent implements AfterViewInit {
                             // the entry it leaves behind in the history names the set it was clicked on. Once
                             // the bracket has been there, the history entry holds them instead (arrival-state.ts).
                             const params = this.router.parseUrl(this.router.url).queryParams;
-                            const player = params['player'] ?? remembered?.playerId, set = params['set'] ?? remembered?.setId;
+                            const player = params['player'] ?? remembered?.playerId, set = params['set'] ?? (remembered?.setId != null ? String(remembered.setId) : undefined);
                             if (Number(player)) tournamentData.event.playerId = Number(player);
                             if (typeof set === 'string' && /^[\w-]{1,80}$/.test(set)) tournamentData.event.setId = set;
 
