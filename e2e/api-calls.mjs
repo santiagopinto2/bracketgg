@@ -1345,8 +1345,8 @@ try {
             after.outlinedLater = (await placeOf(701))?.outlined;
             report.progression.follow = { whileHeld, after, requests: count(log, mark) };
             // Alpha's first set in pool C is 701, and they play 703 and 706 there too
-            check('following a tag: opens the phase and pool it names with the player in the link, asks for that pool first, and scrolls to the player\'s first set, centered and outlined, while the other pools are still loading; the set is not opened',
-                whileHeld.url === eventPath + '/1005/2007?player=1' && early?.set === '701' && Math.abs(early.offCenter) <= 2 && early.inView
+            check('following a tag: opens the phase and pool it names, drops the player from the address once there, asks for that pool first, and scrolls to the player\'s first set, centered and outlined, while the other pools are still loading; the set is not opened',
+                whileHeld.url === eventPath + '/1005/2007' && early?.set === '701' && Math.abs(early.offCenter) <= 2 && early.inView
                 && JSON.stringify(whileHeld.pools) === '["pool-2007"]' && whileHeld.firstPoolAsked === 2007 && whileHeld.dialog === 0 && whileHeld.spinner
                 && JSON.stringify(whileHeld.hovered) === '["701","703","706"]', report.progression.follow);
             check('following a tag: the set stays in the middle of the view as the pools above it are drawn, and its outline goes after a few seconds; a phase no phase takes players from has no tags and asks for no seeds',
@@ -1365,8 +1365,19 @@ try {
             forward.place = await placeOf(701);
             report.progression.history = { back, forward };
             check('following a tag: Back returns to the set the tag was on, in its pool, and Forward to the player\'s set',
-                back.url === eventPath + '/1010/2014?set=1403' && back.arrived?.set === '1403' && back.arrived.inView && back.place?.offCenter === back.arrived.offCenter
-                && forward.url === eventPath + '/1005/2007?player=1' && forward.arrived?.set === '701' && Math.abs(forward.place?.offCenter) <= 2 && !errors.length, report.progression.history);
+                back.url === eventPath + '/1010/2014' && back.arrived?.set === '1403' && back.arrived.inView && back.place?.offCenter === back.arrived.offCenter
+                && forward.url === eventPath + '/1005/2007' && forward.arrived?.set === '701' && Math.abs(forward.place?.offCenter) <= 2 && !errors.length, report.progression.history);
+
+            // A refresh opens the page at the top: the address no longer names the player, and the history
+            // entry that still does is ignored after a reload
+            await page.reload();
+            await quiet();
+            await page.waitForTimeout(800);
+            const refreshed = await page.evaluate(() => ({ outlined: document.querySelectorAll('.set-arrived').length, scrollTop: Math.round(document.querySelector('mat-sidenav-content').scrollTop) }));
+            refreshed.url = at();
+            report.progression.refreshed = refreshed;
+            check('following a tag, then refreshing: the page opens at the top with nothing outlined',
+                refreshed.url === eventPath + '/1005/2007' && refreshed.outlined === 0 && refreshed.scrollTop === 0 && !errors.length, refreshed);
 
             // The tag of a pool not placed yet names no player: the phase opens at the top with that pool asked for first, and nothing is outlined
             await page.goto(appUrl + eventPath + '/1010');
@@ -1469,7 +1480,7 @@ try {
             report.progressionPhone = { layout, tapped, errors: phoneErrors };
             check('phone: the tags are drawn clear of every set and the page is no wider than the screen; a tap follows the tag to the player\'s set, in view',
                 layout.tags === 9 && layout.pageWidth <= layout.windowWidth && JSON.stringify(layout.heights) === '[20]' && layout.covering === 0
-                && tapped.path === eventPath + '/1002/2002?player=4' && tapped.set === '201' && tapped.inView && tapped.dialog === 0 && !phoneErrors.length, report.progressionPhone);
+                && tapped.path === eventPath + '/1002/2002' && tapped.set === '201' && tapped.inView && tapped.dialog === 0 && !phoneErrors.length, report.progressionPhone);
         } catch (e) {
             report.progressionPhone = { crashed: String(e.message).slice(0, 300), errors: phoneErrors };
             check('phone: progression tags', false, report.progressionPhone);
