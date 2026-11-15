@@ -139,8 +139,13 @@
     color: var(--avatar-text);
     flex: none;
     box-shadow: 0 0 0 3px var(--dialog-bg);
+    position: relative;
 
+    // Placed over the whole circle rather than as a grid item: Safari let a portrait picture with
+    // height: 100% grow past the circle to its own aspect ratio
     img {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         border-radius: 50%;

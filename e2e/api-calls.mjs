@@ -886,6 +886,29 @@ try {
             }
             await context.close();
         }
+
+        // 12b. iPhone: a portrait profile picture in the set dialog stays inside its circle (Safari let a
+        //      percentage-height picture in a grid grow past it, 2026-11-15)
+        {
+            const { context, page, quiet } = await openPage(safari3, () => null, devices['iPhone 13']);
+            try {
+                await page.goto(appUrl + eventPath + '/1001');
+                await quiet();
+                await page.locator('.set', { hasText: 'Bravo' }).filter({ hasText: 'Charlie' }).first().click();
+                await page.waitForSelector('.player .avatar img', { timeout: 5000 });
+                await page.waitForTimeout(500);
+                const boxes = await page.locator('.player .avatar img').evaluateAll(images => images.map(img => {
+                    const a = img.parentElement.getBoundingClientRect(), b = img.getBoundingClientRect();
+                    return { avatar: [a.width, a.height].map(Math.round), picture: [b.width, b.height].map(Math.round), offset: [b.x - a.x, b.y - a.y].map(Math.round) };
+                }));
+                report.dialogAvatarSafari = boxes;
+                check('iPhone 13: a portrait picture in the set dialog fills its circle and no more', boxes.length > 0
+                    && boxes.every(b => b.avatar[0] === b.picture[0] && b.avatar[1] === b.picture[1] && !b.offset[0] && !b.offset[1]), boxes);
+            } catch (e) {
+                check('iPhone 13: a portrait picture in the set dialog fills its circle and no more', false, { crashed: String(e.message).slice(0, 300) });
+            }
+            await context.close();
+        }
     } finally {
         await safari3.close();
     }
