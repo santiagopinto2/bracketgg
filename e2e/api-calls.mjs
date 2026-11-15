@@ -2266,9 +2266,9 @@ try {
                 await open(page, 104);
                 const right = await shown(page);
                 report.setDialog.rightWinner = { scores: right.scores, arrow: right.arrow, players: right.players.map(player => player.result), foot: right.foot };
-                check('set dialog: when the right side won, the arrow points right, nudged 1 px that way; with no time or stream there is no footer',
+                check('set dialog: when the right side won, the arrow points right, nudged 1 px that way; with no time or stream there is no footer, and a score-only set has no note',
                     same(right.scores, ['0', '2']) && right.arrow.icon === 'arrow_right' && right.arrow.nudge === 'matrix(1, 0, 0, 1, 1, 0)' && same(right.players.map(player => player.result), ['lost', 'won']) && right.foot === null
-                    && right.note === 'The tournament reported the score only, so there are no games, characters, or stages to show.', report.setDialog.rightWinner);
+                    && right.note === '', report.setDialog.rightWinner);
                 await close(page);
 
                 // A disqualification
@@ -2335,14 +2335,14 @@ try {
                 const empty = { scores: ['–', '–'], arrow: '', games: 0, foot: null, video: null };
                 const want = projected ? {
                     final: { crumbs: 'Single Elim · Test Event · Test Tourney', title: 'Final', chip: 'Projected', chipProjected: true, names: ['Alpha', 'Bravo'], results: ['is-projected', 'is-projected'], avatars: ['A', 'picture'],
-                        ...empty, caption: 'Projected', note: 'Not played yet. Alpha and Bravo are projected to reach this set by seeding.' },
+                        ...empty, caption: 'Projected', note: '' },
                     third: { crumbs: 'Single Elim · Test Event · Test Tourney', title: '3rd Place Tiebreak', chip: 'Projected', chipProjected: true, names: ['Charlie', 'Delta'], results: ['is-projected', 'is-projected'], avatars: ['C', 'D'],
-                        ...empty, caption: 'Projected', note: 'Not played yet. Charlie and Delta are projected to reach this set by seeding.' },
+                        ...empty, caption: 'Projected', note: '' },
                 } : {
                     final: { crumbs: 'Single Elim · Test Event · Test Tourney', title: 'Final', chip: 'Not started', chipProjected: false, names: ['Winner of Semi-Final', 'Winner of Semi-Final'], results: ['unknown', 'unknown'], avatars: ['?', '?'],
-                        ...empty, caption: 'Not played', note: 'Not played yet. Neither player is known.' },
+                        ...empty, caption: 'Not played', note: '' },
                     third: { crumbs: 'Single Elim · Test Event · Test Tourney', title: '3rd Place Tiebreak', chip: 'Not started', chipProjected: false, names: ['Loser of Semi-Final', 'Loser of Semi-Final'], results: ['unknown', 'unknown'], avatars: ['?', '?'],
-                        ...empty, caption: 'Not played', note: 'Not played yet. Neither player is known.' },
+                        ...empty, caption: 'Not played', note: '' },
                 };
                 const sorted = value => JSON.stringify(value, Object.keys({ ...value.final, final: 0, third: 0, errors: 0 }).sort());
                 check(projected ? 'set dialog: a projected set names its projected players, in the projected style, with dashes and no arrow'

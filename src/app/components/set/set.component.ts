@@ -163,23 +163,16 @@ export class SetComponent {
         }).filter(game => game.stage || game.hasPicks || game.sides.some(side => side.win));
     }
 
-    // A line under the score for a set with no games to list, saying why
+    // A line under the score for a disqualification, saying who was out
     private noteText() {
-        const [a, b] = this.sides;
         if (this.dq) {
             const out = this.sides.filter(side => side.value === -1), through = this.sides.find(side => side.won && side.value !== -1);
             const who = out.map(side => side.name).join(' and ');
             return { icon: 'block', text: `${who} ${out.length > 1 ? 'were' : 'was'} disqualified.${through ? ` ${through.name} advances without playing.` : ''}` };
         }
-        if (this.done) return this.games.length ? null : { icon: 'info_outline', text: 'The tournament reported the score only, so there are no games, characters, or stages to show.' };
-        if (this.live) return null;
-        if (this.projected) {
-            const who = this.sides.filter(side => side.projected).map(side => side.name);
-            return { icon: 'auto_graph', text: `Not played yet. ${who.join(' and ')} ${who.length > 1 ? 'are' : 'is'} projected to reach this set by seeding.` };
-        }
-        if (!a.known && !b.known) return { icon: 'hourglass_empty', text: 'Not played yet. Neither player is known.' };
-        if (!a.known || !b.known) return { icon: 'hourglass_empty', text: `Not played yet. ${(a.known ? a : b).name} is waiting for an opponent.` };
-        return { icon: 'hourglass_empty', text: 'Not played yet.' };
+        // Any other set shows only its score and caption: Santi had the notes for score-only, projected, and
+        // unplayed sets removed (2026-11-15)
+        return null;
     }
 
     // When the set started, or ended if start.gg has no start, in the viewer's own time zone
