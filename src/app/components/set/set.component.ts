@@ -174,10 +174,8 @@ export class SetComponent {
         // A finished set with no games listed shows only its score (Santi, 2026-11-15)
         if (this.done) return null;
         if (this.live) return null;
-        if (this.projected) {
-            const who = this.sides.filter(side => side.projected).map(side => side.name);
-            return { icon: 'auto_graph', text: `Not played yet. ${who.join(' and ')} ${who.length > 1 ? 'are' : 'is'} projected to reach this set by seeding.` };
-        }
+        // A projected set says so in its caption, with no note (Santi, 2026-11-15)
+        if (this.projected) return null;
         if (!a.known && !b.known) return { icon: 'hourglass_empty', text: 'Not played yet. Neither player is known.' };
         if (!a.known || !b.known) return { icon: 'hourglass_empty', text: `Not played yet. ${(a.known ? a : b).name} is waiting for an opponent.` };
         return { icon: 'hourglass_empty', text: 'Not played yet.' };

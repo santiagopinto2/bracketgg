@@ -2335,9 +2335,9 @@ try {
                 const empty = { scores: ['–', '–'], arrow: '', games: 0, foot: null, video: null };
                 const want = projected ? {
                     final: { crumbs: 'Single Elim · Test Event · Test Tourney', title: 'Final', chip: 'Projected', chipProjected: true, names: ['Alpha', 'Bravo'], results: ['is-projected', 'is-projected'], avatars: ['A', 'picture'],
-                        ...empty, caption: 'Projected', note: 'Not played yet. Alpha and Bravo are projected to reach this set by seeding.' },
+                        ...empty, caption: 'Projected', note: '' },
                     third: { crumbs: 'Single Elim · Test Event · Test Tourney', title: '3rd Place Tiebreak', chip: 'Projected', chipProjected: true, names: ['Charlie', 'Delta'], results: ['is-projected', 'is-projected'], avatars: ['C', 'D'],
-                        ...empty, caption: 'Projected', note: 'Not played yet. Charlie and Delta are projected to reach this set by seeding.' },
+                        ...empty, caption: 'Projected', note: '' },
                 } : {
                     final: { crumbs: 'Single Elim · Test Event · Test Tourney', title: 'Final', chip: 'Not started', chipProjected: false, names: ['Winner of Semi-Final', 'Winner of Semi-Final'], results: ['unknown', 'unknown'], avatars: ['?', '?'],
                         ...empty, caption: 'Not played', note: 'Not played yet. Neither player is known.' },
