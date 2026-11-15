@@ -157,13 +157,10 @@
             @for (character of side.chars; track $index) {
             <div class="char">
                 <img [src]="character.icon" [alt]="character.name" [title]="character.name">
-                @if (character.switched) {
-                <span class="sw" title="Switched character"><span class="material-icons" aria-hidden="true">swap_horiz</span></span>
-                }
             </div>
             }
         </div>
-        <div class="cname">{{ side.names }}@if (side.switched) {<small>switch</small>}</div>
+        <div class="cname">{{ side.names }}</div>
         <div class="grow"></div>
         @if (side.win) {
         <span class="material-icons won" role="img" aria-label="Won">check</span>

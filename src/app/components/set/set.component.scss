@@ -529,24 +529,6 @@
         height: 30px;
         display: block;
     }
-
-    .sw {
-        position: absolute;
-        right: -5px;
-        bottom: -4px;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: var(--dialog-text);
-        color: var(--dialog-bg);
-        display: grid;
-        place-items: center;
-        box-shadow: 0 0 0 2px var(--dialog-inset);
-
-        .material-icons {
-            font-size: 13px;
-        }
-    }
 }
 
 .cname {
@@ -556,14 +538,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
-
-    small {
-        font-size: 11px;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        color: var(--dialog-text-faint);
-        margin-left: 6px;
-    }
 }
 
 .doubles .cname {

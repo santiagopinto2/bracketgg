@@ -143,19 +143,15 @@ export class SetComponent {
         return [...used.values()];
     }
 
-    // The games that say anything: who won, the stage or the characters. A character that differs
-    // from the same player's in the game before is marked as a switch.
+    // The games that say anything: who won, the stage or the characters. A character switch isn't
+    // marked: the new character's picture says it (Santi, 2026-11-15).
     private gameRows() {
-        const last: any[][] = [[], []];
         return (this.set.games ?? []).map((game, g) => {
-            const sides = this.sides.map((side, i) => {
-                const chars = side.known ? this.picks(game, side.id).map((character, k) =>
-                    ({ ...character, switched: !!last[i][k] && last[i][k].icon !== character.icon })) : [];
-                if (chars.length) last[i] = chars;
+            const sides = this.sides.map(side => {
+                const chars = side.known ? this.picks(game, side.id) : [];
                 return {
                     chars, win: side.known && game.winnerId != null && game.winnerId == side.id,
                     names: [...new Set(chars.map(character => character.name).filter(Boolean))].join(' + '),
-                    switched: chars.some(character => character.switched),
                 };
             });
             const hasPicks = sides.some(side => side.chars.length);
