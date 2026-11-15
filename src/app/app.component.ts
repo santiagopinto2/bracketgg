@@ -2,6 +2,7 @@ import { AfterViewInit, ChangeDetectorRef, Component, ViewChild, effect, ChangeD
 import { ThemeService } from './services/theme.service';
 import { StartggError, StartggService } from './services/startgg.service';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { rememberedArrival } from './services/arrival-state';
 import { filter } from 'rxjs';
 import { TournamentDataService } from './services/tournamentData.service';
 import { MatToolbar } from '@angular/material/toolbar';
@@ -69,6 +70,8 @@ export class AppComponent implements AfterViewInit {
     async parseUrl(url) {
         // A newer navigation makes this load stale; a stale load must not overwrite the newer page
         const loadId = ++this.loadId;
+        // Read on every navigation, so the first one after a refresh is the one that gets nothing
+        const remembered = rememberedArrival();
 
         if (url.includes('/tournament')) {
             let tourneySlug = url.slice(12);
@@ -105,9 +108,10 @@ export class AppComponent implements AfterViewInit {
                                 if (Number(poolId)) tournamentData.event.poolId = Number(poolId);
                             }
                             // A link from a set's progression tag names the player to scroll to (?player=<entrant id>);
-                            // the entry it leaves behind in the history names the set it was clicked on (?set=<set id>)
+                            // the entry it leaves behind in the history names the set it was clicked on. Once
+                            // the bracket has been there, the history entry holds them instead (arrival-state.ts).
                             const params = this.router.parseUrl(this.router.url).queryParams;
-                            const player = params['player'], set = params['set'];
+                            const player = params['player'] ?? remembered?.playerId, set = params['set'] ?? (remembered?.setId != null ? String(remembered.setId) : undefined);
                             if (Number(player)) tournamentData.event.playerId = Number(player);
                             if (typeof set === 'string' && /^[\w-]{1,80}$/.test(set)) tournamentData.event.setId = set;
 

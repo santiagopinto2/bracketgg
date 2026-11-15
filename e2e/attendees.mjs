@@ -504,10 +504,10 @@ export async function attendeeChecks({ browser, openPage, appUrl, eventPath, che
             });
             await quiet();
             Object.assign(out.poolLink, { at: at(), arrived, dialogOpen: await page.locator('app-attendee-dialog').count(), firstPool: log.slice(mark).find(r => r.kind === 'poolSlices')?.query.match(/phaseGroup\(id: "?(\d+)/)?.[1] });
-            check('attendee dialog: a pool opens its phase at that pool, loaded first, scrolled to, and with the player\'s first set there outlined',
+            check('attendee dialog: a pool opens its phase at that pool, loaded first, scrolled to, and with the player\'s first set there outlined; the address then drops the player',
                 same(bravo.entries, [{ event: 'Test Event|/tournament/test-tourney/event/test-event', team: '', seed: 'Seed 2 · 4 entrants', place: '2nd of 4', state: '',
                     phases: [['Three Pools', 'Pool C', 'Fri 10:00 AM PST', eventPath + '/1005/2007?player=2'], ['Top 4', '', '', eventPath + '/1002/2002?player=2']], note: '' }])
-                && out.poolLink.at === eventPath + '/1005/2007?player=2' && arrived?.pool === 'pool-2007' && arrived.names.includes('Bravo') && arrived.inView && arrived.outline
+                && out.poolLink.at === eventPath + '/1005/2007' && arrived?.pool === 'pool-2007' && arrived.names.includes('Bravo') && arrived.inView && arrived.outline
                 && out.poolLink.dialogOpen === 0 && out.poolLink.firstPool === '2007', out.poolLink);
             await page.screenshot({ path: 'e2e-out/attendee-pool-link.png' }).catch(() => { });
 

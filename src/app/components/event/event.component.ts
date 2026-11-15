@@ -4,6 +4,7 @@ import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { picksBySide } from '../set/character-picks';
+import { rememberArrival } from 'src/app/services/arrival-state';
 import { Location, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -579,7 +580,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         if (this.phaseId != null && phaseGroup?.id != null) {
-            this.location.replaceState(`/${this.eventSlug}/brackets/${this.phaseId}/${phaseGroup.id}`, `set=${encodeURIComponent(set.id)}`);
+            rememberArrival(this.location, `/${this.eventSlug}/brackets/${this.phaseId}/${phaseGroup.id}`, '', { setId: String(set.id) });
         }
         this.router.navigateByUrl(tag.href);
     }
@@ -609,6 +610,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         const arrival = this.arrival;
         if (!arrival || arrival.done) return;
         arrival.done = true;
+        this.forgetArrivalInAddress(arrival);
         if (this.userMoved) return;
         this.cdr.detectChanges();
 
@@ -624,6 +626,17 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         if (arrival.playerId != null && !arrival.setId) this.playerHovered = arrival.playerId;
         clearTimeout(this.highlightTimer);
         this.highlightTimer = setTimeout(() => this.highlightedSetId = null, 3500);
+    }
+
+    // The address drops ?player= and ?set= once the link has been followed, and the history entry keeps
+    // them, so Back and Forward come here again but a refresh opens at the top (arrival-state.ts)
+    private forgetArrivalInAddress(arrival) {
+        if (arrival.playerId == null && arrival.setId == null) return;
+        const [path, query = ''] = this.location.path().split('?');
+        const params = new URLSearchParams(query);
+        params.delete('player');
+        params.delete('set');
+        rememberArrival(this.location, path, params.toString(), { playerId: arrival.playerId, setId: arrival.setId });
     }
 
     // Scrolls, at once, to what the link pointed at: a set to the middle of the view, a pool to its top.
