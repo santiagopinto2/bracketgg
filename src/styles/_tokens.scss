@@ -109,6 +109,36 @@ $dark: (
     // The loading notice (Material draws it light on the dark theme and dark on the light one)
     snackbar-spinner: #f21a1a,
     snackbar-success: seagreen,
+
+    // The tournament page. raised: a card under the pointer. selected: the chosen tab or segment.
+    // inset: controls set into the page. glass: buttons and chips that lie over the banner's tint.
+    // panel: the stat numbers. bar: the tabs that stay at the top. done and live: the status chip.
+    tp-raised: #474747,
+    tp-raised-border: rgba(255, 255, 255, 0.32),
+    tp-selected: #5a5a5a,
+    tp-inset: #383838,
+    tp-glass: rgba(255, 255, 255, 0.06),
+    tp-glass-hover: rgba(255, 255, 255, 0.11),
+    tp-glass-border: rgba(255, 255, 255, 0.1),
+    tp-glass-border-hover: rgba(255, 255, 255, 0.18),
+    tp-panel: rgba(63, 63, 63, 0.72),
+    tp-bar: rgba(48, 48, 48, 0.86),
+    tp-faint: rgba(255, 255, 255, 0.6),
+    tp-accent: #ff7059,
+    tp-on-accent: #190b04,
+    tp-done: #58d39a,
+    tp-done-bg: rgba(88, 211, 154, 0.1),
+    tp-done-border: rgba(88, 211, 154, 0.22),
+    tp-live: #ff5d6c,
+    tp-gold: #f2c14e,
+    tp-silver: #d0d4da,
+    tp-bronze: #e0a070,
+    tp-champion-tint: rgba(242, 193, 78, 0.16),
+    tp-ring: rgba(255, 255, 255, 0.08),
+    tp-logo-shadow: 0 16px 30px rgba(0, 0, 0, 0.5),
+    tp-banner-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8),
+    // How strongly the blurred banner shows through
+    tp-ambient: 0.34,
 );
 
 $light: (
@@ -201,6 +231,32 @@ $light: (
 
     snackbar-spinner: #ff6b63,
     snackbar-success: #4cc38a,
+
+    tp-raised: #f8f9fb,
+    tp-raised-border: #a9b0bc,
+    tp-selected: #dfe3e9,
+    tp-inset: #e9ebef,
+    tp-glass: rgba(255, 255, 255, 0.62),
+    tp-glass-hover: rgba(255, 255, 255, 0.92),
+    tp-glass-border: rgba(16, 24, 40, 0.14),
+    tp-glass-border-hover: rgba(16, 24, 40, 0.3),
+    tp-panel: rgba(255, 255, 255, 0.74),
+    tp-bar: rgba(243, 244, 246, 0.88),
+    tp-faint: #646b78,
+    tp-accent: #c4321c,
+    tp-on-accent: #fff,
+    tp-done: #146c34,
+    tp-done-bg: rgba(23, 128, 61, 0.1),
+    tp-done-border: rgba(23, 128, 61, 0.3),
+    tp-live: #c62828,
+    tp-gold: #8a6500,
+    tp-silver: #5f6b7a,
+    tp-bronze: #9a4f12,
+    tp-champion-tint: rgba(183, 121, 31, 0.16),
+    tp-ring: rgba(16, 24, 40, 0.1),
+    tp-logo-shadow: 0 10px 24px rgba(16, 24, 40, 0.18),
+    tp-banner-shadow: 0 24px 48px -30px rgba(16, 24, 40, 0.4),
+    tp-ambient: 0.3,
 );
 
 @if map.keys($dark) != map.keys($light) {

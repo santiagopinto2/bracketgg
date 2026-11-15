@@ -10,37 +10,21 @@ export const SETS_PER_STANDING = 50;
 // The most sets one scores request looks up (setScoresQuery)
 export const MAX_SET_SCORES = 100;
 
-export const tournamentQuery = `query Tournament($slug: String!) {
-                tournament(slug: $slug) {
-                    images {
-                        url
-                        type
-                    }
-                    rules
-                    id
-                    name
-                    slug
-                    venueAddress
-                    startAt
-                    timezone
-                    numAttendees
-                    primaryContact
-                    primaryContactType
-                    events {
-                        id
-                        name
-                        slug
-                        numEntrants
-                        startAt
-                        type
-                        state
-                        videogame {
+// The most events the tournament page shows a top 8 for (tournamentResultsQuery)
+export const MAX_RESULT_EVENTS = 2;
+
+// A tournament with its events, for the tournament page and the menu. `full` adds each event's top 3
+// and its phases' names, which the page's event cards show.
+// Genesis X (30 events, 76 phases, 8 streams) costs 582 objects in full, about 19 per event with a
+// top 3; CEO 2024 (27 events, 107 phases) costs 571 (measured 2026-11-15). Without the top 3 and the
+// phases Genesis X costs 133, about 4 per event. The owner costs 2 and each stream 1; scalars and pictures cost nothing.
+// `Tournament.state` stays 1 (created) while events are being played (The Roundtable 12, 2026-11-15),
+// so the page reads "live" from the events' states and the dates. An event's standings before it ends
+// are provisional (everyone still in shares one placement, `isFinal` false).
+function tournamentText(full: boolean): string {
+    const eventExtras = `phases {
                             id
                             name
-                            images {
-                                url
-                                type
-                            }
                         }
                         standings(query: {
                             page: 1
@@ -48,6 +32,7 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                         }) {
                             nodes {
                                 placement
+                                isFinal
                                 entrant {
                                     name
                                     participants {
@@ -62,10 +47,85 @@ export const tournamentQuery = `query Tournament($slug: String!) {
                                     }
                                 }
                             }
+                        }`;
+    return `query Tournament($slug: String!) {
+                tournament(slug: $slug) {
+                    images {
+                        url
+                        type
+                    }
+                    rules
+                    id
+                    name
+                    slug
+                    venueName
+                    venueAddress
+                    city
+                    addrState
+                    countryCode
+                    lat
+                    lng
+                    hashtag
+                    isOnline
+                    state
+                    startAt
+                    endAt
+                    timezone
+                    numAttendees
+                    primaryContact
+                    primaryContactType
+                    owner {
+                        player {
+                            gamerTag
                         }
+                        images(type: "profile") {
+                            url
+                        }
+                    }
+                    streams {
+                        streamName
+                        streamSource
+                        streamLogo
+                        isOnline
+                        followerCount
+                    }
+                    events {
+                        id
+                        name
+                        slug
+                        numEntrants
+                        startAt
+                        type
+                        state
+                        videogame {
+                            id
+                            name
+                            displayName
+                            images {
+                                url
+                                type
+                            }
+                        }
+                        ${full ? eventExtras : ''}
                     }
                 }
             }`;
+}
+
+export const tournamentQuery = tournamentText(true);
+// For a tournament with so many events that start.gg refuses the full query: no top 3 and no phases
+export const tournamentLiteQuery = tournamentText(false);
+
+// The top 8 of `count` events (1 to MAX_RESULT_EVENTS) by id, as e0 … e<count-1>, from variables
+// $id0 …: the tournament page's Results, asked for only of its biggest finished events. 33 objects per
+// singles event and 49 per two-player team event (Genesis X: Melee and Ultimate Singles together 66,
+// Melee and Ultimate Doubles 98; measured 2026-11-15).
+export function tournamentResultsQuery(count: number): string {
+    const ids = Array.from({ length: count }, (_, k) => k);
+    return `query TournamentResults(${ids.map(k => `$id${k}: ID!`).join(', ')}) {
+                ${ids.map(k => `e${k}: event(id: $id${k}) { id standings(query: { page: 1, perPage: 8 }) { nodes { placement isFinal entrant { id name participants { id user { images(type: "profile") { url width height } } } } } } }`).join('\n                ')}
+            }`;
+}
 
 // What a bracket page needs to know of its event: about 10 objects. `progressingInData` names the
 // phases each phase takes players from, and how many (one object per phase it names). It tells which
@@ -541,6 +601,8 @@ export function allQueries(): string[] {
                 overviews.push(eventOverviewQuery({ lostTo, rankings, socials }));
     return [
         tournamentQuery,
+        tournamentLiteQuery,
+        ...Array.from({ length: MAX_RESULT_EVENTS }, (_, i) => tournamentResultsQuery(i + 1)),
         eventPhasesQuery,
         phaseEntrantsQuery,
         phaseProgressionsQuery,

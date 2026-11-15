@@ -25,7 +25,11 @@ const shots = eventPath => ({
     'set-popup-video': { path: eventPath + '/1001', act: page => page.locator('.set[data-set-id="106"]').click() },
     'set-popup-unplayed': { path: eventPath + '/1006', act: page => page.locator('.set[data-set-id="803"]').click() },
     'phase-menu': { path: eventPath + '/1001', act: page => page.locator('.phase-menu-button').click() },
-    tournament: { path: '/tournament/test-tourney' },
+    // The tournament page (e2e/tournament-page.mjs's tournaments): one that is over, with results, streams, and a
+    // schedule; one that hasn't started; and Test Tourney, which has one event and nothing else
+    tournament: { path: '/tournament/tp-tourney' },
+    'tournament-upcoming': { path: '/tournament/tp-upcoming' },
+    'tournament-small': { path: '/tournament/test-tourney' },
     search: { path: eventPath + '/1001', act: async page => {
         await page.locator('.search-entrant-form input').click();
         await page.locator('.search-entrant-form input').fill('a');
@@ -72,7 +76,8 @@ export async function takeScreenshots({ appUrl, eventPath, openPage, outDir }) {
                         await page.goto(appUrl + shot.path);
                         await page.addStyleTag({ content: still });
                         await quiet();
-                        await page.waitForFunction(() => document.fonts.status === 'loaded' && [...document.images].every(image => image.complete), null, { timeout: 15000 });
+                        // Pictures below the screen load when scrolled to (loading="lazy"), so they don't count
+                        await page.waitForFunction(() => document.fonts.status === 'loaded' && [...document.images].every(image => image.complete || image.loading === 'lazy'), null, { timeout: 15000 });
                         if (shot.act) {
                             await shot.act(page);
                             await quiet(800);

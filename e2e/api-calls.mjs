@@ -10,6 +10,7 @@
 import { chromium, webkit, devices } from 'playwright';
 import { readFileSync } from 'node:fs';
 import { attendeeAnswer, attendeeChecks, attendeeEventPhases, attendeeKind, attendeeTournament } from './attendees.mjs';
+import { tournamentPageChecks, tournamentPageKind, tournamentPageTournament, tournamentResultsAnswer } from './tournament-page.mjs';
 
 const appUrl = process.argv[2] ?? 'http://localhost:4300';
 const reportOnly = process.argv.includes('--report-only');
@@ -210,6 +211,9 @@ function kindOf(query) {
     // The Attendees page's lists and the attendee dialog's details (e2e/attendees.mjs)
     const attendees = attendeeKind(query);
     if (attendees) return attendees;
+    // The tournament page's top 8s (e2e/tournament-page.mjs)
+    const tournamentPage = tournamentPageKind(query);
+    if (tournamentPage) return tournamentPage;
     if (query.includes('...PoolSet')) return 'poolSlices';
     if (query.includes('seedMap')) return 'poolSeeds';
     if (query.includes('tournament(slug')) return 'tournament';
@@ -251,10 +255,12 @@ function answer(query) {
         case 'attendeeSeeds':
         case 'attendeeDetails':
             return attendeeAnswer(kindOf(query), query);
+        case 'tournamentResults':
+            return tournamentResultsAnswer(query);
         case 'tournament':
-            // "Attendee Open" for the Attendees page's checks, and for everything else Test Tourney: five
-            // attendees, its four entrants and a spectator
-            return attendeeTournament(query) ?? { data: { tournament: {
+            // "Attendee Open" for the Attendees page's checks, the tournament page's own three, and for
+            // everything else Test Tourney: five attendees, its four entrants and a spectator
+            return attendeeTournament(query) ?? tournamentPageTournament(query) ?? { data: { tournament: {
                 images: [], rules: null, id: 1, name: 'Test Tourney', slug: 'tournament/test-tourney', venueAddress: null,
                 startAt: 1794000000, timezone: 'America/Los_Angeles', numAttendees: 5, primaryContact: null, primaryContactType: null,
                 events: [{ id: 10, name: 'Test Event', slug: 'tournament/test-tourney/event/test-event', numEntrants: entrants.length,
@@ -2423,6 +2429,9 @@ try {
 
     // 25. The Attendees page and the attendee dialog (e2e/attendees.mjs)
     await attendeeChecks({ browser, openPage, appUrl, eventPath, check, report, count, devices });
+
+    // 26. The tournament page: results, events, schedule, and tournaments that are small, upcoming, or live (e2e/tournament-page.mjs)
+    await tournamentPageChecks({ browser, openPage, appUrl, check, report, count, devices });
 } finally {
     await browser.close();
 }
