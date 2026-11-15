@@ -107,5 +107,7 @@ export function generatePoolSets(pool, bracketType: string, data: PoolSeeds): an
 
     // With nobody going on, the grand final: the winners final's winner against the losers final's
     if (!going) sets.push(set(pool, m + 1, 0, 'Grand Final', [slot('set', `preview_${pool}_${m}_0`, 1), slot('set', previous[0], 1)]));
-    return sets;
+    // In start.gg's order: the losers side first, from its last round to its first, then the winners side.
+    // The bracket view numbers the losers rounds from the set just before the first winners set.
+    return sets.sort((a, b) => a.round - b.round);
 }
