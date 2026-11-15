@@ -131,12 +131,6 @@
     font-weight: 600;
 }
 
-// The page, then the footer. A short page leaves the footer at the bottom of the window.
-mat-sidenav-content {
-    display: flex;
-    flex-direction: column;
-}
-
 .sidenav-account {
     flex-shrink: 0;
     width: 250px;
@@ -159,13 +153,13 @@ mat-sidenav-content {
     gap: 12px;
 }
 
-.site-footer {
+.sidenav-credit {
     flex-shrink: 0;
     display: flex;
-    justify-content: center;
     gap: 8px;
-    margin-top: auto;
-    padding: 20px 16px 14px;
+    width: 250px;
+    box-sizing: border-box;
+    padding: 10px 16px 14px;
     font-size: 12px;
     line-height: 16px;
     color: inherit;

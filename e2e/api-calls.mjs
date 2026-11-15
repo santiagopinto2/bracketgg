@@ -1989,49 +1989,51 @@ try {
             }
         }
 
-        // The footer, on each kind of page and both layouts
+        // The credit: no footer on any page, and "Data from start.gg · Privacy" at the bottom of the menu, in both layouts
         const pages = { home: '/', bracket: eventPath + '/1001', tournament: '/tournament/test-tourney', 'event landing': '/tournament/test-tourney/event/test-event', privacy: '/privacy' };
         for (const [size, device] of [['desktop', { viewport: { width: 1280, height: 900 } }], ['phone', devices['Pixel 7']]]) {
             const { context, page, quiet } = await openPage(browser, () => null, device);
+            const openMenu = async () => {
+                if (size !== 'phone') return;
+                await page.locator('button[aria-label="Menu"]').click();
+                await page.waitForTimeout(500);
+            };
             for (const [name, path] of Object.entries(pages)) {
                 try {
                     await page.goto(appUrl + path);
                     await quiet(800);
-                    const footer = await page.evaluate(async () => {
+                    await openMenu();
+                    const credit = await page.evaluate(() => {
                         const content = document.querySelector('mat-sidenav-content');
-                        const el = content.querySelector('footer.site-footer');
-                        if (!el) return null;
-                        content.scrollTo({ top: content.scrollHeight, left: 0, behavior: 'instant' });
-                        await new Promise(r => setTimeout(r, 200));
-                        const box = el.getBoundingClientRect(), view = content.getBoundingClientRect();
-                        const last = [...content.children].at(-1);
+                        const el = document.querySelector('mat-sidenav .sidenav-credit');
+                        if (!el) return { footer: !!content.querySelector('footer') };
+                        const menu = document.querySelector('mat-sidenav .sidenav-div');
+                        menu.scrollTo({ top: menu.scrollHeight, behavior: 'instant' });
+                        const box = el.getBoundingClientRect(), side = document.querySelector('mat-sidenav').getBoundingClientRect();
                         return {
+                            footer: !!content.querySelector('footer'),
                             text: el.innerText.replace(/\s+/g, ' ').trim(),
                             links: [...el.querySelectorAll('a')].map(a => `${a.innerText.trim()}|${a.getAttribute('href')}`),
-                            isLast: last === el,
-                            // Inside the visible part of the page once scrolled to the end, and flush with its bottom
-                            inView: box.left >= view.left - 1 && box.right <= view.left + content.clientWidth + 1 && box.top >= view.top,
-                            fromBottom: Math.round(view.top + content.clientHeight - box.bottom),
-                            height: Math.round(box.height),
-                            // Nothing wider than the window, and on pages other than a bracket nothing to scroll sideways
+                            inMenu: box.left >= side.left - 1 && box.right <= side.right + 1 && box.bottom <= side.bottom + 1 && box.height > 0,
+                            fromBottom: Math.round(side.bottom - box.bottom),
                             pageWidth: document.documentElement.scrollWidth, windowWidth: innerWidth,
-                            contentOverflow: content.scrollWidth - content.clientWidth,
                         };
                     });
-                    report.loginUi[`footer, ${size}, ${name}`] = footer;
-                    check(`${size}, ${name}: the page ends with "Data from start.gg" and a Privacy link, inside the window, and nothing overflows sideways`,
-                        footer && footer.text === 'Data from start.gg · Privacy' && JSON.stringify(footer.links) === '["start.gg|https://www.start.gg","Privacy|/privacy"]'
-                        && footer.isLast && footer.inView && Math.abs(footer.fromBottom) <= 1 && footer.height <= 60 && footer.pageWidth <= footer.windowWidth
-                        && (name === 'bracket' || footer.contentOverflow <= 0), footer);
+                    report.loginUi[`credit, ${size}, ${name}`] = credit;
+                    check(`${size}, ${name}: no footer on the page; the menu ends with "Data from start.gg" and a Privacy link, and nothing overflows sideways`,
+                        !credit.footer && credit.text === 'Data from start.gg · Privacy' && JSON.stringify(credit.links) === '["start.gg|https://www.start.gg","Privacy|/privacy"]'
+                        && credit.inMenu && credit.fromBottom <= 2 && credit.pageWidth <= credit.windowWidth, credit);
                 } catch (e) {
-                    check(`${size}, ${name}: footer`, false, String(e.message).slice(0, 300));
+                    check(`${size}, ${name}: credit in the menu`, false, String(e.message).slice(0, 300));
                 }
             }
 
-            // The privacy page, reached from the footer's link
+            // The privacy page, reached from the menu's link
             try {
                 await page.goto(appUrl + '/');
-                await page.locator('footer.site-footer a', { hasText: 'Privacy' }).click();
+                await quiet(800);
+                await openMenu();
+                await page.locator('.sidenav-credit a', { hasText: 'Privacy' }).click();
                 await page.waitForTimeout(600);
                 const privacy = await page.evaluate(() => {
                     const article = document.querySelector('app-privacy');
@@ -2044,7 +2046,7 @@ try {
                 });
                 const said = ['Last updated November 13, 2026', 'Message Fable on Discord', 'your browser remembers the choice', 'Logging in is optional', 'user.identity', 'session cookie', 'Logging out deletes', 'a few seconds to a few minutes', 'No analytics and no ads'].filter(t => !privacy.text.includes(t));
                 report.loginUi[`privacy, ${size}`] = { url: privacy.url, heading: privacy.heading, links: privacy.links, missing: said };
-                check(`${size}: the footer's Privacy link opens /privacy, which says what the site keeps and links to start.gg`,
+                check(`${size}: the menu's Privacy link opens /privacy, which says what the site keeps and links to start.gg`,
                     privacy.url === '/privacy' && privacy.heading === 'Privacy' && !said.length
                     && JSON.stringify(privacy.links) === '["https://www.start.gg"]', report.loginUi[`privacy, ${size}`]);
             } catch (e) {

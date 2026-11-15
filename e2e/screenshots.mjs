@@ -34,7 +34,7 @@ const shots = eventPath => ({
         await page.locator('.search-entrant-form input').click();
         await page.locator('.search-entrant-form input').fill('a');
     } },
-    // The end of a bracket, where the footer is
+    // The end of a bracket
     'bracket-end': { path: eventPath + '/1001', act: page => page.locator('mat-sidenav-content').evaluate(el => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })) },
     privacy: { path: '/privacy' },
     // The Attendees page: every event, one event in seed order, and an attendee's dialog
