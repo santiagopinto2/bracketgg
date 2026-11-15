@@ -813,6 +813,25 @@ try {
                 check(`${name}: searching an entrant closes the keyboard and scrolls to them`, !before && keyboardClosed && after && !errors.length, report.phoneSearch[name]);
                 check(`${name}: maximum-scale=1 on iOS only, so tapping a text box doesn't zoom and Android keeps pinch zoom`, viewport.includes('maximum-scale=1') === (name === 'iPhone 13'), viewport);
                 await page.screenshot({ path: `e2e-out/phone-search-${name.replace(/ /g, '-')}.png` }).catch(() => { });
+
+                // A tap on the bracket's background, away from every set, takes the highlight off the player
+                const highlighted = () => page.locator('.slot-hover, .slot-hover-rounded-corners').count();
+                const highlightedBefore = await highlighted();
+                const spot = await page.evaluate(() => {
+                    const box = document.querySelector('mat-sidenav-content').getBoundingClientRect();
+                    for (let y = box.top + box.height * 0.4; y < box.bottom - 10; y += 10) {
+                        for (let x = box.left + 5; x < box.right - 5; x += 10) {
+                            const hit = document.elementFromPoint(x, y);
+                            if (hit && hit.closest('app-event') && !hit.closest('.set, .progression-tags, button, input, a, mat-form-field')) return { x, y };
+                        }
+                    }
+                    return null;
+                });
+                if (spot) await page.touchscreen.tap(spot.x, spot.y);
+                await page.waitForTimeout(400);
+                const highlightedAfter = await highlighted();
+                report.phoneSearch[name].backgroundTap = { highlightedBefore, spot, highlightedAfter, dialogs: await page.locator('mat-dialog-container').count() };
+                check(`${name}: tapping the background takes the highlight off a player`, highlightedBefore > 0 && !!spot && highlightedAfter === 0 && !errors.length, report.phoneSearch[name].backgroundTap);
             } catch (e) {
                 report.phoneSearch[name] = { crashed: String(e.message).slice(0, 300) };
                 check(`${name}: searching an entrant scrolls to them`, false, report.phoneSearch[name]);
