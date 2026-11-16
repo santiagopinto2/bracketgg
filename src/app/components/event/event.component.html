@@ -134,6 +134,20 @@
                                     <div class="col p-0 set-middle" id="entrant-images">
                                         @for (slot of set.slots; track slot; let firstSlot = $first) {
                                         <div class="row set-row gx-0" [ngClass]="getSlotBackgroundColor(slot, set)" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
+                                            @if (slot.entrant?.pictures; as pictures) {
+                                            <!-- A team: its first two players' pictures on a diagonal, in the same 28px -->
+                                            <div class="set-pictures">
+                                                @for (picture of pictures; track $index) {
+                                                <div class="entrant-image set-picture" [title]="picture.tag">
+                                                    @if (picture.url) {
+                                                    <img [class.portrait]="picture.portrait" [src]="picture.url" [alt]="picture.tag" />
+                                                    } @else {
+                                                    <div class="entrant-set-image-default" [style.background-color]="picture.color">{{picture.initial}}</div>
+                                                    }
+                                                </div>
+                                                }
+                                            </div>
+                                            } @else {
                                             <div class="entrant-image set-image">
                                                 @if (getEntrantImage(slot.entrant) !== '') {
                                                 <img [ngClass]="getEntrantImageOrientation(slot.entrant)" [src]="getEntrantImage(slot.entrant)" />
@@ -144,6 +158,7 @@
                                                 </div>
                                                 }
                                             </div>
+                                            }
                                         </div>
                                         }
                                     </div>
