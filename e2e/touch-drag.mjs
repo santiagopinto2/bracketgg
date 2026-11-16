@@ -25,17 +25,19 @@ export async function touchDrag(page, from, by, { steps = 12, hold = 0, during =
 }
 
 // The same drag as touch events made in the page, for a browser without CDP (WebKit). Nothing scrolls
-// by itself there, so it only shows what the page's own handlers do. Returns null where the browser
-// can't make touch events, else whether each move was stopped (preventDefault).
+// by itself there, so it only shows what the page's own handlers do. Playwright's WebKit can't
+// construct a Touch, so each event is a plain Event that carries the finger in `touches`. Returns
+// whether each move was stopped (preventDefault).
 export function scriptedDrag(page, from, by, { steps = 12, hold = 0 } = {}) {
     return page.evaluate(async ({ from, by, steps, hold }) => {
-        if (typeof Touch !== 'function' || typeof TouchEvent !== 'function') return null;
         const target = document.elementFromPoint(from.x, from.y);
         const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
         const fire = (type, y) => {
-            const touch = new Touch({ identifier: 1, target, clientX: from.x, clientY: y, pageX: from.x, pageY: y, screenX: from.x, screenY: y });
+            const touch = { identifier: 1, target, clientX: from.x, clientY: y, pageX: from.x, pageY: y };
             const down = type === 'touchend' ? [] : [touch];
-            return !target.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, composed: true, touches: down, targetTouches: down, changedTouches: [touch] }));
+            const event = new Event(type, { bubbles: true, cancelable: true, composed: true });
+            Object.defineProperties(event, { touches: { value: down }, targetTouches: { value: down }, changedTouches: { value: [touch] } });
+            return !target.dispatchEvent(event);
         };
         const stopped = [];
         fire('touchstart', from.y);

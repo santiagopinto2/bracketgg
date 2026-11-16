@@ -2869,19 +2869,15 @@ try {
                 const handle = { x: page.viewportSize().width / 2, y: rest.top + 9 };
                 const short = { by: Math.round(rest.height * 0.12) };
                 short.stopped = await scriptedDrag(page, handle, short.by, { hold: 300 });
-                if (short.stopped === null) {
-                    report.setDialog.dragSafari = { skipped: 'this WebKit can\'t make touch events' };
-                } else {
-                    await page.waitForTimeout(500);
-                    Object.assign(short, { after: await sheetPane(page), open: await page.locator('mat-dialog-container').count() === 1 });
-                    const long = { by: Math.round(rest.height * 0.6) };
-                    long.stopped = await scriptedDrag(page, handle, long.by);
-                    long.closed = await page.locator('mat-dialog-container').waitFor({ state: 'detached', timeout: 3000 }).then(() => true, () => false);
-                    report.setDialog.dragSafari = { rest, short, long };
-                    check('set dialog on an iPhone (WebKit, scripted touches): a short drag from the handle springs back, a long one closes the dialog, and every move is stopped',
-                        short.open && short.after.top === rest.top && short.after.transform === '' && long.closed
-                        && short.stopped.length > 0 && short.stopped.every(Boolean) && long.stopped.every(Boolean), report.setDialog.dragSafari);
-                }
+                await page.waitForTimeout(500);
+                Object.assign(short, { after: await sheetPane(page), open: await page.locator('mat-dialog-container').count() === 1 });
+                const long = { by: Math.round(rest.height * 0.6) };
+                long.stopped = await scriptedDrag(page, handle, long.by);
+                long.closed = await page.locator('mat-dialog-container').waitFor({ state: 'detached', timeout: 3000 }).then(() => true, () => false);
+                report.setDialog.dragSafari = { rest, short, long };
+                check('set dialog on an iPhone (WebKit, scripted touches): a short drag from the handle springs back, a long one closes the dialog, and every move is stopped',
+                    short.open && short.after.top === rest.top && short.after.transform === '' && long.closed
+                    && short.stopped.length > 0 && short.stopped.every(Boolean) && long.stopped.every(Boolean), report.setDialog.dragSafari);
             } catch (e) {
                 report.setDialog.dragSafari = { crashed: String(e.message).slice(0, 300) };
                 check('dragging the set dialog on an iPhone', false, report.setDialog.dragSafari);
