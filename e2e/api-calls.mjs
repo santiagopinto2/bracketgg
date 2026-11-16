@@ -823,9 +823,13 @@ try {
                 // A tap on the bracket's background, away from every set, takes the highlight off the player.
                 // The search highlights them again first: by now a resting pointer may have moved it.
                 const highlighted = () => page.locator('.slot-hover, .slot-hover-rounded-corners').count();
+                await page.locator('.search-entrant-form input').tap();
+                await page.locator('.search-entrant-form input').fill('');
                 await page.locator('.search-entrant-form input').fill(target.tag);
-                await page.waitForTimeout(400);
-                await page.locator('mat-option', { hasText: target.tag }).first().tap();
+                const option = page.locator('mat-option', { hasText: target.tag }).first();
+                await option.waitFor({ state: 'visible', timeout: 5000 });
+                await page.waitForTimeout(300); // the panel's opening animation
+                await option.tap();
                 for (const start = Date.now(); Date.now() - start < 3000 && !(await highlighted()); ) await page.waitForTimeout(100);
                 const highlightedBefore = await highlighted();
                 const spot = await page.evaluate(() => {
