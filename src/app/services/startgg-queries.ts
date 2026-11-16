@@ -123,7 +123,7 @@ export const tournamentLiteQuery = tournamentText(false);
 export function tournamentResultsQuery(count: number): string {
     const ids = Array.from({ length: count }, (_, k) => k);
     return `query TournamentResults(${ids.map(k => `$id${k}: ID!`).join(', ')}) {
-                ${ids.map(k => `e${k}: event(id: $id${k}) { id standings(query: { page: 1, perPage: 8 }) { nodes { placement isFinal entrant { id name participants { id user { images(type: "profile") { url width height } } } } } } }`).join('\n                ')}
+                ${ids.map(k => `e${k}: event(id: $id${k}) { id standings(query: { page: 1, perPage: 8 }) { nodes { placement isFinal entrant { id name participants { id gamerTag user { images(type: "profile") { url width height } } } } } } }`).join('\n                ')}
             }`;
 }
 
@@ -409,6 +409,7 @@ export function eventOverviewQuery({ lostTo = false, rankings = false, socials =
                                 name
                                 participants {
                                     id
+                                    gamerTag
                                     ${rankings ? rankingsQuery : ''}
                                     user {
                                         images(type: "profile") {

@@ -1792,8 +1792,9 @@ try {
                     const event = overview(q);
                     event.type = 5;
                     event.standings.nodes = event.standings.nodes.map((node, i) => ({ ...node, entrant: { ...node.entrant, name: i ? 'Kilo / Lima' : 'Juliet / Mike',
-                        participants: [{ id: 900 + 2 * i, user: { images: i ? [] : [{ url: svg(40, 40, '#2a7'), width: 40, height: 40 }] } },
-                            { id: 901 + 2 * i, user: { images: i ? [] : [{ url: svg(40, 40, '#c33'), width: 40, height: 40 }] } }] } }));
+                        // start.gg can list a team's players in another order than its name: Mike before Juliet, Lima before Kilo
+                        participants: [{ id: 900 + 2 * i, gamerTag: i ? 'Lima' : 'Mike', user: { images: i ? [] : [{ url: svg(40, 40, '#c33'), width: 40, height: 40 }] } },
+                            { id: 901 + 2 * i, gamerTag: i ? 'Kilo' : 'Juliet', user: { images: i ? [] : [{ url: svg(40, 40, '#2a7'), width: 40, height: 40 }] } }] } }));
                     return { body: { data: { event } } };
                 });
                 await team.page.goto(appUrl + '/tournament/test-tourney/event/test-event');
@@ -1801,12 +1802,13 @@ try {
                 const teamCards = await team.page.locator('.standing').evaluateAll(cards => cards.slice(0, 2).map(card => {
                     const avatars = [...card.querySelectorAll('.standing-profile-image')];
                     const boxes = avatars.map(a => a.getBoundingClientRect());
-                    return { pictures: avatars.map(a => a.querySelector('img')?.getAttribute('src') ? 'img' : a.textContent.trim()), overlap: boxes.length === 2 ? Math.round(boxes[0].right - boxes[1].left) : null,
+                    return { pictures: avatars.map(a => a.querySelector('img')?.getAttribute('src') ? 'img' : a.textContent.trim()), srcs: avatars.map(a => a.querySelector('img')?.getAttribute('src') ?? null), overlap: boxes.length === 2 ? Math.round(boxes[0].right - boxes[1].left) : null,
                         firstLeft: boxes.length === 2 && boxes[0].left < boxes[1].left, sizes: boxes.map(b => Math.round(b.width)) };
                 }));
                 report.eventLanding.teamAvatars = teamCards;
-                check('event landing, teams: each card shows both teammates, pictures or initials, overlapping with the first on the left',
+                check('event landing, teams: each card shows both teammates in the order of the name, pictures or initials, overlapping with the first on the left',
                     teamCards.length === 2 && JSON.stringify(teamCards.map(c => c.pictures)) === JSON.stringify([['img', 'img'], ['K', 'L']])
+                    && JSON.stringify(teamCards[0].srcs) === JSON.stringify([svg(40, 40, '#2a7'), svg(40, 40, '#c33')])
                     && teamCards.every(c => c.overlap === 16 && c.firstLeft && c.sizes.join() === '52,52'), teamCards);
                 await team.context.close();
             }
