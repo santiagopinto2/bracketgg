@@ -41,6 +41,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     eventName = '';
     eventSlug = '';
     tournamentName = '';
+    // start.gg's name for the tournament's time zone ("America/Los_Angeles"), for the set dialog's times
+    tournamentTimeZone: string | null = null;
     // The shown phase's id, also for a phase the event's list doesn't have
     phaseId = null;
     // The pool a /brackets/<phase id>/<pool id> link names. It loads first; the page stays at the top.
@@ -138,6 +140,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.eventSlug = '';
                 this.phaseId = null;
                 this.tournamentName = '';
+                this.tournamentTimeZone = null;
                 this.playersById = Promise.resolve(new Map());
                 this.colorsById = new Map();
                 this.loadId++;
@@ -151,6 +154,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
                 this.eventName = event.event.name;
                 this.tournamentName = tournament.name ?? '';
+                this.tournamentTimeZone = tournament.timezone || null;
                 this.eventSlug = event.slug;
                 this.phaseId = event.phaseId;
                 this.poolId = event.poolId ?? null;
@@ -1345,7 +1349,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             return source?.fullRoundText ? `${slot.prereqPlacement == 2 ? 'Loser' : 'Winner'} of ${source.fullRoundText}` : null;
         });
         this.dialog.open(SetComponent, {
-            data: { set, crumbs: [pool, this.phases[this.currentPhaseIndex]?.name, this.eventName, this.tournamentName], waiting },
+            data: { set, crumbs: [pool, this.phases[this.currentPhaseIndex]?.name, this.eventName, this.tournamentName], waiting, timeZone: this.tournamentTimeZone },
             panelClass: 'set-dialog-panel',
             width: '600px',
             maxWidth: 'calc(100vw - 48px)',

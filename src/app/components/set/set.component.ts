@@ -171,16 +171,24 @@ export class SetComponent {
         return null;
     }
 
-    // When the set started, or ended if start.gg has no start, in the viewer's own time zone
+    // When the set started, or ended if start.gg has no start, in the tournament's own time zone with
+    // its short name ("Sun, Nov 15 · 9:58 PM PST"); the viewer's zone when start.gg gives none
     private timeText() {
         const started = Number(this.set.startedAt) > 0;
         const at = Number(started ? this.set.startedAt : this.set.completedAt);
         if (!(at > 0)) return null;
-        const date = new Date(at * 1000);
-        const sameYear = date.getFullYear() === new Date().getFullYear();
-        const day = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
-        const clock = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        return { text: `${day} · ${clock}`, title: started ? 'Started' : 'Finished' };
+        const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' };
+        let format: Intl.DateTimeFormat;
+        try {
+            format = new Intl.DateTimeFormat('en-US', this.data.timeZone ? { ...options, timeZone: this.data.timeZone } : options);
+        } catch {
+            format = new Intl.DateTimeFormat('en-US', options); // a zone name the browser doesn't know
+        }
+        const part: Record<string, string> = {};
+        for (const { type, value } of format.formatToParts(new Date(at * 1000))) part[type] = value;
+        const year = part['year'] === format.formatToParts(new Date()).find(p => p.type === 'year')?.value ? '' : `, ${part['year']}`;
+        const text = `${part['weekday']}, ${part['month']} ${part['day']}${year} · ${part['hour']}:${part['minute']} ${part['dayPeriod']} ${part['timeZoneName']}`;
+        return { text, title: started ? 'Started' : 'Finished' };
     }
 
     // A singles player's X and Twitch, once the details are in

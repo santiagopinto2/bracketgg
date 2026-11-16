@@ -2604,8 +2604,9 @@ try {
                     && full.caption === 'Final · Best of 5', { scores: full.scores, boxes: full.scoreBoxes, arrow: full.arrow, caption: full.caption });
                 check('set dialog: every game with its characters, stage and a check on the winning side',
                     same(full.games, ['Game 1, Battlefield: Fox ✓ | Sheik', 'Game 2, Dream Land: Fox | Sheik ✓', 'Game 3, Stage not reported: Falco ✓ | Sheik', 'Game 4, Final Destination: Falco ✓ | Sheik']) && full.note === '', full.games);
-                check('set dialog: the footer has the start time and the stream with its link, and nothing about start.gg',
-                    /^\w{3}, Nov \d+( · |, 2026 · )\d+:\d\d [AP]M$/.test(full.foot?.time ?? '') && full.foot.stream === 'Streamed on teststream (Twitch)' && full.foot.streamLink === 'https://twitch.tv/teststream', full.foot);
+                // The tournament's own time zone (America/Los_Angeles) with its name, whatever the browser's zone
+                check('set dialog: the footer has the start time in the tournament\'s time zone, and the stream with its link, and nothing about start.gg',
+                    full.foot?.time === 'Fri, Nov 6 · 2:20 PM PST' && full.foot.stream === 'Streamed on teststream (Twitch)' && full.foot.streamLink === 'https://twitch.tv/teststream', full.foot);
                 check('set dialog: a YouTube video shows its thumbnail, and nothing else loads from YouTube before a tap',
                     full.video.thumbnail === `https://i.ytimg.com/vi/${video}/maxresdefault.jpg` && full.video.frame === null && same(beforeTap, [`https://i.ytimg.com/vi/${video}/maxresdefault.jpg`]) && same(full.video.links, []), { video: full.video, beforeTap });
                 check('set dialog, dark: the dialog\'s own surface color and readable text (4.5 to 1)', dark.surface === 'rgb(66, 66, 66)' && dark.panel === dark.surface && readable(dark.contrast), dark);
