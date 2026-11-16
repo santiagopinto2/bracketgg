@@ -55,7 +55,8 @@ serve() {
 status=0
 
 run_branch() {
-  node e2e/gql-cache.mjs > $out/gql-cache.json 2>&1 || { cat $out/gql-cache.json; echo "gql-cache tests failed"; exit 1; }
+  # Without the token here: its live part runs in the live job
+  env -u STARTGG_TOKEN node e2e/gql-cache.mjs > $out/gql-cache.json 2>&1 || { cat $out/gql-cache.json; echo "gql-cache tests failed"; exit 1; }
   echo "gql-cache: ok"
   build_branch
   node scripts/check-bundle.js dist/bracketgg/browser unused-in-browser || exit 1
@@ -111,6 +112,9 @@ run_visual() {
 # With Santi's start.gg token, the checks against the real start.gg. Only the live part runs them, so
 # one job per CI run talks to start.gg and the parallel jobs don't trip its rate limit together.
 live_api_checks() {
+  # The shared cache against the real start.gg (e2e/gql-cache.mjs runs its live part when the token is set)
+  node e2e/gql-cache.mjs > $out/gql-cache-live.json 2>&1 || { cat $out/gql-cache-live.json; echo "live gql-cache check failed"; exit 1; }
+  echo "live gql-cache: ok"
   # With Santi's start.gg token: a real multi-pool phase fetched in pool slices must match each pool fetched alone
   node e2e/live-phase-sets.mjs > $out/live-phase-sets.json 2>&1 || { cat $out/live-phase-sets.json; echo "live phase sets check failed"; exit 1; }
   echo "live phase sets: $(head -c 80 $out/live-phase-sets.json | tr -d '\n')"
