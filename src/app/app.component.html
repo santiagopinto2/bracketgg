@@ -69,6 +69,8 @@
                 </mat-nav-list>
             </div>
 
+            <!-- The bottom of the menu: the phone's login, then the credit -->
+            <div class="sidenav-bottom">
             @if (!isLarge) {
             <mat-nav-list class="sidenav-account">
                 @if (authService.isAuthenticated()) {
@@ -82,17 +84,18 @@
                 }
             </mat-nav-list>
             }
+
+            <!-- start.gg's API terms ask for this credit. It sits at the bottom of the menu, not on every page (Santi, 2026-11-15). -->
+            <div class="sidenav-credit">
+                <span>Data from <a href="https://www.start.gg" target="_blank" rel="noopener">start.gg</a></span>
+                <span aria-hidden="true">·</span>
+                <a routerLink="/privacy" (click)="closeSidenav()">Privacy</a>
+            </div>
+            </div>
         </div>
     </mat-sidenav>
 
     <mat-sidenav-content>
         <router-outlet></router-outlet>
-
-        <!-- start.gg's API terms ask for this credit. It sits at the end of each page, or at the bottom of the window on a short one. -->
-        <footer class="site-footer">
-            <span>Data from <a href="https://www.start.gg" target="_blank" rel="noopener">start.gg</a></span>
-            <span aria-hidden="true">·</span>
-            <a routerLink="/privacy">Privacy</a>
-        </footer>
     </mat-sidenav-content>
 </mat-sidenav-container>
