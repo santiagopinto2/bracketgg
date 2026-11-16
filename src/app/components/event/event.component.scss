@@ -269,12 +269,19 @@
     left: 11px;
     top: 10px;
 
-    // The first teammate is in front, with an edge in the row's color where the two meet
+    // The first teammate is in front. The second has a circle cut out where the first sits, 1.5px wider
+    // than it, so the row's own color (a highlight's too) shows between them. A ring drawn around the
+    // first picture let a hairline of the second show through its antialiased edge on phones.
     &:first-child {
         left: 2px;
         top: 1px;
         z-index: 1;
-        box-shadow: 0 0 0 1.5px var(--set-row-bg, var(--set-bg));
+    }
+
+    &:not(:first-child) {
+        // The first's center (9.5px, 8.5px in the column) is at (-1.5px, -1.5px) from this one's corner
+        -webkit-mask-image: radial-gradient(circle 9px at -1.5px -1.5px, transparent 98%, #000 100%);
+        mask-image: radial-gradient(circle 9px at -1.5px -1.5px, transparent 98%, #000 100%);
     }
 
     .entrant-set-image-default {
