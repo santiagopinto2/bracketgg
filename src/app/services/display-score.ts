@@ -29,3 +29,10 @@ export function scoresFromDisplayScore(set): number[] | null {
     }
     return null;
 }
+
+// The score so far of a set being played (state 2), which has no displayScore yet: each side's games
+// won, from the games' winnerId (a game still being played has none). Null for any other set.
+export function scoresInProgress(set): number[] | null {
+    if (set.state !== 2 || set.winnerId || set.slots?.length !== 2 || set.slots.some(slot => !slot?.entrant?.id)) return null;
+    return set.slots.map(slot => (set.games ?? []).filter(game => game?.winnerId != null && game.winnerId == slot.entrant.id).length);
+}
