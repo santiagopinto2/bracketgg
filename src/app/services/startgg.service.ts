@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
-import { scoresFromDisplayScore } from './display-score';
+import { scoresFromDisplayScore, scoresInProgress } from './display-score';
 import { generatePoolSets } from './generated-bracket';
 import { MAX_POOL_SLICES, MAX_RESULT_EVENTS, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuery, attendeesQuery, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSeedsQuery, poolSetsQuery, poolSlicesQuery, seededAttendeesQuery, setDetailsQuery, setScoresQuery, tournamentLiteQuery, tournamentQuery, tournamentResultsQuery } from './startgg-queries';
 
@@ -476,7 +476,8 @@ export class StartggService {
         const unread = [];
         for (const set of sets) {
             const scores = scoresFromDisplayScore(set);
-            if (scores) set.slots.forEach((slot, i) => slot.standing = { stats: { score: { value: scores[i] } } });
+            const live = scores ? null : scoresInProgress(set);
+            if (scores ?? live) set.slots.forEach((slot, i) => slot.standing = { stats: { score: { value: (scores ?? live)[i] } } });
             else if (set.displayScore == null && !set.winnerId) set.slots.forEach(slot => slot.standing = null); // not played yet
             else unread.push(set);
         }

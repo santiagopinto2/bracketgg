@@ -1255,6 +1255,36 @@ try {
         await context.close();
     }
 
+    // 15b. A set being played (state 2) has no displayScore yet: its score so far comes from the games
+    //      won, 0 - 0 before any, and neither side is marked the winner
+    {
+        const playing = body => {
+            for (const set of body.data.phaseGroup.sets.nodes) {
+                if (set.fullRoundText !== 'Grand Final' && set.fullRoundText !== 'Winners Final') continue;
+                const first = set.slots[0].entrant.id;
+                Object.assign(set, { state: 2, winnerId: null, displayScore: null,
+                    games: set.fullRoundText === 'Grand Final' ? [{ winnerId: first, selections: [] }, { winnerId: null, selections: [] }] : [] });
+            }
+            return body;
+        };
+        const { context, page } = await openPage(browser, q =>
+            kindOf(q) === 'sets' && q.includes('phaseGroup(id: 2001)') ? { body: playing(answer(q)) } : null);
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        await page.goto(appUrl + eventPath + '/1001');
+        await page.locator('.set').first().waitFor();
+        await page.waitForTimeout(1500);
+        const shown = await page.locator('.set').evaluateAll(sets => sets.map(set => ({
+            text: [...set.querySelectorAll('.set-tag')].map((tag, i) => `${tag.textContent.trim()} ${[...set.querySelectorAll('.set-scores .set-row')][i]?.textContent.trim() ?? ''}`).join(' - '),
+            marked: set.querySelectorAll('.winner-score, .winner-name').length,
+        })));
+        const live = shown.filter(s => s.text === 'Alpha 1 - Bravo 0' || s.text === 'Alpha 0 - Bravo 0');
+        report.inProgressScore = { shown, errors };
+        check('a set being played shows its score so far (0 - 0 before a game is won), with neither side marked the winner',
+            live.length === 2 && live.every(s => s.marked === 0) && !errors.length, report.inProgressScore);
+        await context.close();
+    }
+
     // 16. Single elimination: only the winners side is drawn, the 3rd place match comes after the final
     //     with no line from it, and Show Projected fills the final and 3rd place match from the semis.
     //     A round robin phase gets a message instead of a spinner, and double elimination keeps both sides.

@@ -1266,6 +1266,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
     hasScore(set) {
         if (!set.slots[0].standing || !set.slots[1].standing) return false;
+        if (set.state === 2 && !set.winnerId) return true; // being played: the score so far, 0 - 0 included
         return set.slots[0].standing.stats.score.value || set.slots[1].standing.stats.score.value;
     }
 
