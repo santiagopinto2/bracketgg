@@ -257,6 +257,9 @@
     flex: none;
     width: 28px;
     height: 100%;
+    // The first picture's edge reaches past the row's top by half a pixel; the row cuts it off, so it
+    // doesn't show as a gray arc in the gap between the two rows
+    overflow: hidden;
 }
 
 .set-picture {
