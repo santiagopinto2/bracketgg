@@ -4,6 +4,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { StartggService } from 'src/app/services/startgg.service';
 import { socials } from 'src/app/services/player-extras';
+import { SheetDragDirective } from '../sheet-drag/sheet-drag.directive';
 import { webLink, youtubePlayer, youtubeThumbnail, youtubeVideo } from './video';
 
 // start.gg's numbers for a set's state (ActivityState)
@@ -32,7 +33,9 @@ const linked = socials.filter(social => social.type === 'TWITTER' || social.type
     templateUrl: './set.component.html',
     styleUrl: './set.component.scss',
     changeDetection: ChangeDetectionStrategy.Eager,
-    imports: [NgTemplateOutlet, MatDialogModule]
+    imports: [NgTemplateOutlet, MatDialogModule],
+    // On a phone the sheet drags down to close
+    hostDirectives: [SheetDragDirective]
 })
 export class SetComponent {
 

@@ -10,6 +10,7 @@
 import { chromium, webkit, devices } from 'playwright';
 import { readFileSync } from 'node:fs';
 import { attendeeAnswer, attendeeChecks, attendeeEventPhases, attendeeKind, attendeeTournament } from './attendees.mjs';
+import { scriptedDrag, scrollBehind, sheetPane, touchDrag, touchMoves, watchTouchMoves } from './touch-drag.mjs';
 import { tournamentPageChecks, tournamentPageKind, tournamentPageTournament, tournamentResultsAnswer } from './tournament-page.mjs';
 
 const appUrl = process.argv[2] ?? 'http://localhost:4300';
@@ -2469,7 +2470,8 @@ try {
     //     with an arrow at the winner; the players' X and Twitch arrive from one small request when it
     //     opens; a YouTube video is a thumbnail until tapped, then YouTube's no-cookie player (allowed by
     //     the server's Content-Security-Policy); and the footer has the start time and the stream.
-    //     Also a disqualification, sets not played yet, the light theme and the phone's bottom sheet.
+    //     Also a disqualification, sets not played yet, the light theme and the phone's bottom sheet,
+    //     which drags down to close.
     {
         const character = name => ({ name, images: [{ type: 'stockIcon', url: `https://icons.test/${name}.svg` }] });
         const pick = (entrantId, name) => ({ entrant: { id: entrantId }, character: character(name) });
@@ -2790,7 +2792,102 @@ try {
                 report.setDialog.phone = { crashed: String(e.message).slice(0, 300) };
                 check('the set dialog on a phone', false, report.setDialog.phone);
             }
+
+            // Dragging the sheet, with Chromium's own touch input. The dialog is still open.
+            try {
+                const host = page.locator('mat-dialog-container app-set');
+                const isOpen = async () => await page.locator('mat-dialog-container').count() === 1;
+                await host.evaluate(el => el.scrollTo({ top: 0, behavior: 'instant' }));
+                await watchTouchMoves(page);
+                const behind = await scrollBehind(page);
+                const rest = await sheetPane(page);
+                const width = page.viewportSize().width;
+                const handle = { x: width / 2, y: rest.top + 9 };
+
+                // A short drag from the handle, the finger resting before it lifts
+                const short = { by: Math.round(rest.height * 0.12) };
+                short.during = await touchDrag(page, handle, short.by, { hold: 300, during: () => sheetPane(page) });
+                await page.waitForTimeout(500);
+                Object.assign(short, { after: await sheetPane(page), open: await isOpen(), stopped: await touchMoves(page) });
+
+                // With the content scrolled down, a drag down on it scrolls it
+                const scrolled = { scrollable: await host.evaluate(el => { el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }); return el.scrollTop > 0; }) };
+                scrolled.from = await host.evaluate(el => Math.round(el.scrollTop));
+                scrolled.during = await touchDrag(page, { x: width / 2, y: rest.top + rest.height * 0.45 }, 100, { hold: 100, during: () => sheetPane(page) });
+                await page.waitForTimeout(400);
+                Object.assign(scrolled, { to: await host.evaluate(el => Math.round(el.scrollTop)), after: await sheetPane(page), open: await isOpen() });
+                await touchMoves(page);
+
+                // A tap still works: the thumbnail plays the video
+                await host.evaluate(el => el.scrollTo({ top: 0, behavior: 'instant' }));
+                await page.locator('.vplayer').scrollIntoViewIfNeeded();
+                const thumbnail = await page.locator('.vplayer').boundingBox();
+                await page.touchscreen.tap(thumbnail.x + thumbnail.width / 2, thumbnail.y + thumbnail.height / 2);
+                const tapped = await page.locator('.vplayer iframe').waitFor({ timeout: 3000 }).then(() => true, () => false);
+
+                // A long drag from the handle, here with the content scrolled down
+                await host.evaluate(el => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
+                await touchMoves(page);
+                const long = { by: Math.round(rest.height * 0.6) };
+                long.during = await touchDrag(page, handle, long.by, { during: () => sheetPane(page) });
+                long.closed = await page.locator('mat-dialog-container').waitFor({ state: 'detached', timeout: 3000 }).then(() => true, () => false);
+                long.stopped = await touchMoves(page);
+                const behindAfter = await scrollBehind(page);
+                if (!long.closed) await close(page);
+
+                report.setDialog.drag = { rest, short, scrolled, tapped, long, behind, behindAfter };
+                const follows = drag => Math.abs(drag.during.top - (rest.top + drag.by)) <= 2;
+                check('set dialog on a phone: a short drag down from the handle moves the sheet with the finger, and on release it springs back and stays open',
+                    follows(short) && short.after.top === rest.top && short.after.transform === '' && short.open, { rest, short });
+                check('set dialog on a phone: with the content scrolled down, a drag down on it scrolls it and the sheet stays where it is',
+                    !scrolled.scrollable || (scrolled.during.top === rest.top && scrolled.after.top === rest.top && scrolled.to < scrolled.from && scrolled.open), { rest, scrolled });
+                check('set dialog on a phone: a tap after a drag still plays the video', tapped, { tapped });
+                check('set dialog on a phone: a long drag down from the handle moves the sheet with the finger, and on release it slides away and the dialog closes',
+                    follows(long) && long.closed, { rest, long });
+                check('set dialog on a phone: every move of a drag on the handle is stopped, and nothing behind the sheet scrolls',
+                    short.stopped.length > 0 && short.stopped.every(Boolean) && long.stopped.length > 0 && long.stopped.every(Boolean) && behind === behindAfter, { short: short.stopped, long: long.stopped, behind, behindAfter });
+            } catch (e) {
+                report.setDialog.drag = { crashed: String(e.message).slice(0, 300) };
+                check('dragging the set dialog on a phone', false, report.setDialog.drag);
+            }
             await context.close();
+        }
+
+        // The same drags in Safari's engine on an iPhone, as touch events made in the page (WebKit has
+        // no touch input to drive from here): the sheet's own handling, not Safari's scrolling
+        {
+            const safari = await webkit.launch();
+            const { context, page, quiet } = await openPage(safari, respond, devices['iPhone 13']);
+            try {
+                await icons(page);
+                await page.goto(appUrl + eventPath + '/1001');
+                await quiet();
+                await open(page, 106);
+                await quiet(600);
+                await page.waitForTimeout(400);
+                const rest = await sheetPane(page);
+                const handle = { x: page.viewportSize().width / 2, y: rest.top + 9 };
+                const short = { by: Math.round(rest.height * 0.12) };
+                short.stopped = await scriptedDrag(page, handle, short.by, { hold: 300 });
+                if (short.stopped === null) {
+                    report.setDialog.dragSafari = { skipped: 'this WebKit can\'t make touch events' };
+                } else {
+                    await page.waitForTimeout(500);
+                    Object.assign(short, { after: await sheetPane(page), open: await page.locator('mat-dialog-container').count() === 1 });
+                    const long = { by: Math.round(rest.height * 0.6) };
+                    long.stopped = await scriptedDrag(page, handle, long.by);
+                    long.closed = await page.locator('mat-dialog-container').waitFor({ state: 'detached', timeout: 3000 }).then(() => true, () => false);
+                    report.setDialog.dragSafari = { rest, short, long };
+                    check('set dialog on an iPhone (WebKit, scripted touches): a short drag from the handle springs back, a long one closes the dialog, and every move is stopped',
+                        short.open && short.after.top === rest.top && short.after.transform === '' && long.closed
+                        && short.stopped.length > 0 && short.stopped.every(Boolean) && long.stopped.every(Boolean), report.setDialog.dragSafari);
+                }
+            } catch (e) {
+                report.setDialog.dragSafari = { crashed: String(e.message).slice(0, 300) };
+                check('dragging the set dialog on an iPhone', false, report.setDialog.dragSafari);
+            }
+            await context.close();
+            await safari.close();
         }
     }
 

@@ -4,6 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
+import { SheetDragDirective } from '../sheet-drag/sheet-drag.directive';
 import { rankIcon } from 'src/app/services/player-extras';
 
 // "Fri 10:00 AM PST": a pool's start in the tournament's time zone, with the zone's abbreviation.
@@ -41,6 +42,8 @@ export function orderPhases(seeds: any[]): any[] {
     templateUrl: './attendee-dialog.component.html',
     changeDetection: ChangeDetectionStrategy.Eager,
     styleUrls: ['./attendee-dialog.component.scss', './attendee-entries.scss'],
+    // On a phone the sheet drags down to close
+    hostDirectives: [SheetDragDirective],
 })
 export class AttendeeDialogComponent {
 
