@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
-import { picksBySide } from '../set/character-picks';
+import { charactersBySide } from './set-characters';
 import { rememberArrival } from 'src/app/services/arrival-state';
 import { Location, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
@@ -415,11 +415,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         // Where each set of a round with byes goes, from start.gg's links between sets
         phaseGroup.byeLayouts = phaseGroup.sets.nodes.map(rounds => this.getByeLayouts(rounds));
 
-        // Organize set games data
+        // The characters each side's card shows, from the set's games
         phaseGroupSets.forEach(set => {
-            if (set.games) {
-                set.games.forEach(game => game.picks = picksBySide(game, set.slots));
-            }
+            if (set.games) set.chars = charactersBySide(set);
         });
 
         // Calculate the number of players per phase group
@@ -1140,9 +1138,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     getSetNameWidth(set) {
-        if (this.hasScore(set) && set.games && set.games[0].selections) return '108px';
-        if (this.hasScore(set)) return '136px';
-        return '156px';
+        // What the 204px card has left beside the seed and picture, the characters, and the score
+        return `${156 - (this.hasChars(set) ? 28 : 0) - (this.hasScore(set) ? 20 : 0)}px`;
     }
 
     getSetNamesWidthStyling(set) {
@@ -1273,12 +1270,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     hasChars(set) {
-        return set.games?.[0]?.picks?.some(side => side.length);
-    }
-
-    // The bracket has room for one icon per side: the first player's pick in game 1
-    getCharIcon(set, playerIndex) {
-        return set.games[0].picks[playerIndex]?.[0] ?? null;
+        return set.chars?.some(side => side.icons.length);
     }
 
     onShowUpsetsChange(event) {

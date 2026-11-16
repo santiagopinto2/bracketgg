@@ -41,6 +41,10 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 
 A set's YouTube `vodUrl` shows as a thumbnail (`i.ytimg.com`); a tap loads YouTube's player from `www.youtube-nocookie.com`, the only frame the Content-Security-Policy allows (`server/http-security.js`). Any other web link is an "Open video" link.
 
+## Characters on a set card
+
+A bracket card's character column is 28px wide whatever a side played (`src/app/components/event/set-characters.ts`). A side with one character has one 18px icon. A side with more (a switch, a doubles team, or both) has two 12 to 16px icons on a diagonal and a "+N" for the rest. The lineup is the group of characters used in the most games, and the earliest group wins a tie. start.gg leaves a selection's `participant` empty in doubles, so a team's icons follow start.gg's order, not the names'.
+
 ## Building and testing
 
 CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and push to main. `e2e/api-calls.mjs` runs the app against a fake start.gg (`e2e/attendees.mjs` holds the Attendees page's part of it, `e2e/tournament-page.mjs` the tournament page's, which also saves the whole page in both themes to `e2e-out/tournament-page/`). `e2e/gql-cache.mjs` tests the cache, allowlist and site gate; `e2e/auth.mjs` runs the real server against a fake start.gg for login, sessions and security headers. `e2e/live-bracket.mjs` walks real Genesis X brackets in a browser for the progression tags and saves dark-theme screenshots to the `e2e-out` artifact (`live-bracket/`); it reports and never fails a run.
