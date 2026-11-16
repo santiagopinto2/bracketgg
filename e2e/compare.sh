@@ -1,9 +1,10 @@
 #!/bin/sh
 # CI's checks, in four parts that run side by side as separate jobs (.github/workflows/ci.yml):
-#   sh e2e/compare.sh branch   unit-style checks, this branch's build, the live start.gg checks, e2e/api-calls.mjs, and e2e/auth.mjs
+#   sh e2e/compare.sh branch   unit-style checks, this branch's build, e2e/api-calls.mjs, and e2e/auth.mjs
 #   sh e2e/compare.sh main     the base branch's build through e2e/api-calls.mjs, as a report only
 #   sh e2e/compare.sh visual   both builds' screenshots, pixel for pixel (e2e/visual-diff.mjs)
-#   sh e2e/compare.sh live     a browser walk through real brackets (needs STARTGG_TOKEN); it never fails
+#   sh e2e/compare.sh live     the checks against the real start.gg, then a browser walk through real brackets
+#                              (needs STARTGG_TOKEN; the walk never fails the run)
 # With no part it runs all four, one after another. Reports go to e2e-out/.
 # Meant for a fleet job or CI, not the VM.
 set -u
@@ -62,18 +63,6 @@ run_branch() {
   if node scripts/check-bundle.js /tmp/leak unused-in-browser 2> /dev/null; then echo "check-bundle.js missed a leaked secret"; exit 1; fi
   echo "check-bundle.js: ok"
 
-  # With Santi's start.gg token: a real multi-pool phase fetched in pool slices must match each pool fetched alone
-  node e2e/live-phase-sets.mjs > $out/live-phase-sets.json 2>&1 || { cat $out/live-phase-sets.json; echo "live phase sets check failed"; exit 1; }
-  echo "live phase sets: $(head -c 80 $out/live-phase-sets.json | tr -d '\n')"
-  # With the token: scores read from displayScore must equal start.gg's own score fields on real sets
-  node --experimental-strip-types e2e/live-display-score.mjs > $out/live-display-score.json 2> $out/live-display-score.err || { cat $out/live-display-score.json $out/live-display-score.err; echo "live displayScore check failed"; exit 1; }
-  echo "live displayScore: ok"
-  # With the token: a phase's players, profile pictures only, and the top 8's losses, from the real start.gg
-  node --experimental-strip-types e2e/live-players.mjs > $out/live-players.json 2> $out/live-players.err || { cat $out/live-players.json $out/live-players.err; echo "live players check failed"; exit 1; }
-  echo "live players: ok"
-  # With the token: the next phase's seeds for a real pool, what asking costs, each player's last set, and that a player keeps their entrant id in the next phase
-  node --experimental-strip-types e2e/live-progression.mjs > $out/live-progression.json 2> $out/live-progression.err || { cat $out/live-progression.json $out/live-progression.err; echo "live progression check failed"; exit 1; }
-  echo "live progression: ok"
 
   browsers
   serve /tmp/app-branch 4302
@@ -119,10 +108,28 @@ run_visual() {
   fi
 }
 
+# With Santi's start.gg token, the checks against the real start.gg. Only the live part runs them, so
+# one job per CI run talks to start.gg and the parallel jobs don't trip its rate limit together.
+live_api_checks() {
+  # With Santi's start.gg token: a real multi-pool phase fetched in pool slices must match each pool fetched alone
+  node e2e/live-phase-sets.mjs > $out/live-phase-sets.json 2>&1 || { cat $out/live-phase-sets.json; echo "live phase sets check failed"; exit 1; }
+  echo "live phase sets: $(head -c 80 $out/live-phase-sets.json | tr -d '\n')"
+  # With the token: scores read from displayScore must equal start.gg's own score fields on real sets
+  node --experimental-strip-types e2e/live-display-score.mjs > $out/live-display-score.json 2> $out/live-display-score.err || { cat $out/live-display-score.json $out/live-display-score.err; echo "live displayScore check failed"; exit 1; }
+  echo "live displayScore: ok"
+  # With the token: a phase's players, profile pictures only, and the top 8's losses, from the real start.gg
+  node --experimental-strip-types e2e/live-players.mjs > $out/live-players.json 2> $out/live-players.err || { cat $out/live-players.json $out/live-players.err; echo "live players check failed"; exit 1; }
+  echo "live players: ok"
+  # With the token: the next phase's seeds for a real pool, what asking costs, each player's last set, and that a player keeps their entrant id in the next phase
+  node --experimental-strip-types e2e/live-progression.mjs > $out/live-progression.json 2> $out/live-progression.err || { cat $out/live-progression.json $out/live-progression.err; echo "live progression check failed"; exit 1; }
+  echo "live progression: ok"
+}
+
 # With the token: a browser walk through real brackets (Genesis X) for the progression tags, in dark mode.
 # Screenshots and a report in e2e-out/live-bracket; it never fails the run.
 run_live() {
-  [ -n "${STARTGG_TOKEN:-}" ] || { echo "no STARTGG_TOKEN: live bracket walk skipped"; return; }
+  [ -n "${STARTGG_TOKEN:-}" ] || { echo "no STARTGG_TOKEN: live checks skipped"; return; }
+  live_api_checks
   build_branch
   browsers
   PORT=4304 STATIC_DIR=/tmp/app-branch STARTGG_SITE_TOKEN="$STARTGG_TOKEN" node proxy-server.js > $out/server-live.log 2>&1 &

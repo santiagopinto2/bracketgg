@@ -7,6 +7,11 @@ on:
   push:
     branches: [main]
 
+# A newer run for the same PR (a push, or adding a label) cancels the older one. Pushes to main all run.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   # e2e/compare.sh's four parts, side by side on their own runners
   checks:
@@ -25,7 +30,8 @@ jobs:
         with:
           node-version: 22
       # branch: this commit's build against a fake start.gg; main: the base branch's, as a report;
-      # visual: both builds' screenshots compared; live: real brackets in a browser (never fails)
+      # visual: both builds' screenshots compared; live: the checks against the real start.gg and a
+      # browser walk through real brackets (the walk never fails)
       - run: sh e2e/compare.sh ${{ matrix.part }}
         env:
           BASE_REF: origin/${{ github.base_ref || 'main' }}
