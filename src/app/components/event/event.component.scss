@@ -269,19 +269,20 @@
     left: 11px;
     top: 10px;
 
-    // The first teammate is in front. The second has a circle cut out where the first sits, 1.5px wider
-    // than it, so the row's own color (a highlight's too) shows between them. A ring drawn around the
-    // first picture let a hairline of the second show through its antialiased edge on phones.
+    // The second teammate is in front, like a side's second character icon (Santi, 2026-11-16). The
+    // first has a circle cut out where the second sits, 1.5px wider than it, so the row's own color (a
+    // highlight's too) shows between them. A ring drawn around a picture let a hairline of the one
+    // behind show through its antialiased edge on phones.
     &:first-child {
         left: 2px;
         top: 1px;
-        z-index: 1;
+        // The second's center (18.5px, 17.5px in the column) is at (16.5px, 16.5px) from this one's corner
+        -webkit-mask-image: radial-gradient(circle 9px at 16.5px 16.5px, transparent 98%, #000 100%);
+        mask-image: radial-gradient(circle 9px at 16.5px 16.5px, transparent 98%, #000 100%);
     }
 
     &:not(:first-child) {
-        // The first's center (9.5px, 8.5px in the column) is at (-1.5px, -1.5px) from this one's corner
-        -webkit-mask-image: radial-gradient(circle 9px at -1.5px -1.5px, transparent 98%, #000 100%);
-        mask-image: radial-gradient(circle 9px at -1.5px -1.5px, transparent 98%, #000 100%);
+        z-index: 1;
     }
 
     .entrant-set-image-default {
@@ -336,12 +337,10 @@
     top: 12px;
 }
 
-// The first icon is in front, like a team's first picture, with an edge in the row's color on its
-// lower right, where it meets the second (Santi, 2026-11-16)
-.set-char-pair-1,
-.set-char-main {
-    z-index: 1;
-    filter: drop-shadow(1px 1px 0 var(--set-row-bg, var(--set-bg)));
+// The lower icon gets an edge in the row's color where it meets the upper one
+.set-char-pair-2,
+.set-char-sub {
+    filter: drop-shadow(-1px -1px 0 var(--set-row-bg, var(--set-bg)));
 }
 
 // How many more characters the side used
