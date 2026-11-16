@@ -2481,7 +2481,8 @@ try {
             for (const set of body.data.phaseGroup.sets.nodes) {
                 if (set.id === 106) set.games = [
                     { winnerId: 1, stage: { name: 'Battlefield' }, selections: [pick(2, 'Sheik'), pick(1, 'Fox')] },
-                    { winnerId: 2, stage: { name: 'Dream Land' }, selections: [pick(1, 'Fox'), pick(2, 'Sheik')] },
+                    // Bravo's side picks Sheik twice in one game, as a doubles team whose players both play her
+                    { winnerId: 2, stage: { name: 'Dream Land' }, selections: [pick(1, 'Fox'), pick(2, 'Sheik'), pick(2, 'Sheik')] },
                     { winnerId: 1, stage: null, selections: [pick(1, 'Falco'), pick(2, 'Sheik')] },
                     { winnerId: 1, stage: { name: 'Final Destination' }, selections: [pick(1, 'Falco'), pick(2, 'Sheik')] },
                 ];
@@ -2509,6 +2510,7 @@ try {
                     names: all('.name', player).map(name => name.textContent.trim()), sponsor: text('.sponsor', player),
                     result: ['won', 'lost', 'unknown', 'is-projected'].filter(name => player.classList.contains(name)).join(' '),
                     winner: !!player.querySelector('.wintag'), seed: text('.seed', player), used: all('.used img', player).map(image => image.alt),
+                    usedBelowSeed: !player.querySelector('.used') || player.querySelector('.used').getBoundingClientRect().top >= (player.querySelector('.meta')?.getBoundingClientRect().bottom ?? 0) - 0.5,
                     avatars: all('.avatar', player).map(avatar => avatar.querySelector('img') ? 'picture' : avatar.textContent.trim()),
                     links: all('.links a', player).map(link => `${link.getAttribute('aria-label')}|${link.href}`),
                 })),
@@ -2591,10 +2593,10 @@ try {
 
                 check('set dialog: the phase, event and tournament above the round, with the set\'s state',
                     full.crumbs === 'Pools · Test Event · Test Tourney' && full.title === 'Grand Final' && full.chip === 'Completed', full);
-                check('set dialog: each player\'s name, picture or initial, Winner badge, seed and characters',
+                check('set dialog: each player\'s name, picture or initial, Winner badge, seed, and characters on their own line below, one for each player who played one at once',
                     same(full.players.map(({ links, ...player }) => player), [
-                        { names: ['Alpha'], sponsor: '', result: 'won', winner: true, seed: 'Seed 1', used: ['Fox', 'Falco'], avatars: ['A'] },
-                        { names: ['Bravo'], sponsor: '', result: 'lost', winner: false, seed: 'Seed 2', used: ['Sheik'], avatars: ['picture'] },
+                        { names: ['Alpha'], sponsor: '', result: 'won', winner: true, seed: 'Seed 1', used: ['Fox', 'Falco'], usedBelowSeed: true, avatars: ['A'] },
+                        { names: ['Bravo'], sponsor: '', result: 'lost', winner: false, seed: 'Seed 2', used: ['Sheik', 'Sheik'], usedBelowSeed: true, avatars: ['picture'] },
                     ]), full.players);
                 check('set dialog: one small request on open brings X and Twitch, with no link to a start.gg profile',
                     requests.total === 1 && requests.setDetails === 1 && same(full.players.map(player => player.links), [['X: AlphaSSB|https://x.com/AlphaSSB', 'Twitch: AlphaTV|https://twitch.tv/AlphaTV'], []])
@@ -2603,7 +2605,7 @@ try {
                     same(full.scores, ['3', '1']) && full.scoreBoxes.every(box => box === 'rgba(0, 0, 0, 0) 0px') && full.arrow.icon === 'arrow_left' && full.arrow.nudge === 'matrix(1, 0, 0, 1, -1, 0)'
                     && full.caption === 'Final · Best of 5', { scores: full.scores, boxes: full.scoreBoxes, arrow: full.arrow, caption: full.caption });
                 check('set dialog: every game with its characters, stage and a check on the winning side',
-                    same(full.games, ['Game 1, Battlefield: Fox ✓ | Sheik', 'Game 2, Dream Land: Fox | Sheik ✓', 'Game 3, Stage not reported: Falco ✓ | Sheik', 'Game 4, Final Destination: Falco ✓ | Sheik']) && full.note === '', full.games);
+                    same(full.games, ['Game 1, Battlefield: Fox ✓ | Sheik', 'Game 2, Dream Land: Fox | Sheik+Sheik ✓', 'Game 3, Stage not reported: Falco ✓ | Sheik', 'Game 4, Final Destination: Falco ✓ | Sheik']) && full.note === '', full.games);
                 // The tournament's own time zone (America/Los_Angeles) with its name, whatever the browser's zone
                 check('set dialog: the footer has the start time in the tournament\'s time zone, and the stream with its link, and nothing about start.gg',
                     full.foot?.time === 'Fri, Nov 6 · 2:20 PM PST' && full.foot.stream === 'Streamed on teststream (Twitch)' && full.foot.streamLink === 'https://twitch.tv/teststream', full.foot);

@@ -119,14 +119,15 @@
             @if (side.seed !== null) {
             <span class="seed">Seed {{ side.seed }}</span>
             }
-            @if (side.used.length) {
-            <span class="used">
-                @for (character of side.used; track character.icon) {
-                <img [src]="character.icon" [alt]="character.name" [title]="character.name">
-                }
-            </span>
+        </div>
+        <!-- The characters always get their own line, below the seed -->
+        @if (side.used.length) {
+        <div class="used">
+            @for (character of side.used; track $index) {
+            <img [src]="character.icon" [alt]="character.name" [title]="character.name">
             }
         </div>
+        }
         @if (links.length) {
         <div class="links">
             @for (link of links; track link.name) {

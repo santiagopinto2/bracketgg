@@ -234,7 +234,9 @@
 }
 
 .used {
-    display: inline-flex;
+    margin-top: 4px;
+    display: flex;
+    justify-content: center;
     gap: 2px;
 
     img {
