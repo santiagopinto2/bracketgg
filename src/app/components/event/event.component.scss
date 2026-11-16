@@ -353,6 +353,12 @@
     text-shadow: var(--set-text-shadow);
 }
 
+// A team's name starts 3px in, so it is as far from the pictures (which end 2px before the column
+// does) as it is from a pair of characters on its right: 5px on both sides. The row keeps its width.
+.set-name-team {
+    padding-left: 3px;
+}
+
 .set-sponsor {
     color: var(--set-sponsor);
     min-width: 22px;

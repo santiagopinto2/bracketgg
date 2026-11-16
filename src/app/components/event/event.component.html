@@ -166,7 +166,7 @@
                                         @for (slot of set.slots; track slot; let firstSlot = $first) {
                                         <div class="row set-row" [ngClass]="[isWinner(set, slot, 'name'), getSlotBackgroundColor(slot, set, true)]" [ngStyle]="{'height': getSlotHeight(firstSlot), 'width': getSetNameWidth(set)}"
                                             (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()" #slot [attr.entrantId]="slot.entrant?.id">
-                                            <div class="d-flex set-name">
+                                            <div class="d-flex set-name" [class.set-name-team]="slot.entrant?.pictures">
                                                 @if (slot.entrant?.sponsor) {
                                                 <span class="set-sponsor">{{slot.entrant.sponsor}}</span>
                                                 }

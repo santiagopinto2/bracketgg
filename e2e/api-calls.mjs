@@ -1157,6 +1157,9 @@ try {
                 const corner = row.getBoundingClientRect();
                 return {
                     name: names[k].querySelector('.set-tag').textContent.trim(), row: round(corner.width), nameRow: round(names[k].getBoundingClientRect().width),
+                    // How far into its row the name starts, and how wide the name's box is with its padding
+                    nameLeft: round(names[k].querySelector('.set-tag').getBoundingClientRect().left - names[k].getBoundingClientRect().left),
+                    nameBox: round(names[k].querySelector('.set-name').getBoundingClientRect().width),
                     pictures: [...row.querySelectorAll('.entrant-image')].map(el => {
                         const box = el.getBoundingClientRect();
                         const image = el.querySelector('img');
@@ -1181,6 +1184,7 @@ try {
             'Charlie / Golf / Hotel': `team Charlie: initial C ${first} | team Golf: initial G ${second}`,
             'Delta': `solo initial D ${solo}`,
         };
+        const round2 = n => Math.round(n * 100) / 100;
         const transparent = color => !color || color === 'rgba(0, 0, 0, 0)' || color === 'transparent';
         report.teamPictures = {};
         try {
@@ -1215,6 +1219,11 @@ try {
             const dialog = await page.locator('mat-dialog-container').count();
             report.teamPictures.dialog = { dialog, errors };
             check('team pictures: a team\'s set still opens its dialog', dialog === 1 && !errors.length, report.teamPictures.dialog);
+            // 3px past where a single player's name starts and the 2px the pictures leave free make 5px, the gap a pair of characters leaves on the right
+            const lefts = Object.fromEntries(sides.map(side => [side.name, `${side.nameLeft} in ${side.nameBox} of ${side.nameRow}`]));
+            const soloLeft = sides.find(side => side.name === 'Delta')?.nameLeft;
+            check('team pictures: a team\'s name starts 3px further in than a single player\'s, in a row of the same width',
+                sides.every(side => side.nameLeft === (side.name === 'Delta' ? soloLeft : round2(soloLeft + 3)) && side.nameBox === sides[0].nameBox && side.nameRow === 136), lefts);
             await context.close();
 
             // The light theme and a phone: the same pictures in the same places
