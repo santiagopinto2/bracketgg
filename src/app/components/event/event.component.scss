@@ -336,10 +336,12 @@
     top: 12px;
 }
 
-// The lower icon gets an edge in the row's color where it meets the upper one
-.set-char-pair-2,
-.set-char-sub {
-    filter: drop-shadow(-1px -1px 0 var(--set-row-bg, var(--set-bg)));
+// The first icon is in front, like a team's first picture, with an edge in the row's color on its
+// lower right, where it meets the second (Santi, 2026-11-16)
+.set-char-pair-1,
+.set-char-main {
+    z-index: 1;
+    filter: drop-shadow(1px 1px 0 var(--set-row-bg, var(--set-bg)));
 }
 
 // How many more characters the side used
