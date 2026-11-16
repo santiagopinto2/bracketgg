@@ -8,9 +8,15 @@ on:
     branches: [main]
 
 jobs:
-  build-and-e2e:
+  # e2e/compare.sh's four parts, side by side on their own runners
+  checks:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [branch, main, visual, live]
+    name: ${{ matrix.part == 'branch' && 'build-and-e2e' || matrix.part }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,22 +24,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Builds this commit and the base branch, then runs e2e/api-calls.mjs against a fake start.gg on both
-      - run: sh e2e/compare.sh
+      # branch: this commit's build against a fake start.gg; main: the base branch's, as a report;
+      # visual: both builds' screenshots compared; live: real brackets in a browser (never fails)
+      - run: sh e2e/compare.sh ${{ matrix.part }}
         env:
           BASE_REF: origin/${{ github.base_ref || 'main' }}
-          # Santi's start.gg test token, for one live check of the shared cache (absent on forks)
+          # Santi's start.gg test token, for the live checks (absent on forks)
           STARTGG_TOKEN: ${{ secrets.STARTGG_TOKEN }}
           # A PR labeled visual-change may look different from the base branch (e2e/visual-diff.mjs)
           VISUAL_CHANGES_OK: ${{ contains(github.event.pull_request.labels.*.name, 'visual-change') }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-out
+          name: e2e-out-${{ matrix.part }}
           path: e2e-out
       # This commit's build, to open against real brackets before merging (STATIC_DIR=<dir> node proxy-server.js)
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && matrix.part == 'branch'
         with:
           name: app-branch
           path: /tmp/app-branch
@@ -42,7 +49,7 @@ jobs:
   # The build the live site deploys: ~/ops/bin/bracketgg-build downloads this artifact for main's head commit
   dist:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build-and-e2e
+    needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
