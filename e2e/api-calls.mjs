@@ -1119,6 +1119,139 @@ try {
         }
     }
 
+    // 13c. A team's pictures on a set's card: its first two players in the order of its name, 15px each
+    //      on a diagonal inside the same 28px column, a player without a picture as their initial on
+    //      their own color. A single player keeps the one 18px picture, and no column changes width.
+    {
+        const picture = color => ({ images: [{ url: svg(40, 40, color), type: 'profile', width: 40, height: 40 }] });
+        // start.gg lists Alpha's team in reverse, and Alpha has no picture. Bravo's team is in order,
+        // both with pictures (Bravo's is a portrait). Charlie's has three players, listed in reverse,
+        // none with a picture. Delta plays alone.
+        const teams = {
+            1: { name: 'Alpha / Echo', participants: [{ gamerTag: 'Echo', user: picture('#36c') }, { gamerTag: 'Alpha', user: null }] },
+            2: { name: 'Bravo / Foxtrot', participants: [{ gamerTag: 'Bravo', user: { images: bravoImages } }, { gamerTag: 'Foxtrot', user: picture('#c63') }] },
+            3: { name: 'Charlie / Golf / Hotel', participants: [{ gamerTag: 'Hotel', user: null }, { gamerTag: 'Golf', user: { images: [] } }, { gamerTag: 'Charlie', user: null }] },
+        };
+        const respond = q => {
+            if (kindOf(q) === 'seeds') {
+                const body = answer(q);
+                for (const { entrant } of body.data.phase.seeds.nodes) {
+                    if (teams[entrant.id]) entrant.participants = teams[entrant.id].participants.map(p => ({ gamerTag: p.gamerTag, user: userAsQueried(structuredClone(p.user), q) }));
+                }
+                return { body };
+            }
+            if (kindOf(q) === 'sets' && q.includes('phaseGroup(id: 2001)')) {
+                const body = answer(q);
+                for (const set of body.data.phaseGroup.sets.nodes) for (const slot of set.slots) if (teams[slot.entrant?.id]) slot.entrant.name = teams[slot.entrant.id].name;
+                return { body };
+            }
+            return null;
+        };
+        // Each card: its width, its columns' widths, and what each side's picture column holds, with
+        // boxes [left, top, width, height] measured from the corner of the side's row in that column
+        const measure = page => page.locator('.set').evaluateAll(sets => Object.fromEntries(sets.map(set => {
+            const round = n => Math.round(n * 100) / 100;
+            const width = selector => round(set.querySelector(selector)?.getBoundingClientRect().width ?? -1);
+            const names = [...set.querySelectorAll('#names .set-row')];
+            const sides = [...set.querySelectorAll('#entrant-images .set-row')].map((row, k) => {
+                const corner = row.getBoundingClientRect();
+                return {
+                    name: names[k].querySelector('.set-tag').textContent.trim(), row: round(corner.width), nameRow: round(names[k].getBoundingClientRect().width),
+                    // How far into its row the name starts, and how wide the name's box is with its padding
+                    nameLeft: round(names[k].querySelector('.set-tag').getBoundingClientRect().left - names[k].getBoundingClientRect().left),
+                    nameBox: round(names[k].querySelector('.set-name').getBoundingClientRect().width),
+                    pictures: [...row.querySelectorAll('.entrant-image')].map(el => {
+                        const box = el.getBoundingClientRect();
+                        const image = el.querySelector('img');
+                        const initial = el.querySelector('.entrant-set-image-default');
+                        return {
+                            team: el.classList.contains('set-picture'), title: el.getAttribute('title') ?? '',
+                            shows: image ? `picture ${image.getAttribute('src').match(/%23(\w+)/)?.[1] ?? '?'}${image.classList.contains('portrait') ? ' portrait' : ''}` : `initial ${initial?.textContent.trim()}`,
+                            color: initial ? getComputedStyle(initial).backgroundColor : null,
+                            box: [box.left - corner.left, box.top - corner.top, box.width, box.height].map(round),
+                            inside: box.left >= corner.left - 0.01 && box.right <= corner.right + 0.01 && box.top >= corner.top - 0.01 && box.bottom <= corner.bottom + 0.01,
+                        };
+                    }),
+                };
+            });
+            return [set.getAttribute('data-set-id'), { card: round(set.getBoundingClientRect().width), names: width('#names'), pictures: width('#entrant-images'), sides }];
+        })));
+        const drawnSide = side => side.pictures.map(p => `${p.team ? 'team' : 'solo'} ${p.title ? p.title + ': ' : ''}${p.shows} [${p.box.join(', ')}]`).join(' | ');
+        const first = '[2, 1, 15, 15]', second = '[11, 10, 15, 15]', solo = '[5, 4, 18, 18]';
+        const want = {
+            'Alpha / Echo': `team Alpha: initial A ${first} | team Echo: picture 36c ${second}`,
+            'Bravo / Foxtrot': `team Bravo: picture 2a7 portrait ${first} | team Foxtrot: picture c63 ${second}`,
+            'Charlie / Golf / Hotel': `team Charlie: initial C ${first} | team Golf: initial G ${second}`,
+            'Delta': `solo initial D ${solo}`,
+        };
+        const round2 = n => Math.round(n * 100) / 100;
+        const transparent = color => !color || color === 'rgba(0, 0, 0, 0)' || color === 'transparent';
+        report.teamPictures = {};
+        try {
+            const { context, page, quiet } = await openPage(browser, respond, { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 }, { fonts: true });
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            await page.waitForTimeout(1000);
+            const cards = await measure(page);
+            const sides = Object.values(cards).flatMap(card => card.sides);
+            const drawn = Object.fromEntries(Object.entries(cards).map(([id, card]) => [id, card.sides.map(side => `${side.name} = ${drawnSide(side)}`)]));
+            report.teamPictures.dark = { cards, drawn, errors };
+            await page.screenshot({ path: 'e2e-out/team-pictures-dark.png' }).catch(() => { });
+
+            check('team pictures: a team shows its first two players in the order of its name, 15px each on a diagonal, and a player without a picture as their initial',
+                sides.length === 12 && sides.every(side => drawnSide(side) === want[side.name]) && Object.keys(want).every(name => sides.some(side => side.name === name)) && !errors.length, { drawn, errors });
+            // Alpha's color is the team's; Charlie and Golf each have one, and the same one on every card
+            const initials = sides.flatMap(side => side.pictures.filter(p => p.team && p.color).map(p => ({ who: p.title, color: p.color })));
+            const colorsOf = who => [...new Set(initials.filter(i => i.who === who).map(i => i.color))];
+            report.teamPictures.colors = { Alpha: colorsOf('Alpha'), Charlie: colorsOf('Charlie'), Golf: colorsOf('Golf') };
+            check('team pictures: each teammate without a picture has a color, the same one on every card',
+                ['Alpha', 'Charlie', 'Golf'].every(who => colorsOf(who).length === 1 && !transparent(colorsOf(who)[0])), report.teamPictures.colors);
+            const all = Object.values(cards);
+            const widths = all.map(card => [card.card, card.pictures, card.names].join(' '));
+            check('team pictures: every card stays 204px wide with a 28px picture column and a 136px tag column, and every picture is inside its row of that column',
+                all.length === 6 && widths.every(w => w === '204 28 136') && sides.every(side => side.row === 28 && side.nameRow === 136 && side.pictures.every(p => p.inside)), { widths });
+
+            // The set dialog still opens on a team's set
+            await page.locator('.set', { hasText: 'Alpha / Echo' }).first().click();
+            await page.waitForTimeout(800);
+            const dialog = await page.locator('mat-dialog-container').count();
+            report.teamPictures.dialog = { dialog, errors };
+            check('team pictures: a team\'s set still opens its dialog', dialog === 1 && !errors.length, report.teamPictures.dialog);
+            // 3px past where a single player's name starts and the 2px the pictures leave free make 5px, the gap a pair of characters leaves on the right
+            const lefts = Object.fromEntries(sides.map(side => [side.name, `${side.nameLeft} in ${side.nameBox} of ${side.nameRow}`]));
+            const soloLeft = sides.find(side => side.name === 'Delta')?.nameLeft;
+            check('team pictures: a team\'s name starts 3px further in than a single player\'s, in a row of the same width',
+                sides.every(side => side.nameLeft === (side.name === 'Delta' ? soloLeft : round2(soloLeft + 3)) && side.nameBox === sides[0].nameBox && side.nameRow === 136), lefts);
+            await context.close();
+
+            // The light theme and a phone: the same pictures in the same places
+            const light = await openPage(browser, respond, { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 }, { fonts: true });
+            await light.page.addInitScript(() => localStorage.setItem('bgg-theme', 'light'));
+            await light.page.goto(appUrl + eventPath + '/1001');
+            await light.quiet();
+            await light.page.waitForTimeout(1000);
+            const lightCards = await measure(light.page);
+            await light.page.screenshot({ path: 'e2e-out/team-pictures-light.png' }).catch(() => { });
+            await light.context.close();
+            const phone = await openPage(browser, respond, { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }, { fonts: true });
+            await phone.page.goto(appUrl + eventPath + '/1001');
+            await phone.quiet();
+            await phone.page.waitForTimeout(1000);
+            const phoneCards = await measure(phone.page);
+            await phone.page.screenshot({ path: 'e2e-out/team-pictures-phone.png' }).catch(() => { });
+            await phone.context.close();
+            const drawnIn = measured => JSON.stringify(Object.values(measured).map(card => card.sides.map(side => `${side.name} = ${drawnSide(side)}`)));
+            report.teamPictures.light = drawnIn(lightCards) === drawnIn(cards);
+            report.teamPictures.phone = drawnIn(phoneCards) === drawnIn(cards);
+            check('team pictures: the light theme and a phone draw the same pictures in the same places', report.teamPictures.light && report.teamPictures.phone, report.teamPictures);
+        } catch (e) {
+            report.teamPictures.crashed = String(e.message).slice(0, 300);
+            check('team pictures on the bracket\'s cards', false, report.teamPictures);
+        }
+    }
+
     // 14. A phase with three pools: one request of pool slices (as many requests as the old whole-phase
     // fetch, which took one), every pool drawn like a pool fetched alone
     {

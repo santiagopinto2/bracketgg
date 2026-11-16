@@ -4,6 +4,7 @@ import { StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { charactersBySide } from './set-characters';
+import { inNameOrder } from 'src/app/services/team-order';
 import { rememberArrival } from 'src/app/services/arrival-state';
 import { Location, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
@@ -240,6 +241,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!entrant.participants[0].user) entrant.participants[0].user = { images: [] };
 
         if (!entrant.backgroundColor && this.getEntrantImage(entrant) === '') entrant.backgroundColor = this.colorFor(entrant.id);
+        entrant.pictures = this.teamPictures(entrant);
 
         entrant.name = entrant.name ?? '';
         let pipeIndex = entrant.name.lastIndexOf('|');
@@ -248,6 +250,28 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             entrant.name = entrant.name.slice(pipeIndex + 2);
         }
         return entrant;
+    }
+
+    // What a team's set card shows in place of one picture: its first two players in the order of
+    // its name (start.gg's order can differ), each with their picture or, without one, their initial
+    // on their own color. Null for a single player, whose card keeps the one picture.
+    teamPictures(entrant): { tag: string, url: string, portrait: boolean, initial: string, color: string | null }[] | null {
+        const participants: any[] = entrant.participants ?? [];
+        if (participants.length < 2) return null;
+        return inNameOrder(participants, entrant.name).slice(0, 2).map(participant => {
+            const image = participant?.user?.images?.[0];
+            const tag = participant?.gamerTag || '';
+            return {
+                tag, url: image?.url ?? '', portrait: !!image && image.height > image.width, initial: (tag[0] ?? '?').toUpperCase(),
+                color: image?.url ? null : this.colorFor(this.teammateKey(entrant.id, participants.indexOf(participant))),
+            };
+        });
+    }
+
+    // What a teammate's color is kept under: the team's own for the player start.gg lists first (the
+    // color the search and the set dialog use), one of their own for each of the others
+    private teammateKey(entrantId, i: number) {
+        return i == 0 || entrantId == null ? entrantId : `${entrantId}/${i}`;
     }
 
     // A player's random color, the same each time they appear in this event
@@ -270,7 +294,11 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     async loadPlayers(phaseId, numSeeds, singles): Promise<Map<any, any>> {
         try {
             const players = await this.startggService.getPhaseEntrants(phaseId, numSeeds, singles);
-            for (const player of players) if (!player.participants?.[0]?.user?.images?.length) this.colorFor(player.id);
+            for (const player of players) {
+                (player.participants?.length ? player.participants : [null]).forEach((participant, i) => {
+                    if (!participant?.user?.images?.length) this.colorFor(this.teammateKey(player.id, i));
+                });
+            }
             return new Map(players.map(player => [player.id, player]));
         } catch (error) {
             console.warn('Could not load the players of this phase', error);
@@ -363,6 +391,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
                 slot.entrant.participants = entrant.participants;
                 slot.entrant.initialSeedNum = entrant.initialSeedNum;
                 slot.entrant.backgroundColor = entrant.backgroundColor;
+                slot.entrant.pictures = entrant.pictures;
                 if (!seen.has(slot.entrant.id)) {
                     seen.add(slot.entrant.id);
                     newEntrants.push(slot.entrant);

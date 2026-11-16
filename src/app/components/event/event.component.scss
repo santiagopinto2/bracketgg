@@ -250,6 +250,38 @@
     margin: 4px 5px;
 }
 
+// A team's two pictures: smaller and on a diagonal like a team's characters, so the column stays as
+// wide as one picture with its margins (28px) and the names lose nothing
+.set-pictures {
+    position: relative;
+    flex: none;
+    width: 28px;
+    height: 100%;
+}
+
+.set-picture {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    left: 11px;
+    top: 10px;
+
+    // The first teammate is in front, with an edge in the row's color where the two meet
+    &:first-child {
+        left: 2px;
+        top: 1px;
+        z-index: 1;
+        box-shadow: 0 0 0 1.5px var(--set-row-bg, var(--set-bg));
+    }
+
+    .entrant-set-image-default {
+        height: 100%;
+        font-size: 9.5px;
+        line-height: 15.5px;
+        padding-left: 0;
+    }
+}
+
 // A side that used more than one character in the set: its icons shrink and sit on a diagonal, so
 // the column stays as wide as one icon with its margins (28px) and the names lose nothing
 .set-chars {
@@ -319,6 +351,12 @@
 .set-name {
     padding: 4px 3px 0 0;
     text-shadow: var(--set-text-shadow);
+}
+
+// A team's name starts 3px in, so it is as far from the pictures (which end 2px before the column
+// does) as it is from a pair of characters on its right: 5px on both sides. The row keeps its width.
+.set-name-team {
+    padding-left: 3px;
 }
 
 .set-sponsor {
