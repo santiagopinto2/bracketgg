@@ -1,6 +1,8 @@
 // What the tournament page shows, worked out from start.gg's tournament (tournamentQuery): plain
 // values the template prints. No Angular here, so it can be read and tested on its own.
 
+import { inNameOrder } from '../../services/team-order';
+
 export interface PlayerRow {
     placement: number;
     // "1st", "2nd", ...
@@ -109,13 +111,13 @@ export function toRow(standing: any, teams: boolean): PlayerRow {
     const name: string = standing?.entrant?.name ?? '';
     const cut = teams ? -1 : name.indexOf(' | ');
     const tag = cut < 0 ? name : name.slice(cut + 3);
-    const participants = standing?.entrant?.participants ?? [];
+    const participants = teams ? inNameOrder(standing?.entrant?.participants ?? [], name) : standing?.entrant?.participants ?? [];
     return {
         placement: standing?.placement,
         place: ordinal(Number(standing?.placement) || 0),
         team: cut < 0 ? '' : name.slice(0, cut),
         tag,
-        // A team has no picture of its own: its first player's who has one
+        // A team has no picture of its own: the first player's in its name who has one
         pic: participants.map((p: any) => p?.user?.images?.[0]?.url).find(Boolean) ?? '',
         initials: initialsOf(tag),
     };

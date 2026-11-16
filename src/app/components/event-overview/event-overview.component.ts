@@ -1,3 +1,4 @@
+import { inNameOrder } from '../../services/team-order';
 import { Component, computed, effect, signal, ChangeDetectionStrategy } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -81,7 +82,8 @@ export class EventOverviewComponent {
 
         // One picture per player: a team shows each teammate's, overlapping (start.gg sends them all with
         // the standings). A player without one gets the first letter of their tag on a random color.
-        const participants: any[] = standing.entrant?.participants ?? [];
+        // A team's in the order its name lists them (team-order.ts)
+        const participants: any[] = singles ? standing.entrant?.participants ?? [] : inNameOrder(standing.entrant?.participants ?? [], name);
         const tags = singles ? [standing.tag] : name.split(' / ');
         standing.avatars = (singles ? participants.slice(0, 1) : participants.slice(0, 4)).map((participant, i) => {
             const profile = participant?.user?.images?.[0] ?? null;
@@ -94,7 +96,7 @@ export class EventOverviewComponent {
             return {
                 url: profile?.url ?? '',
                 portrait: !!profile && profile.height > profile.width,
-                initial: (tags[i] ?? tags[0] ?? '')[0]?.toUpperCase() ?? '',
+                initial: (participant?.gamerTag || tags[i] || tags[0] || '')[0]?.toUpperCase() ?? '',
                 color: profile ? null : this.colors.get(key),
             };
         });
