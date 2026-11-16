@@ -674,9 +674,12 @@
     :host {
         max-height: calc(100vh - 44px);
         max-height: calc(100dvh - 44px);
+        // Scrolling past either end stays in the sheet: the page behind doesn't move
+        overscroll-behavior: contain;
     }
 
-    // The head stays in view while the rest scrolls, with the sheet's handle above it
+    // The head stays in view while the rest scrolls, with the sheet's handle above it. Dragging it
+    // down closes the sheet (data-sheet-handle, SheetDragDirective).
     .head {
         padding: 20px 6px 10px 16px;
         gap: 4px;

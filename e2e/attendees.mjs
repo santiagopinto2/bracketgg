@@ -6,6 +6,7 @@
 // entrants in two divisions, so no phase holds them all, not seeded yet). "Test Tourney" is
 // api-calls.mjs's own, whose brackets the fake can draw: its four entrants and one spectator are its
 // attendees, so a pool link from the dialog can be followed into a bracket.
+import { scrollBehind, sheetPane, touchDrag, touchMoves, watchTouchMoves } from './touch-drag.mjs';
 
 const svg = (color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="${color}"/></svg>`)}`;
 const FRIDAY_10AM_PST = 1708106400; // Fri Feb 16 2024, 10:00 in Los Angeles (18:00 UTC)
@@ -556,7 +557,27 @@ export async function attendeeChecks({ browser, openPage, appUrl, eventPath, che
                     grab: getComputedStyle(document.querySelector('.dlg-grab')).display, entries: document.querySelectorAll('.dlg-entry').length, bodyScrolls: body.scrollHeight >= body.clientHeight, bodyInside: body.getBoundingClientRect().bottom <= r.bottom + 1 };
             });
             await page.screenshot({ path: 'e2e-out/attendee-dialog-phone.png' }).catch(() => { });
-            await closeDialog(page);
+
+            // The sheet drags down to close: a short drag from its handle springs back, a long one closes it
+            await watchTouchMoves(page);
+            const behind = await scrollBehind(page);
+            const rest = await sheetPane(page);
+            const handle = { x: page.viewportSize().width / 2, y: rest.top + 10 };
+            const short = { by: Math.round(rest.height * 0.12) };
+            short.during = await touchDrag(page, handle, short.by, { hold: 300, during: () => sheetPane(page) });
+            await page.waitForTimeout(500);
+            Object.assign(short, { after: await sheetPane(page), open: await page.locator('app-attendee-dialog').count() === 1, stopped: await touchMoves(page) });
+            const long = { by: Math.round(rest.height * 0.6) };
+            long.during = await touchDrag(page, handle, long.by, { during: () => sheetPane(page) });
+            long.closed = await page.locator('app-attendee-dialog').waitFor({ state: 'detached', timeout: 3000 }).then(() => true, () => false);
+            long.stopped = await touchMoves(page);
+            const behindAfter = await scrollBehind(page);
+            if (!long.closed) await closeDialog(page);
+            out.phoneDrag = { rest, short, long, behind, behindAfter };
+            const follows = drag => Math.abs(drag.during.top - (rest.top + drag.by)) <= 2;
+            check('attendee dialog on a phone: a short drag down from the handle springs back, a long one slides the sheet away and closes the dialog, and nothing behind the sheet scrolls',
+                follows(short) && short.after.top === rest.top && short.after.transform === '' && short.open && follows(long) && long.closed
+                && short.stopped.length > 0 && short.stopped.every(Boolean) && long.stopped.length > 0 && long.stopped.every(Boolean) && behind === behindAfter, out.phoneDrag);
             await page.locator('mat-toolbar button:has(mat-icon:text("menu"))').click();
             await page.waitForTimeout(700);
             const menu = await page.locator('mat-sidenav .attendees-link').evaluate(el => ({ text: el.querySelector('.attendees-text').textContent.trim(), count: el.querySelector('.attendees-count').textContent.trim(), visible: el.getBoundingClientRect().width > 0 }));

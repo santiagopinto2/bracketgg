@@ -41,6 +41,10 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 
 A set's YouTube `vodUrl` shows as a thumbnail (`i.ytimg.com`); a tap loads YouTube's player from `www.youtube-nocookie.com`, the only frame the Content-Security-Policy allows (`server/http-security.js`). Any other web link is an "Open video" link.
 
+## Phone sheets
+
+On a phone the set dialog and the attendee dialog are sheets from the bottom of the screen, and both drag down to close through one host directive, `SheetDragDirective` (`src/app/components/sheet-drag/`). A dialog is a sheet where its panel has `--sheet-drag: 1` (`src/styles.scss`). A downward drag moves the sheet when it starts on a `data-sheet-handle` element (the set dialog's head) or while the content under the finger is scrolled to its top; released past a quarter of the sheet's height, or flicked, it closes. The directive stops (`preventDefault`) every touch move that would otherwise reach the page, since Safari pulls to refresh on those. `e2e/touch-drag.mjs` has the finger drags the tests use.
+
 ## Characters on a set card
 
 A bracket card's character column is 28px wide whatever a side played (`src/app/components/event/set-characters.ts`). A side with one character has one 18px icon. A side with more (a switch, a doubles team, or both) has two 12 to 16px icons on a diagonal and a "+N" for the rest. The lineup is the group of characters used in the most games, and the earliest group wins a tie. start.gg leaves a selection's `participant` empty in doubles, so a team's icons follow start.gg's order, not the names'.

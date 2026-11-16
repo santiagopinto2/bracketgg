@@ -209,6 +209,8 @@
 
     .dlg-body {
         padding: 0 16px 28px;
+        // Scrolling past either end stays in the sheet: the page behind doesn't move
+        overscroll-behavior: contain;
     }
 
     .dlg-pill {
