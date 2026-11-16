@@ -116,6 +116,13 @@
         color: var(--chip-active-text);
     }
 
+    // Upcoming is blue, so it doesn't look like Completed's gray (Santi, 2026-11-15)
+    &.state-created,
+    &.state-ready {
+        background: var(--chip-upcoming-bg);
+        color: var(--chip-upcoming-text);
+    }
+
     &.state-completed {
         opacity: 0.75;
     }

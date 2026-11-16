@@ -82,7 +82,7 @@
                 <small>of {{ count(entry.event.numEntrants) }}</small>
             </div>
             } @else if (entry.state) {
-            <span class="dlg-state" [class.active]="entry.state === 'In Progress'">{{ entry.state }}</span>
+            <span class="dlg-state" [class.active]="entry.state === 'In Progress'" [class.upcoming]="entry.state === 'Upcoming'">{{ entry.state }}</span>
             }
         </div>
 
