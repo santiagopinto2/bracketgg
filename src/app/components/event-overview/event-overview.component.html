@@ -72,11 +72,15 @@
             @for (standing of standings(); track standing.entrant?.id ?? $index) {
             <div class="standing">
                 <span class="standing-placement placement-{{ standing.placement }}">{{ standing.placement }}<sup>{{ getOrdinalSuffix(standing.placement) }}</sup></span>
-                <div class="standing-profile-image">
-                    @if (getStandingProfileImage(standing) !== '') {
-                    <img [ngClass]="getStandingProfileImageOrientation(standing)" [src]="getStandingProfileImage(standing)" />
-                    } @else {
-                    <div class="standing-profile-image-default" [ngStyle]="{'background-color': standing.backgroundColor}">{{ getStandingInitial(standing) }}</div>
+                <div class="standing-avatars">
+                    @for (avatar of standing.avatars; track $index) {
+                    <div class="standing-profile-image">
+                        @if (avatar.url) {
+                        <img [class.portrait]="avatar.portrait" [src]="avatar.url" alt="" (error)="avatar.url = ''" />
+                        } @else {
+                        <div class="standing-profile-image-default" [ngStyle]="{'background-color': avatar.color}">{{ avatar.initial }}</div>
+                        }
+                    </div>
                     }
                 </div>
                 <div class="standing-info">
