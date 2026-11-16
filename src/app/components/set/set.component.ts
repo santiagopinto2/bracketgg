@@ -136,11 +136,21 @@ export class SetComponent {
             .filter(character => character.icon);
     }
 
-    // Every character an entrant used in the set, once each
+    // Every character an entrant used in the set, as many times as they played it at once: a doubles
+    // team that both played Fox shows two Foxes (Santi, 2026-11-16). In order of first use.
     private charactersUsed(entrantId) {
-        const used = new Map<string, { name: string, icon: string }>();
-        for (const game of this.set.games ?? []) for (const character of this.picks(game, entrantId)) used.set(character.icon, character);
-        return [...used.values()];
+        const used = new Map<string, { character: { name: string, icon: string }, most: number }>();
+        for (const game of this.set.games ?? []) {
+            const inGame = new Map<string, number>();
+            for (const character of this.picks(game, entrantId)) {
+                const count = (inGame.get(character.icon) ?? 0) + 1;
+                inGame.set(character.icon, count);
+                const entry = used.get(character.icon);
+                if (!entry) used.set(character.icon, { character, most: count });
+                else entry.most = Math.max(entry.most, count);
+            }
+        }
+        return [...used.values()].flatMap(({ character, most }) => Array.from({ length: most }, () => character));
     }
 
     // The games that say anything: who won, the stage or the characters. A character switch isn't
