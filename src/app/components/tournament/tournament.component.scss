@@ -542,6 +542,11 @@ app-tournament .tp-page {
                 // The first picture's center, from this one's left edge
                 -webkit-mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at calc(var(--lap) - var(--d) / 2) 50%, transparent 98%, #000 100%);
                 mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at calc(var(--lap) - var(--d) / 2) 50%, transparent 98%, #000 100%);
+
+                // Their initial sits in the middle of the part that shows
+                &::before {
+                    transform: translateX(calc((var(--lap) + var(--gap)) / 2));
+                }
             }
         }
 
