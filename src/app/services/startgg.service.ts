@@ -40,9 +40,10 @@ export interface BackgroundLane {
 const BACKGROUND_HEADERS = { 'x-bgg-background': '1' };
 
 // How long a phase loaded once is reused instead of asked for again: one start.gg calls COMPLETED for
-// half an hour, any other for 2 minutes, so a live bracket opened from memory is at most that old
+// half an hour, any other for 30 seconds, so a live bracket opened from memory is at most that old
+// (the server keeps live sets 15 s)
 export const LOADED_FINISHED_MS = 30 * 60_000;
-export const LOADED_LIVE_MS = 2 * 60_000;
+export const LOADED_LIVE_MS = 30_000;
 // The most phases and pools kept; the oldest go first
 const MAX_LOADED_PHASES = 100;
 const MAX_LOADED_POOLS = 2000;
@@ -67,7 +68,7 @@ export class StartggService {
     readonly setsPerStanding = SETS_PER_STANDING;
 
     // Tournament info and player lists rarely change during an event, so they are reused for
-    // a few minutes. Sets are kept only as the phases loaded (loadedPools), at most 2 minutes for a
+    // a few minutes. Sets are kept only as the phases loaded (loadedPools), at most 30 seconds for a
     // phase that isn't finished, so brackets stay live.
     private cacheMs = 5 * 60_000;
     private cache = new Map<string, { at: number, value: any }>();

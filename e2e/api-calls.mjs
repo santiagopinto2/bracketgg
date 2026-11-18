@@ -589,6 +589,19 @@ try {
                 loaded.afterShown && loaded.phases.includes(1006) && !loaded.phases.includes(1005) && !loaded.phases.includes(1001) && loaded.requests <= 15 && loaded.perMinute <= 15 && loaded.atOnce <= 2 && !loaded.failed, loaded);
             check(`background loading, ${loggedIn ? 'logged in' : 'not logged in'}: a phase loaded in the background opens with no request, drawn as usual`,
                 opened.url === eventPath + '/1006' && opened.drawn && opened.requests === 0 && opened.background === 0 && !opened.spinner && !errors.length, opened);
+            if (loggedIn) {
+                // A live phase ("Later Phase", 1004, ACTIVE) is reused for 30 seconds only: past that, opening it asks again
+                await page.waitForTimeout(31000);
+                const liveMark = log.length;
+                await page.locator('.phase-menu-button').click();
+                await page.waitForTimeout(300);
+                await page.locator('.phase-menu-item').nth(3).click();
+                await quiet();
+                const live = { url: new URL(page.url()).pathname, requests: count(log, liveMark) };
+                report.prefetch.live = live;
+                check('background loading: a phase that isn\'t finished is reused for 30 seconds only, then asked for again (its players stay cached)',
+                    live.url === eventPath + '/1004' && live.requests.phase === 1 && live.requests.sets === 1 && !live.requests.seeds, live);
+            }
         } catch (e) {
             report.prefetch[name] = { crashed: String(e.message).slice(0, 300), errors };
             check(`background loading, ${name}`, false, report.prefetch[name]);
