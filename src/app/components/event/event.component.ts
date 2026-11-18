@@ -6,6 +6,8 @@ import { SetOrderConstants } from './set-order-constants';
 import { charactersBySide } from './set-characters';
 import { inNameOrder } from 'src/app/services/team-order';
 import { rememberArrival } from 'src/app/services/arrival-state';
+import { inject } from '@angular/core';
+import { PhasePrefetch } from 'src/app/services/phase-prefetch';
 import { Location, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -88,6 +90,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     maxRounds = [];
     maxRoundModifier = [1, -1];
     maxRoundsPhase = -1;
+    // Loads the event's other phases in the background once the shown one is drawn
+    private prefetch = inject(PhasePrefetch);
     canHover = true;
     playerHovered = -1;
     isGrabbing = false;
@@ -348,6 +352,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             await Promise.all(phaseGroupPromises);
             if (loadId !== this.loadId) return;
             this.loadingService.updateValue(false);
+            // The event's other phases now load in the background (phase-prefetch.ts)
+            this.prefetch.shownPhaseLoaded(phaseId);
             // A link with no pool, or to a pool that isn't here: look for its player or set in the whole phase
             this.arrive();
         } catch (error) {

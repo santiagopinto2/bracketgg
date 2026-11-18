@@ -297,7 +297,7 @@ function answer(query) {
             const phaseId = Number(query.match(/phase\(id: (\d+)\)/)[1]);
             const groupIds = poolsOf[phaseId] ?? [phaseGroupOf[phaseId]];
             const total = groupIds.reduce((n, id) => n + setsOf[id].length, 0);
-            return { data: { phase: { id: phaseId, bracketType: bracketTypeOf[phaseId] ?? 'DOUBLE_ELIMINATION', sets: { pageInfo: { total } }, phaseGroups: { pageInfo: { total: groupIds.length }, nodes: groupIds.map((id, i) =>
+            return { data: { phase: { id: phaseId, bracketType: bracketTypeOf[phaseId] ?? 'DOUBLE_ELIMINATION', state: phaseStateOf[phaseId] ?? 'COMPLETED', sets: { pageInfo: { total } }, phaseGroups: { pageInfo: { total: groupIds.length }, nodes: groupIds.map((id, i) =>
                 ({ id, displayIdentifier: String.fromCharCode(65 + i), sets: { pageInfo: { total: setsOf[id].length } } })) } } } };
         }
         case 'phaseSets': {
@@ -362,7 +362,13 @@ function withVariables(query, variables) {
 // the n-th request (counting from 1); otherwise the normal answer goes back. With `wait` (a promise) in
 // what it returns, the answer is held until that promise settles. `fonts` lets the icon and
 // text fonts load, for screenshots that look like the real page. `loggedIn: false` opens it as a visitor.
-async function openPage(browser, respond = () => null, contextOptions = {}, { fonts = false, loggedIn = true } = {}) {
+//
+// `log` holds the page's own requests. The background loading of an event's other phases
+// (phase-prefetch.ts, its requests marked x-bgg-background) goes to `background` instead, answered by
+// `backgroundRespond(query, n)` the same way (n counting background requests), or normally. Every
+// entry has a `seq` across both, and `end`, when its answer went back. `backgroundRespond: busy` stops
+// the background loading at its first request, for checks of how a phase loads by itself.
+async function openPage(browser, respond = () => null, contextOptions = {}, { fonts = false, loggedIn = true, backgroundRespond = () => null } = {}) {
     const context = await browser.newContext(contextOptions);
     // Older builds keep the login in localStorage; this branch asks the server
     if (loggedIn) await context.addInitScript(() => {
@@ -383,7 +389,8 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
     });
     const page = await context.newPage();
     const log = [];
-    let pending = 0;
+    const background = [];
+    let pending = 0, seq = 0;
     let lastActivity = Date.now();
     if (!fonts) await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
     // start.gg directly (before the shared cache) or through the site's /api/gql
@@ -392,13 +399,17 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
         pending++;
         const { query: text, variables } = route.request().postDataJSON();
         const query = withVariables(text, variables);
-        const n = log.length + 1;
-        const override = respond(query, n);
-        log.push({ n, at: Date.now(), kind: kindOf(query), status: override?.status ?? 200, query });
+        const inBackground = (await route.request().allHeaders())['x-bgg-background'] === '1';
+        const into = inBackground ? background : log;
+        const n = into.length + 1;
+        const override = (inBackground ? backgroundRespond : respond)(query, n);
+        const entry = { n, seq: ++seq, at: Date.now(), kind: kindOf(query), status: override?.status ?? 200, query };
+        into.push(entry);
         await new Promise(r => setTimeout(r, 50));
         if (override?.wait) await override.wait;
-        await route.fulfill({ status: override?.status ?? 200, headers: { ...cors, 'content-type': 'application/json' },
+        await route.fulfill({ status: override?.status ?? 200, headers: { ...cors, 'content-type': 'application/json', ...(override?.headers ?? {}) },
             body: JSON.stringify(override?.body ?? answer(query)) });
+        entry.end = Date.now();
         pending--;
         lastActivity = Date.now();
     });
@@ -410,8 +421,18 @@ async function openPage(browser, respond = () => null, contextOptions = {}, { fo
         }
         return false;
     };
-    return { context, page, log, quiet, outside };
+    return { context, page, log, background, quiet, outside };
 }
+
+// The site's own token is at its limit (server/site-gate.js)
+const busy = () => ({ status: 503, headers: { 'retry-after': '5' }, body: { errors: [{ message: 'BracketGG is busy.', extensions: { code: 'SITE_BUSY' } }] } });
+// The phase a request is about: its phase id, or the phase of the first pool it names
+const phaseOfPool = Object.fromEntries([...Object.entries(phaseGroupOf).map(([phase, pool]) => [pool, Number(phase)]),
+    ...Object.entries(poolsOf).flatMap(([phase, pools]) => pools.map(pool => [pool, Number(phase)]))]);
+const phaseAsked = query => Number(query.match(/phase\(id: (\d+)\)/)?.[1]) || phaseOfPool[query.match(/phaseGroup\(id: "?(\d+)"?\)/)?.[1]] || null;
+// The most requests that started in any 60 seconds, and the most that were waiting on an answer at once
+const perMinute = entries => Math.max(0, ...entries.map(a => entries.filter(b => b.at >= a.at && b.at < a.at + 60000).length));
+const atOnce = entries => Math.max(0, ...entries.map(a => entries.filter(b => b.at <= a.at && (b.end ?? Infinity) > a.at).length));
 
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
 const count = (log, from = 0) => {
@@ -499,9 +520,10 @@ const check = (name, ok, detail) => report.checks.push({ name, ok: !!ok, detail 
 const browser = await chromium.launch();
 
 try {
-    // 1. Load a bracket, switch phase, switch back
+    // 1. Load a bracket, switch phase, switch back. With no background loading (1d has it), so the
+    //    switch shows what a phase costs by itself.
     {
-        const { context, page, log, quiet } = await openPage(browser);
+        const { context, page, log, quiet } = await openPage(browser, () => null, {}, { backgroundRespond: busy });
         await page.goto(appUrl + eventPath + '/1001');
         await quiet();
         report.firstLoad = count(log);
@@ -522,7 +544,109 @@ try {
         await quiet();
         report.phaseSwitchBack = count(log, mark);
         check('switching back reuses the first phase\'s players', !report.phaseSwitchBack.seeds && !report.phaseSwitchBack.entrants, report.phaseSwitchBack);
+        check('switching back to a finished phase loaded a moment ago asks for nothing', report.phaseSwitchBack.total === 0, report.phaseSwitchBack);
         await context.close();
+    }
+
+    // 1d. Background loading (phase-prefetch.ts): once the shown phase is drawn, the event's other
+    //     phases load in the background, and opening one of them then asks for nothing. Logged in, every
+    //     phase within the limits; not logged in, only the phases that fit in a request or two. A busy
+    //     or rate-limited answer stops it for good; a hidden tab waits; Save-Data loads nothing.
+    report.prefetch = {};
+    const phasesOf = entries => [...new Set(entries.map(r => phaseAsked(r.query)).filter(Boolean))].sort((a, b) => a - b);
+    const openSingleElim = async page => {
+        await page.locator('.phase-menu-button').click();
+        await page.waitForTimeout(300);
+        await page.locator('.phase-menu-item').nth(5).click();
+    };
+    for (const loggedIn of [true, false]) {
+        const name = loggedIn ? 'loggedIn' : 'visitor';
+        // Not logged in, "Three Pools" (1005) says it has 600 players: far more than a request or two
+        const bigPools = q => {
+            if (loggedIn || kindOf(q) !== 'eventPhases') return null;
+            const body = answer(q);
+            const phase = body.data?.event?.phases?.find(phase => phase.id === 1005);
+            if (phase) phase.numSeeds = 600;
+            return { body };
+        };
+        const { context, page, log, background, quiet } = await openPage(browser, bigPools, {}, { loggedIn });
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        try {
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            const shownLast = Math.max(...log.map(r => r.seq));
+            const loaded = { requests: background.length, phases: phasesOf(background), perMinute: perMinute(background), atOnce: atOnce(background),
+                afterShown: background.length > 0 && background.every(r => r.seq > shownLast), failed: background.filter(r => r.status !== 200).length, kinds: count(background) };
+            const mark = log.length, backgroundMark = background.length;
+            await openSingleElim(page);
+            await quiet();
+            const opened = { url: new URL(page.url()).pathname, drawn: (await tags(page)).includes('Alpha'), requests: count(log, mark).total, background: background.length - backgroundMark, spinner: await spinnerShown(page), errors };
+            report.prefetch[name] = { loaded, opened };
+            if (loggedIn) check('background loading, logged in: after the shown phase is drawn, every other phase of the event, at most 40 requests a minute, 2 at a time and 120 in all',
+                loaded.afterShown && JSON.stringify(loaded.phases) === '[1002,1003,1004,1005,1006,1007,1008]' && loaded.requests <= 120 && loaded.perMinute <= 40 && loaded.atOnce <= 2 && !loaded.failed, loaded);
+            else check('background loading, not logged in: after the shown phase is drawn, only phases that fit in a request or two, never the big pool phase, at most 15 requests',
+                loaded.afterShown && loaded.phases.includes(1006) && !loaded.phases.includes(1005) && !loaded.phases.includes(1001) && loaded.requests <= 15 && loaded.perMinute <= 15 && loaded.atOnce <= 2 && !loaded.failed, loaded);
+            check(`background loading, ${loggedIn ? 'logged in' : 'not logged in'}: a phase loaded in the background opens with no request, drawn as usual`,
+                opened.url === eventPath + '/1006' && opened.drawn && opened.requests === 0 && opened.background === 0 && !opened.spinner && !errors.length, opened);
+        } catch (e) {
+            report.prefetch[name] = { crashed: String(e.message).slice(0, 300), errors };
+            check(`background loading, ${name}`, false, report.prefetch[name]);
+        }
+        await context.close();
+    }
+
+    // A busy site (503 SITE_BUSY, not logged in) or start.gg's rate limit (429, logged in) stops the
+    // background loading at its first request, which is never retried, and the visitor sees nothing of it
+    for (const [name, loggedIn, refuse] of [['site busy', false, busy], ['rate limited', true, () => ({ status: 429, body: { success: false, message: 'Rate limit exceeded - api-token' } })]]) {
+        const { context, page, log, background, quiet } = await openPage(browser, () => null, {}, { loggedIn, backgroundRespond: refuse });
+        try {
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            await page.waitForTimeout(3000);
+            const mark = log.length;
+            await openSingleElim(page);
+            await quiet();
+            const stopped = { background: background.length, drawn: (await tags(page)).includes('Alpha'), switchRequests: count(log, mark), snackbar: await snackText(page) };
+            report.prefetch[name] = stopped;
+            check(`background loading: a ${name} answer stops it at once, never retried, with no message, and phases still open as usual`,
+                stopped.background === 1 && stopped.drawn && stopped.switchRequests.seeds === 1 && !/busy|rate/i.test(stopped.snackbar), stopped);
+        } catch (e) {
+            report.prefetch[name] = { crashed: String(e.message).slice(0, 300) };
+            check(`background loading, ${name}`, false, report.prefetch[name]);
+        }
+        await context.close();
+    }
+
+    // A hidden tab loads nothing in the background until it is shown again; Save-Data loads nothing at all
+    {
+        const hidden = await openPage(browser);
+        const saver = await openPage(browser);
+        try {
+            await hidden.page.addInitScript(() => {
+                window.bggHidden = true;
+                Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => window.bggHidden ? 'hidden' : 'visible' });
+            });
+            await saver.page.addInitScript(() => Object.defineProperty(navigator, 'connection', { configurable: true, get: () => ({ saveData: true }) }));
+            await hidden.page.goto(appUrl + eventPath + '/1001');
+            await saver.page.goto(appUrl + eventPath + '/1001');
+            await hidden.quiet();
+            await saver.quiet();
+            await hidden.page.waitForTimeout(3000);
+            const whileHidden = hidden.background.length;
+            await hidden.page.evaluate(() => { window.bggHidden = false; });
+            await hidden.page.waitForTimeout(2500);
+            await hidden.quiet();
+            const result = { whileHidden, afterShown: hidden.background.length, saveData: saver.background.length, drawn: (await tags(hidden.page)).includes('Alpha') && (await tags(saver.page)).includes('Alpha') };
+            report.prefetch.hiddenAndSaveData = result;
+            check('background loading waits while the tab is hidden and goes on once it shows; a Save-Data connection loads nothing in the background',
+                result.whileHidden === 0 && result.afterShown > 0 && result.saveData === 0 && result.drawn, result);
+        } catch (e) {
+            report.prefetch.hiddenAndSaveData = { crashed: String(e.message).slice(0, 300) };
+            check('background loading in a hidden tab and on Save-Data', false, report.prefetch.hiddenAndSaveData);
+        }
+        await hidden.context.close();
+        await saver.context.close();
     }
 
     // 1b. Avatars: Bravo's profile picture (a portrait), never the banner, in the bracket, the search and the set dialog
@@ -1597,7 +1721,7 @@ try {
             const actual = slices.reduce((sum, s) => sum + 1 + body.data[s.alias].sets.nodes.length * 150, 0);
             if (actual > 1000) return { body: { errors: [{ message: `Your query complexity is too high. A maximum of 1000 objects may be returned by each request. (actual: ${actual})` }] } };
             return { body, wait: slices.some(s => s.groupId === 2007) ? null : held };
-        }, dark, { fonts: true });
+        }, dark, { fonts: true, backgroundRespond: busy }); // how a followed phase loads by itself, so no background loading
         const errors = [];
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
         const at = () => { const url = new URL(page.url()); return url.pathname + url.search; };

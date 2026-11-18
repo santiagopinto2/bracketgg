@@ -26,6 +26,27 @@ export class TooComplexError extends StartggError {
     constructor(message: string, public actual: number | null) { super(message); }
 }
 
+// A background request that was not sent, or whose answer ended the background loading (phase-prefetch.ts)
+export class BackgroundStopped extends StartggError { }
+
+// How background requests (phase-prefetch.ts) are let through. `admit` resolves when one may go and
+// throws BackgroundStopped when it may not; `stop` ends the background loading, after a busy or failed answer.
+export interface BackgroundLane {
+    admit(): Promise<void>;
+    stop(reason: string): void;
+}
+
+// Sent with every background request, so it can be told apart (the tests count them separately)
+const BACKGROUND_HEADERS = { 'x-bgg-background': '1' };
+
+// How long a phase loaded once is reused instead of asked for again: one start.gg calls COMPLETED for
+// half an hour, any other for 2 minutes, so a live bracket opened from memory is at most that old
+export const LOADED_FINISHED_MS = 30 * 60_000;
+export const LOADED_LIVE_MS = 2 * 60_000;
+// The most phases and pools kept; the oldest go first
+const MAX_LOADED_PHASES = 100;
+const MAX_LOADED_POOLS = 2000;
+
 @Injectable({
     providedIn: 'root'
 })
@@ -46,10 +67,11 @@ export class StartggService {
     readonly setsPerStanding = SETS_PER_STANDING;
 
     // Tournament info and player lists rarely change during an event, so they are reused for
-    // a few minutes. Sets are never cached, so brackets stay live.
+    // a few minutes. Sets are kept only as the phases loaded (loadedPools), at most 2 minutes for a
+    // phase that isn't finished, so brackets stay live.
     private cacheMs = 5 * 60_000;
     private cache = new Map<string, { at: number, value: any }>();
-    private inFlight = new Map<string, Promise<any>>();
+    private inFlight = new Map<string, { promise: Promise<any>, background: boolean }>();
     private gate = new RequestGate();
     private maxRateLimitRetries = 4;
     private rateLimitBackoffMs = 5_000;
@@ -65,31 +87,54 @@ export class StartggService {
     private requestCost = 980;
     private sliceCosts = new Map<string, { perSet: number, size: number }>();
 
+    // Phases loaded so far, the shown ones and the background's (phase-prefetch.ts): start.gg's phase
+    // with its pools, each pool's sets (with scores filled in), and later phases' progression seeds. A
+    // fresh one (see LOADED_LIVE_MS) is used instead of asking again, so a phase loaded in the
+    // background opens at once. getLoadedPhases() gives them all.
+    private loadedPhases = new Map<string, { at: number, phase: any }>();
+    private loadedPools = new Map<string, { at: number, phaseId: string, sets: any[] }>();
+    private loadedProgressions = new Map<string, { at: number, finished: boolean, seeds: any[] }>();
+
     constructor(
         private http: HttpClient,
         private loadingService: LoadingService
     ) { }
 
     // Sends a query (one of startgg-queries.ts's texts) and returns its `data`. Identical requests already
-    // on their way share one request. The server adds the start.gg token: the visitor's own if they
-    // logged in, otherwise the site's.
-    private query(query: string, variables: Record<string, any>): Promise<any> {
+    // on their way share one request, except that the visitor's own never wait on a background one. The
+    // server adds the start.gg token: the visitor's own if they logged in, otherwise the site's.
+    private query(query: string, variables: Record<string, any>, lane: BackgroundLane | null = null): Promise<any> {
         const key = query + JSON.stringify(variables);
-        let pending = this.inFlight.get(key);
-        if (!pending) {
-            pending = this.send(query, variables).finally(() => this.inFlight.delete(key));
-            this.inFlight.set(key, pending);
-        }
-        return pending;
+        const shared = this.inFlight.get(key);
+        if (shared && (lane || !shared.background)) return shared.promise;
+        const promise: Promise<any> = this.send(query, variables, lane).finally(() => {
+            if (this.inFlight.get(key)?.promise === promise) this.inFlight.delete(key);
+        });
+        this.inFlight.set(key, { promise, background: !!lane });
+        return promise;
     }
 
-    private async send(query: string, variables: Record<string, any>): Promise<any> {
+    // This service as phase-prefetch.ts uses it: the same methods and caches, with every request in the
+    // background `lane`. A background request is never retried: a busy or failed answer stops the lane.
+    background(lane: BackgroundLane): StartggService {
+        const view = Object.create(this) as StartggService;
+        view.query = (query: string, variables: Record<string, any>) => this.query(query, variables, lane);
+        return view;
+    }
+
+    private async send(query: string, variables: Record<string, any>, lane: BackgroundLane | null = null): Promise<any> {
         for (let attempt = 0; ; attempt++) {
             let res: any;
+            if (lane) await lane.admit();
             try {
-                res = await this.gate.run(() => firstValueFrom(this.http.post<any>(this.baseUrl, { query, variables })));
+                res = await this.gate.run(() => firstValueFrom(this.http.post<any>(this.baseUrl, { query, variables }, lane ? { headers: BACKGROUND_HEADERS } : {})), !!lane);
             } catch (error) {
                 if (!(error instanceof HttpErrorResponse)) throw error;
+                if (lane) {
+                    const reason = this.isSiteBusy(error.status, error.error) ? 'site busy' : this.isRateLimited(error.status, error.error) ? 'rate limited' : `error ${error.status}`;
+                    lane.stop(reason);
+                    throw new BackgroundStopped(reason);
+                }
                 if (this.isSiteBusy(error.status, error.error)) {
                     this.waitOutSiteBusy(attempt, error.headers?.get('Retry-After'));
                     continue;
@@ -100,6 +145,10 @@ export class StartggService {
             }
 
             if (this.isRateLimited(200, res)) {
+                if (lane) {
+                    lane.stop('rate limited');
+                    throw new BackgroundStopped('rate limited');
+                }
                 this.waitOutRateLimit(attempt, null);
                 continue;
             }
@@ -234,8 +283,14 @@ export class StartggService {
     // start.gg can have more, so pages are asked for until one comes back short.
     private seedsPerPage = 240;
     async getPhaseProgressions(phaseId, expected): Promise<any[]> {
+        // Reused while fresh, like the phases loaded (see loadedPhases); a finished phase's seeds longer
+        const memoryKey = `${phaseId}:${Number(expected) || 0}`;
+        const hit = this.loadedProgressions.get(memoryKey);
+        if (hit && Date.now() - hit.at < (hit.finished ? LOADED_FINISHED_MS : LOADED_LIVE_MS)) return structuredClone(hit.seeds);
+        let state: string | null = null;
         const loadPage = async (page: number, perPage: number) => {
             const data = await this.query(phaseProgressionsQuery, { phaseId: Number(phaseId), page, perPage });
+            state ??= data?.phase?.state ?? null;
             return data?.phase?.seeds?.nodes ?? [];
         };
         const key = `progressions:${phaseId}`;
@@ -247,6 +302,7 @@ export class StartggService {
             seeds.push(...more);
             if (more.length < perPage) break;
         }
+        this.remember(this.loadedProgressions, memoryKey, { at: Date.now(), finished: state === 'COMPLETED', seeds: structuredClone(seeds) }, MAX_LOADED_PHASES);
         return seeds;
     }
 
@@ -347,18 +403,75 @@ export class StartggService {
         });
     }
 
+    // A phase with its pools and each pool's set count, reused while fresh (see loadedPhases)
     async getPhase(phaseId): Promise<any> {
+        const hit = this.loadedPhases.get(String(phaseId));
+        if (hit && this.isFresh(hit.at, String(phaseId))) return structuredClone(hit.phase);
         const data = await this.query(phaseQuery, { phaseId: Number(phaseId) });
         if (!data?.phase) throw new StartggError('Bracket phase not found on start.gg.');
+        this.remember(this.loadedPhases, String(phaseId), { at: Date.now(), phase: structuredClone(data.phase) }, MAX_LOADED_PHASES);
         return data.phase;
     }
 
+    // Whether something loaded at `at` for the phase `phaseId` may still be used (LOADED_LIVE_MS)
+    private isFresh(at: number, phaseId: string | undefined): boolean {
+        const finished = phaseId != null && this.loadedPhases.get(phaseId)?.phase?.state === 'COMPLETED';
+        return Date.now() - at < (finished ? LOADED_FINISHED_MS : LOADED_LIVE_MS);
+    }
+
+    // Keeps `value` under `key` as the newest entry, dropping the oldest past `max`
+    private remember<T>(map: Map<string, T>, key: string, value: T, max: number) {
+        map.delete(key);
+        map.set(key, value);
+        while (map.size > max) map.delete(map.keys().next().value as string);
+    }
+
+    // The phase a pool belongs to, from the phases loaded so far
+    private phaseOfPool(poolId): string | undefined {
+        const known = this.loadedPools.get(String(poolId))?.phaseId;
+        if (known) return known;
+        for (const [phaseId, { phase }] of this.loadedPhases)
+            if (phase?.phaseGroups?.nodes?.some(group => String(group?.id) === String(poolId))) return phaseId;
+        return undefined;
+    }
+
+    private rememberPool(poolId, phaseId: string | undefined, sets: any[]) {
+        this.remember(this.loadedPools, String(poolId), { at: Date.now(), phaseId, sets: structuredClone(sets) }, MAX_LOADED_POOLS);
+    }
+
+    // A fresh copy of a pool's sets loaded before, or null
+    private loadedPool(poolId): any[] | null {
+        const hit = this.loadedPools.get(String(poolId));
+        return hit && this.isFresh(hit.at, hit.phaseId) ? structuredClone(hit.sets) : null;
+    }
+
+    // Every phase loaded so far and still fresh, by phase id: start.gg's phase (as getPhase gives it) and
+    // its pools' sets by pool id, for the pools loaded. For what needs more than the shown phase (Show
+    // Projected across phases). The copies are the caller's to change.
+    getLoadedPhases(): Map<string, { phase: any, pools: Map<string, any[]> }> {
+        const phases = new Map<string, { phase: any, pools: Map<string, any[]> }>();
+        for (const [phaseId, { at, phase }] of this.loadedPhases) {
+            if (!this.isFresh(at, phaseId)) continue;
+            const pools = new Map<string, any[]>();
+            for (const group of phase?.phaseGroups?.nodes ?? []) {
+                const sets = this.loadedPool(group?.id);
+                if (sets) pools.set(String(group.id), sets);
+            }
+            phases.set(phaseId, { phase: structuredClone(phase), pools });
+        }
+        return phases;
+    }
+
+    // A pool's sets, reused while fresh (see loadedPhases)
     async getPhaseGroupSets(phaseGroupId, totalSets): Promise<any> {
+        const loaded = this.loadedPool(phaseGroupId);
+        if (loaded) return { nodes: loaded };
         const nodes = await this.loadPages(`sets:${phaseGroupId}`, totalSets, this.setsPerPage, async (page, perPage) => {
             const data = await this.getPhaseGroupSetsPaginated(phaseGroupId, page, perPage);
             return data?.phaseGroup?.sets?.nodes ?? [];
         });
         await this.fillScores(nodes);
+        this.rememberPool(phaseGroupId, this.phaseOfPool(phaseGroupId), nodes);
         return { nodes };
     }
 
@@ -377,6 +490,12 @@ export class StartggService {
     // the cost per set to what start.gg counted, and its slices are asked for again in smaller requests;
     // slices that already arrived are kept, so no pool is passed on twice.
     async getPhaseSetsByPool(phaseId, expected: Map<any, number>, onPool: (poolId: any, sets: any[]) => void): Promise<void> {
+        // Every pool loaded before and still fresh: passed on at once, nothing asked
+        const loaded = [...expected.keys()].map(pool => this.loadedPool(pool));
+        if (loaded.every(sets => sets)) {
+            [...expected.keys()].forEach((pool, i) => onPool(pool, loaded[i]));
+            return;
+        }
         const key = `pool-slices:${phaseId}`;
         let { perSet, size } = this.sliceCosts.get(key) ?? { perSet: this.objectsPerPoolSet, size: this.sliceSize };
         const pools = [...expected.keys()];
@@ -403,7 +522,9 @@ export class StartggService {
                     pages.set(pool, needed + 1);
                     return;
                 }
-                onPool(pool, structuredClone(Array.from({ length: needed }, (_, i) => got.get(i + 1)).flat()));
+                const sets = Array.from({ length: needed }, (_, i) => got.get(i + 1)).flat();
+                this.rememberPool(pool, String(phaseId), sets);
+                onPool(pool, structuredClone(sets));
                 next++;
             }
         };
@@ -489,7 +610,12 @@ export class StartggService {
             const chunk = unread.slice(i, i + MAX_SET_SCORES);
             const variables = Object.fromEntries(chunk.map((set, k) => [`id${k}`, String(set.id)]));
             // A failure here only costs those sets their numbers; the winner still shows
-            const data = await this.query(setScoresQuery(chunk.length), variables).catch(error => { console.warn('Could not load scores', error); return null; });
+            const data = await this.query(setScoresQuery(chunk.length), variables).catch(error => {
+                // A stopped background load stops here too, so sets without their scores are never kept
+                if (error instanceof BackgroundStopped) throw error;
+                console.warn('Could not load scores', error);
+                return null;
+            });
             chunk.forEach((set, k) => set.slots.forEach((slot, j) => slot.standing = data?.[`s${k}`]?.slots?.[j]?.standing ?? null));
         }
     }
