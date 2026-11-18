@@ -30,9 +30,12 @@ const shots = eventPath => ({
     tournament: { path: '/tournament/tp-tourney' },
     'tournament-upcoming': { path: '/tournament/tp-upcoming' },
     'tournament-small': { path: '/tournament/test-tourney' },
-    search: { path: eventPath + '/1001', act: async page => {
-        await page.locator('.search-entrant-form input').click();
-        await page.locator('.search-entrant-form input').fill('a');
+    // The player search: its matches in their two groups, nobody found, and a picked player's tracker
+    search: { path: eventPath + '/1007', act: page => search(page, 'a') },
+    'search-none': { path: eventPath + '/1007', act: page => search(page, 'mang0') },
+    tracker: { path: eventPath + '/1001', act: async page => {
+        await search(page, 'Bravo');
+        await page.locator('.ps-row').first().click();
     } },
     // The end of a bracket
     'bracket-end': { path: eventPath + '/1001', act: page => page.locator('mat-sidenav-content').evaluate(el => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })) },
@@ -46,6 +49,12 @@ const shots = eventPath => ({
     'menu-visitor': { path: '/', visitor: true, phoneOnly: true, act: openMenu },
     menu: { path: '/tournament/test-tourney', phoneOnly: true, act: openMenu },
 });
+// Opens the player search, from the header's icon on a phone and the bracket's button on a desktop, and types
+const search = async (page, text) => {
+    const header = page.locator('.header-find');
+    await (await header.count() ? header : page.locator('.find-player')).click({ timeout: 5000 });
+    await page.locator('.ps-input').fill(text, { timeout: 5000 });
+};
 const openMenu = page => page.locator('mat-toolbar button:has(mat-icon:text("menu"))').click();
 
 export async function takeScreenshots({ appUrl, eventPath, openPage, outDir }) {

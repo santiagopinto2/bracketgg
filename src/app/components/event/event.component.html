@@ -1,7 +1,7 @@
-<div class="no-select" [style.cursor]="isGrabbing ? 'grabbing' : 'grab'">
+<div class="no-select" [class.tracking]="tracked" [style.cursor]="isGrabbing ? 'grabbing' : 'grab'">
     <div class="container-fluid">
         <button mat-mini-fab class="scroll-to-top-button" [class.shown]="showScrollToTop()" [attr.tabindex]="showScrollToTop() ? null : -1"
-            aria-label="Back to top" [ngStyle]="{'right': scrollToTopOffset + 'px', 'bottom': scrollToTopBottomOffset + 'px'}" (click)="scrollToTop()">
+            aria-label="Back to top" [class.above-tracker]="tracked" [ngStyle]="{'right': scrollToTopOffset + 'px', 'bottom': scrollToTopBottomOffset + 'px'}" (click)="scrollToTop()">
             <mat-icon>arrow_upward</mat-icon>
         </button>
 
@@ -16,36 +16,14 @@
         </div>
         }
 
-        <div class="row" style="margin-top: 12px">
+        <!-- The player search opens from here, from "/" or Ctrl+K, and on a phone from the header's icon -->
+        <div class="row find-row" style="margin-top: 12px">
             <div class="col">
-                <form class="search-entrant-form">
-                    <mat-form-field style="width: 100%">
-                        <mat-label>Search Entrant</mat-label>
-                        <input matInput [matAutocomplete]="auto" [formControl]="entrantCtrl">
-                        <mat-autocomplete #auto="matAutocomplete" [displayWith]="entrantSearchDisplay" (optionSelected)="entrantSearched($event)">
-                            @for (entrant of filteredEntrants(); track entrant.id) {
-                            <mat-option [value]="entrant">
-                                <div class="row">
-                                    <div class="col p-0">
-                                        <div class="entrant-image" style="width: 30px; height: 30px">
-                                            @if (getEntrantImage(entrant) !== '') {
-                                            <img [ngClass]="getEntrantImageOrientation(entrant)" [src]="getEntrantImage(entrant)" />
-                                            }
-                                            @if (getEntrantImage(entrant) === '') {
-                                            <div class="entrant-search-image-default" [ngStyle]="{'background-color': entrant.backgroundColor}">
-                                                {{entrant.participants[0].gamerTag[0].toUpperCase()}}</div>
-                                            }
-                                        </div>
-                                    </div>
-                                    <div class="col d-flex flex-column justify-content-center">
-                                        <span class="search-entrant-name">{{entrant.name}}</span>
-                                    </div>
-                                </div>
-                            </mat-option>
-                            }
-                        </mat-autocomplete>
-                    </mat-form-field>
-                </form>
+                <button type="button" class="find-player" [disabled]="!entrants().length" aria-keyshortcuts="/ Control+K" title="Find a player in this phase" (click)="openSearch()">
+                    <mat-icon aria-hidden="true">search</mat-icon>
+                    <span>Find player</span>
+                    <kbd class="find-key" aria-hidden="true">/</kbd>
+                </button>
             </div>
         </div>
 
@@ -127,7 +105,8 @@
                             @if (j % 3 == 0) {
                             <div class="d-flex flex-column round" id="set-column">
                                 @for (set of getRoundSets(phaseGroup, side, (j / 3 + 1) * maxRoundModifier[side], i); track set.id) {
-                                <div class="row set" id="set" [attr.data-set-id]="set.id" [class.set-arrived]="highlightedSetId != null && highlightedSetId == set.id" [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set, phaseGroup)">
+                                <div class="row set" id="set" [attr.data-set-id]="set.id" [class.set-arrived]="highlightedSetId != null && highlightedSetId == set.id"
+                                    [class.on-path]="tracked && isOnPath(set)" [class.set-focused]="focusedSetId != null && focusedSetId == set.id" [ngStyle]="{'margin': getSetMargin(phaseGroup, (j / 3 + 1) * maxRoundModifier[side], side, set)}" (click)="openSet(set, phaseGroup)">
                                     <div class="col p-0 set-seeds" id="seeds">
                                         @for (slot of set.slots; track slot; let firstSlot = $first) {
                                         <div class="row set-row" [ngStyle]="{'height': getSlotHeight(firstSlot)}" (mouseenter)="onSlotEnter(slot)" (mouseleave)="onSlotLeave()">
@@ -258,3 +237,41 @@
     }
 </div>
 </div>
+
+<!-- The tracked player (picked in the search): who they are, how they stand, and arrows through their sets -->
+@if (tracked; as player) {
+<div class="player-tracker" role="region" aria-label="Tracked player" (mousedown)="$event.stopPropagation()">
+    <app-player-avatar class="pt-avatar" [entrant]="player.entrant" [size]="40"></app-player-avatar>
+    <span class="pt-who">
+        <b>{{ player.entrant.sponsor ? player.entrant.sponsor + ' | ' : '' }}{{ player.entrant.name }}</b>
+        <small>
+            @if (player.seed != null) {
+            <span class="pt-seed">Seed {{ player.seed }} · </span>
+            }
+            <em [class.pt-good]="player.status.in || player.status.won">{{ player.status.line }}</em>
+        </small>
+    </span>
+    <span class="pt-sep" aria-hidden="true"></span>
+    <div class="pt-step">
+        <button type="button" class="pt-btn pt-prev" aria-label="Previous set" [disabled]="trackedIndex <= 0" (click)="stepTracked(-1)">
+            <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="pt-mid" aria-live="polite">
+            <b>{{ player.steps[trackedIndex]?.round }}</b>
+            <small>{{ player.steps[trackedIndex]?.text }}</small>
+            <span class="pt-dots" aria-hidden="true">
+                @for (step of player.steps; track $index) {
+                <i [class.pt-w]="step.result === 'W'" [class.pt-l]="step.result === 'L'" [class.pt-cur]="$index === trackedIndex"></i>
+                }
+            </span>
+        </span>
+        <button type="button" class="pt-btn pt-next" aria-label="Next set" [disabled]="trackedIndex >= player.steps.length - 1" (click)="stepTracked(1)">
+            <mat-icon>chevron_right</mat-icon>
+        </button>
+    </div>
+    <span class="pt-sep" aria-hidden="true"></span>
+    <button type="button" class="pt-btn pt-close" aria-label="Stop tracking this player" (click)="clearTracked()">
+        <mat-icon>close</mat-icon>
+    </button>
+</div>
+}

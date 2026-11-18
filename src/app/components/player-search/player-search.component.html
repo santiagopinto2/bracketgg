@@ -1,0 +1,68 @@
+<div class="ps" [class.ps-phone]="data.phone">
+    <div class="ps-in">
+        @if (data.phone) {
+        <button type="button" class="ps-back" aria-label="Close the search" (click)="close()">
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        } @else {
+        <mat-icon class="ps-icon" aria-hidden="true">search</mat-icon>
+        }
+        <input #box class="ps-input" type="text" inputmode="search" enterkeyhint="search" placeholder="Find a player" aria-label="Find a player"
+            autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="ps-results"
+            [attr.aria-activedescendant]="shown().items.length ? 'ps-row-' + active() : null" [value]="text()" (input)="onInput(box.value)" (keydown)="onKeydown($event)">
+        <span class="ps-scope" title="The search covers the phase on screen">{{ data.phaseName }}</span>
+    </div>
+
+    <div class="ps-body" id="ps-results" role="listbox" aria-label="Players">
+        @if (!shown().total) {
+        <div class="ps-empty">
+            <mat-icon aria-hidden="true">person_search</mat-icon>
+            @if (text().trim()) {
+            <b>No one in {{ data.phaseName }} matches "{{ text().trim() }}"</b>
+            } @else {
+            <b>No players in {{ data.phaseName }} yet</b>
+            }
+            <p>The search covers the phase on screen.</p>
+            @if (data.otherPhases.length) {
+            <div class="ps-phases">
+                @for (phase of data.otherPhases; track phase.id) {
+                <button type="button" class="ps-phase" (click)="searchPhase(phase)">Search {{ phase.name }}</button>
+                }
+            </div>
+            }
+        </div>
+        } @else {
+        @for (group of shown().groups; track group.label) {
+        <div class="ps-group" role="presentation">{{ group.label }} · {{ group.count }}</div>
+        <div class="ps-list" role="presentation">
+            @for (item of group.items; track item.track.id) {
+            <button type="button" class="ps-row" role="option" tabindex="-1" [id]="'ps-row-' + item.index" [class.active]="item.index === active()"
+                [attr.aria-selected]="item.index === active()" [attr.data-player-id]="item.track.id" (mousemove)="active.set(item.index)" (click)="pick(item.track)">
+                <span class="ps-seed">{{ item.track.seed }}</span>
+                <app-player-avatar [entrant]="item.track.entrant" [size]="28"></app-player-avatar>
+                <span class="ps-name">
+                    @if (item.sponsor.length) {
+                    <span class="ps-sponsor">@for (segment of item.sponsor; track $index) {<span [class.ps-hit]="segment.hit">{{ segment.text }}</span>}</span>
+                    <span class="ps-bar">{{ ' | ' }}</span>
+                    }
+                    @for (segment of item.name; track $index) {<span [class.ps-hit]="segment.hit">{{ segment.text }}</span>}
+                </span>
+                <span class="ps-status" [class.ps-in-status]="item.track.status.in" [class.ps-won]="item.track.status.won">{{ item.track.status.text }}</span>
+            </button>
+            }
+        </div>
+        }
+        @if (shown().more > 0) {
+        <div class="ps-more">And {{ shown().more }} more. Type to narrow the list.</div>
+        }
+        }
+    </div>
+
+    @if (!data.phone && shown().total) {
+    <div class="ps-hints" aria-hidden="true">
+        <span><kbd>↑</kbd><kbd>↓</kbd> Move</span>
+        <span><kbd>Enter</kbd> Jump to player</span>
+        <span><kbd>Esc</kbd> Close</span>
+    </div>
+    }
+</div>

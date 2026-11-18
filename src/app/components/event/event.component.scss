@@ -54,9 +54,73 @@
     margin: 0;
 }
 
-.search-entrant-form {
-    width: 350px;
-    max-width: calc(100% - 56px);
+// Opens the player search. On a phone the header's search icon does (app.component.html).
+.find-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 10px 0 12px;
+    border: 1px solid var(--tag-border);
+    border-radius: 18px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font: inherit;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+        background: var(--tag-hover-bg);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--highlight);
+        outline-offset: 1px;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+
+    mat-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
+    }
+}
+
+.find-row {
+    margin-bottom: 6px;
+}
+
+// The key that opens the search
+.find-key {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border: 1px solid var(--tag-border);
+    border-radius: 5px;
+    background: var(--surface-hover);
+    color: var(--surface-text-muted);
+    font: 500 11px/1 Roboto, sans-serif;
+}
+
+@media (hover: none) {
+    .find-key {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .find-row {
+        display: none;
+    }
 }
 
 .entrant-image {
@@ -86,20 +150,6 @@
     border-radius: 50%;
     color: var(--avatar-text);
     text-align: center;
-}
-
-.entrant-search-image-default {
-    @extend .entrant-image-default;
-    font-size: 18px;
-    line-height: 30px;
-    padding-left: 0.5px;
-}
-
-.search-entrant-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 240px;
 }
 
 
@@ -495,4 +545,240 @@
 // "Project from pools", beside the Show Projected checkbox
 .project-from-pools {
     margin-right: 8px;
+}
+
+// A player is tracked (picked in the search): their sets keep their color and the rest of the bracket dims
+.tracking {
+    // Room to scroll the last sets clear of the tracker
+    padding-bottom: 110px;
+
+    .set:not(.on-path),
+    .full-round-text,
+    .first-block-column-first-row,
+    .first-block-column-second-row,
+    .straight-block {
+        opacity: 0.38;
+    }
+
+    .set {
+        transition: opacity 0.15s;
+    }
+}
+
+// The set of theirs the tracker is on
+.set-focused {
+    box-shadow: 0 0 0 2px var(--highlight), 0 0 0 7px var(--highlight-bg);
+}
+
+// The tracker: a pill floating over the bottom of the bracket, centered on the bracket's part of the
+// screen (the menu takes 250px on the left)
+.player-tracker {
+    position: fixed;
+    z-index: 900;
+    left: calc(50% + 125px);
+    bottom: 22px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: calc(100vw - 250px - 32px);
+    height: 64px;
+    padding: 0 10px 0 12px;
+    border: 1px solid var(--tag-border);
+    border-radius: 32px;
+    background: var(--dialog-bg);
+    box-shadow: var(--float-shadow);
+    color: var(--surface-text);
+    font-size: 14px;
+    line-height: 1.25;
+    letter-spacing: normal;
+    white-space: nowrap;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+
+    b {
+        font-weight: 500;
+    }
+
+    small {
+        color: var(--dialog-text-faint);
+        font-size: 12px;
+    }
+}
+
+.pt-who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    b {
+        font-size: 15px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    small {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    em {
+        font-style: normal;
+    }
+}
+
+// Still in, or the winner
+.pt-good {
+    color: var(--dialog-win-text);
+}
+
+.pt-sep {
+    flex: none;
+    width: 1px;
+    height: 34px;
+    background: var(--dialog-line);
+}
+
+.pt-step {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pt-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--dialog-hover);
+    color: var(--surface-text);
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--highlight);
+        outline-offset: 1px;
+    }
+}
+
+.pt-mid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 176px;
+
+    b {
+        font-size: 13px;
+    }
+}
+
+// One bar per set: won, lost, not played yet, and the one on screen
+.pt-dots {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+
+    i {
+        width: 14px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--chip-bg);
+    }
+
+    .pt-w {
+        background: var(--set-win-bg);
+    }
+
+    .pt-l {
+        background: var(--danger);
+    }
+
+    .pt-cur {
+        background: var(--highlight);
+        outline: 1.5px solid var(--highlight);
+        outline-offset: 1.5px;
+    }
+}
+
+// A phone, where the menu lies over the page: a bar across the bottom of the screen, above the
+// phone's own bar, with the arrows on a second line in reach of a thumb
+@media (max-width: 768px) {
+    .tracking {
+        padding-bottom: 170px;
+    }
+
+    .player-tracker {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        transform: none;
+        flex-wrap: wrap;
+        gap: 10px;
+        max-width: none;
+        height: auto;
+        padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+        border: 0;
+        border-top: 1px solid var(--tag-border);
+        border-radius: 0;
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .pt-who {
+        flex: 1 1 0;
+
+        b {
+            font-size: 16px;
+        }
+    }
+
+    .pt-sep {
+        display: none;
+    }
+
+    .pt-close {
+        order: 1;
+        width: 40px;
+        height: 40px;
+    }
+
+    .pt-step {
+        order: 2;
+        flex: 0 0 100%;
+        padding: 6px;
+        border-radius: 14px;
+        background: var(--dialog-inset);
+
+        .pt-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+        }
+    }
+
+    .pt-mid {
+        flex: 1 1 0;
+        min-width: 0;
+
+        b,
+        small {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    // The back-to-top button moves up, clear of the tracker
+    .scroll-to-top-button.above-tracker {
+        bottom: calc(160px + env(safe-area-inset-bottom)) !important;
+    }
 }

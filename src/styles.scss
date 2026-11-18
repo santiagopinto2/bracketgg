@@ -69,6 +69,41 @@ body {
     }
 }
 
+// The bracket's player search (src/app/components/player-search): a large box near the top of the
+// screen, over a dimmed bracket. On a phone it is the whole screen, down to the keyboard (the
+// component sizes the panel to what the keyboard leaves).
+.player-search-backdrop {
+    background: var(--scrim);
+}
+
+.player-search-panel {
+    --mat-dialog-container-max-width: 620px;
+    --mat-dialog-container-small-max-width: 100vw;
+    --mat-dialog-container-min-width: 0;
+
+    .mat-mdc-dialog-surface,
+    .mdc-dialog__surface {
+        background: var(--dialog-bg);
+        border: 1px solid var(--tag-border);
+        border-radius: 16px;
+        box-shadow: var(--float-shadow);
+        overflow: hidden;
+    }
+}
+
+.player-search-phone {
+    .mat-mdc-dialog-surface,
+    .mdc-dialog__surface {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
+html:has(.cdk-overlay-pane.player-search-phone) {
+    overscroll-behavior: none;
+}
+
 // While a phone's sheet is open the page behind it doesn't rubber-band or pull to refresh
 @media (max-width: 600px) {
     html:has(.cdk-overlay-pane.set-dialog-panel) {

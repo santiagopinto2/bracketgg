@@ -515,6 +515,8 @@ const setGamesQuery = `games {
 // What the app reads of each set, the same from a pool or a pool slice. The set dialog's state, best of,
 // times and video are scalars, which start.gg doesn't count. The stream would cost 1 object for every
 // set, streamed or not (measured 2026-11-14), so the dialog asks for it when it opens (setDetailsQuery).
+// The winner's and loser's placements, for the player search's "Out, 17th", are scalars too: 40 sets of
+// a Genesis X pool cost 41 objects with and without them (measured 2026-11-18).
 const setFields = `id
                             round
                             fullRoundText
@@ -525,6 +527,8 @@ const setFields = `id
                             startedAt
                             completedAt
                             vodUrl
+                            wPlacement
+                            lPlacement
                             ${setGamesQuery}
                             slots {
                                 prereqId
