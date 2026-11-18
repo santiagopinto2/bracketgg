@@ -30,6 +30,15 @@ const standings = (names, { isFinal = true, places = placements } = {}) => ({ no
 })) });
 const game = (id, name, displayName, color) => ({ id, name, displayName, images: [{ url: svg(96, 128, color), type: 'primary' }] });
 const phases = (firstId, ...names) => names.map((name, k) => ({ id: firstId + k, name }));
+// As start.gg sends a big event's phases: out of order, with a wrong `phaseOrder` (Genesis X's are),
+// and an exhibition side bracket (Port Priority DX's Salmon Ladder). The page orders them by their
+// progressions and links the last real one, Top 8.
+const alphaPhases = [
+    { id: 6101, name: 'R1 Pools', phaseOrder: 1, isExhibition: false, progressingInData: [] },
+    { id: 6103, name: 'Top 8', phaseOrder: 2, isExhibition: false, progressingInData: [{ origin: 6102 }] },
+    { id: 6104, name: 'Salmon Ladder', phaseOrder: 3, isExhibition: true, progressingInData: [] },
+    { id: 6102, name: 'Top 64', phaseOrder: 4, isExhibition: false, progressingInData: [{ origin: 6101 }] },
+];
 const podium = name => [`${name} One`, `${name} Two`, `${name} Three`];
 
 const bros = game(1, 'Super Test Bros.', 'Test Bros.', '#345');
@@ -40,7 +49,7 @@ const topEightOf = {
 };
 // short: the end of the event's slug. at: hours after the tournament starts.
 const showcaseEvents = [
-    { id: 601, name: 'Alpha Singles', short: 'alpha-singles', type: 1, numEntrants: 512, at: 0, videogame: bros, phases: phases(6101, 'R1 Pools', 'Top 64', 'Top 8'), top: topEightOf[601] },
+    { id: 601, name: 'Alpha Singles', short: 'alpha-singles', type: 1, numEntrants: 512, at: 0, videogame: bros, phases: alphaPhases, top: topEightOf[601] },
     { id: 602, name: 'Beta Singles', short: 'beta-singles', type: 1, numEntrants: 256, at: 2, videogame: game(2, 'Test Fighter 6', 'Test Fighter', '#734'), phases: phases(6201, 'Pools', 'Top 8'), top: topEightOf[602] },
     { id: 603, name: 'Alpha Doubles', short: 'alpha-doubles', type: 5, numEntrants: 120, at: 0, videogame: bros, phases: phases(6301, 'Bracket'), top: ['Ace / Blaze', 'Comet / Dash', 'Echo / Flint'] },
     { id: 604, name: 'Gamma Singles', short: 'gamma-singles', type: 1, numEntrants: 96, at: 9, videogame: game(3, 'Puzzle Test', 'Puzzle Test', '#473'), phases: phases(6401, 'Day 1', 'Day 2', 'Top 24', 'Top 8', 'Finals'), top: podium('Gamma') },
@@ -135,7 +144,7 @@ const pageShown = page => page.evaluate(() => {
         tabs: all('.tabs > *', root).map(el => text(el).replace(/\s*([\d,]+)$/, ' $1')),
         attendeesTab: href(root.querySelector('.tabs a')),
         results: all('.result', root).filter(visible).map(card => ({
-            name: text(card.querySelector('h3')), link: href(card.querySelector('h3 a')), sub: text(card.querySelector('.result-title p')), bracket: href(card.querySelector('header .jump')),
+            name: text(card.querySelector('h3')), link: href(card.querySelector('h3 a')), sub: text(card.querySelector('.result-title p')), bracket: href(card.querySelector('header .jump')), jump: text(card.querySelector('header .jump')),
             champion: row(card.querySelector('.champ-text strong')), places: all('.places li', card).map(row),
         })),
         resultTabs: all('#tp-results .seg button', root).filter(visible).map(b => text(b) + (b.classList.contains('on') ? '*' : '')),
@@ -199,17 +208,17 @@ export async function tournamentPageChecks({ browser, openPage, appUrl, check, r
             check('tournament page: Attendees is a tab with the count, a link to the Attendees page',
                 shown.attendeesTab === base + '/attendees'
                 && same(shown.tabs, ['Overview', 'Results', 'Events 10', 'Attendees 1,234', 'Streams 3', 'Schedule', 'Location']), { tab: shown.attendeesTab, tabs: shown.tabs });
-            check('tournament page: Results shows the two biggest events, the champion first and 2nd to 8th below, with links to the event and its last bracket',
+            check('tournament page: Results shows the two biggest events, the champion first and 2nd to 8th below, with links to the event and its last bracket (not an exhibition, in progression order)',
                 same(shown.results, [
-                    { name: 'Alpha Singles', link: base + '/event/alpha-singles', sub: '512 entrants · 3 phases', bracket: base + '/event/alpha-singles/brackets/6103', champion: 'SPN Ace',
+                    { name: 'Alpha Singles', link: base + '/event/alpha-singles', sub: '512 entrants · 4 phases', bracket: base + '/event/alpha-singles/brackets/6103', jump: 'Top 8 bracket', champion: 'SPN Ace',
                         places: ['2nd Blaze', '3rd RED Comet', '4th Dash', '5th Echo', '5th TM Flint', '7th Gale', '7th Halo'] },
-                    { name: 'Beta Singles', link: base + '/event/beta-singles', sub: '256 entrants · 2 phases', bracket: base + '/event/beta-singles/brackets/6202', champion: 'Ivy',
+                    { name: 'Beta Singles', link: base + '/event/beta-singles', sub: '256 entrants · 2 phases', bracket: base + '/event/beta-singles/brackets/6202', jump: 'Top 8 bracket', champion: 'Ivy',
                         places: ['2nd XY Jinx', '3rd Kite', '4th Lux', '5th Mako', '5th Nova', '7th Onyx', '7th Pike'] },
                 ]) && !shown.resultTabs.length, { results: shown.results, tabs: shown.resultTabs });
             check('tournament page: the eight biggest events as cards in two columns, each with its game, top 3, phases, and start time',
                 shown.eventCount === '10' && same(eventNames(shown), ['Alpha Singles', 'Beta Singles', 'Alpha Doubles', 'Gamma Singles', 'Epsilon Singles', 'Zeta Singles', 'Delta Teams', 'Eta Singles'])
                 && shown.eventColumns === 2 && shown.more === 'Show all 10 events'
-                && same(shown.events[0], { name: 'Alpha Singles', href: base + '/event/alpha-singles', game: 'Super Test Bros. · Singles', n: '512 entrants', pod: ['1st SPN Ace', '2nd Blaze', '3rd RED Comet'], note: null, trail: 'R1 Pools›Top 64›Top 8', when: 'Fri 10:00 AM' })
+                && same(shown.events[0], { name: 'Alpha Singles', href: base + '/event/alpha-singles', game: 'Super Test Bros. · Singles', n: '512 entrants', pod: ['1st SPN Ace', '2nd Blaze', '3rd RED Comet'], note: null, trail: 'R1 Pools›Top 64›Top 8›Salmon Ladder', when: 'Fri 10:00 AM' })
                 && same(shown.events[2], { name: 'Alpha Doubles', href: base + '/event/alpha-doubles', game: 'Super Test Bros. · Teams', n: '120 teams', pod: ['1st Ace / Blaze', '2nd Comet / Dash', '3rd Echo / Flint'], note: null, trail: 'Bracket', when: 'Fri 10:00 AM' })
                 && shown.events[3].trail === '5 phases' && shown.events[3].when === 'Fri 7:00 PM' && shown.events[7].note === 'No results reported' && !shown.events[7].pod.length,
                 { count: shown.eventCount, columns: shown.eventColumns, more: shown.more, events: shown.events });

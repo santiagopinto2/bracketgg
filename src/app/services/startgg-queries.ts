@@ -14,7 +14,8 @@ export const MAX_SET_SCORES = 100;
 export const MAX_RESULT_EVENTS = 2;
 
 // A tournament with its events, for the tournament page and the menu. `full` adds each event's top 3
-// and its phases' names, which the page's event cards show.
+// and its phases' names, which the page's event cards show, with what `orderPhases` sorts them by
+// (`progressingInData` costs one object for each phase it names).
 // Genesis X (30 events, 76 phases, 8 streams) costs 582 objects in full, about 19 per event with a
 // top 3; CEO 2024 (27 events, 107 phases) costs 571 (measured 2026-11-15). Without the top 3 and the
 // phases Genesis X costs 133, about 4 per event. The owner costs 2 and each stream 1; scalars and pictures cost nothing.
@@ -25,6 +26,11 @@ function tournamentText(full: boolean): string {
     const eventExtras = `phases {
                             id
                             name
+                            phaseOrder
+                            isExhibition
+                            progressingInData {
+                                origin
+                            }
                         }
                         standings(query: {
                             page: 1
@@ -141,6 +147,8 @@ export const eventPhasesQuery = `query EventPhases($slug: String!) {
                         name
                         numSeeds
                         groupCount
+                        phaseOrder
+                        isExhibition
                         progressingInData {
                             origin
                             numProgressing
@@ -398,6 +406,11 @@ export function eventOverviewQuery({ lostTo = false, rankings = false, socials =
                         numSeeds
                         groupCount
                         state
+                        phaseOrder
+                        isExhibition
+                        progressingInData {
+                            origin
+                        }
                     }
                     standings(query: {
                         page: 1
