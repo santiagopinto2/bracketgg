@@ -47,6 +47,10 @@ $dark: (
     // and a fill to fade from
     highlight: #ffd54f,
     highlight-bg: rgba(255, 213, 79, 0.3),
+    // The player search: the part of a name that matches what was typed, and the shadow under the
+    // search box and the tracker, which float over the bracket
+    search-match: #ffd54f,
+    float-shadow: 0 14px 40px rgba(0, 0, 0, 0.55),
 
     // Placements and rankings
     place-1: #ffd700,
@@ -179,6 +183,8 @@ $light: (
     tag-hover-bg: #d5dae1,
     highlight: #d97706,
     highlight-bg: rgba(245, 158, 11, 0.28),
+    search-match: #9a5300,
+    float-shadow: 0 14px 40px rgba(16, 24, 40, 0.22),
 
     place-1: #8a6500,
     place-2: #5f6b7a,

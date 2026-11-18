@@ -28,15 +28,16 @@ const slot = (entrantId, score) => {
 };
 const from = (setId, placement) => ({ prereqType: 'set', prereqId: String(setId), prereqPlacement: placement, entrant: null, standing: null });
 
-// A finished 4-player double elimination pool, in start.gg's ROUND order (losers first)
+// A finished 4-player double elimination pool, in start.gg's ROUND order (losers first), with the
+// placements start.gg gives each set's winner and loser
 function poolSets(idBase) {
     return [
-        { id: idBase + 5, round: -2, fullRoundText: 'Losers Final', winnerId: 2, slots: [slot(2, 2), slot(3, 1)] },
-        { id: idBase + 4, round: -1, fullRoundText: 'Losers Round 1', winnerId: 3, slots: [slot(4, 0), slot(3, 2)] },
-        { id: idBase + 1, round: 1, fullRoundText: 'Winners Semi-Final', winnerId: 1, slots: [slot(1, 2), slot(4, 0)] },
-        { id: idBase + 2, round: 1, fullRoundText: 'Winners Semi-Final', winnerId: 2, slots: [slot(2, 2), slot(3, 1)] },
-        { id: idBase + 3, round: 2, fullRoundText: 'Winners Final', winnerId: 1, slots: [slot(1, 2), slot(2, 0)] },
-        { id: idBase + 6, round: 3, fullRoundText: 'Grand Final', winnerId: 1, slots: [slot(1, 3), slot(2, 1)] },
+        { id: idBase + 5, round: -2, fullRoundText: 'Losers Final', winnerId: 2, wPlacement: 2, lPlacement: 3, slots: [slot(2, 2), slot(3, 1)] },
+        { id: idBase + 4, round: -1, fullRoundText: 'Losers Round 1', winnerId: 3, wPlacement: 3, lPlacement: 4, slots: [slot(4, 0), slot(3, 2)] },
+        { id: idBase + 1, round: 1, fullRoundText: 'Winners Semi-Final', winnerId: 1, wPlacement: 2, lPlacement: 4, slots: [slot(1, 2), slot(4, 0)] },
+        { id: idBase + 2, round: 1, fullRoundText: 'Winners Semi-Final', winnerId: 2, wPlacement: 2, lPlacement: 4, slots: [slot(2, 2), slot(3, 1)] },
+        { id: idBase + 3, round: 2, fullRoundText: 'Winners Final', winnerId: 1, wPlacement: 2, lPlacement: 3, slots: [slot(1, 2), slot(2, 0)] },
+        { id: idBase + 6, round: 3, fullRoundText: 'Grand Final', winnerId: 1, wPlacement: 1, lPlacement: 2, slots: [slot(1, 3), slot(2, 1)] },
     ];
 }
 
@@ -727,10 +728,10 @@ try {
             await page.goto(appUrl + eventPath + '/1001');
             await quiet();
             const bracket = await avatars('#entrant-images img');
-            await page.locator('.search-entrant-form input').click();
-            await page.locator('.search-entrant-form input').fill('Bra');
+            await page.locator('.find-player').click();
+            await page.locator('.ps-input').fill('Bra');
             await page.waitForTimeout(500);
-            const search = { options: (await page.locator('mat-option').allInnerTexts()).map(t => t.trim()), avatars: await avatars('mat-option img') };
+            const search = { options: (await page.locator('.ps-row .ps-name').allInnerTexts()).map(t => t.trim()), avatars: await avatars('.ps-row img') };
             await page.keyboard.press('Escape');
             await page.waitForTimeout(300);
             await page.locator('.set', { hasText: 'Bravo' }).filter({ hasText: 'Charlie' }).first().click();
@@ -1104,7 +1105,9 @@ try {
         }
     }
 
-    // 10. Phone: searching an entrant scrolls the bracket to them, even as the keyboard closes
+    // 10. Phone: the player search opens from the header's icon and takes the whole screen above the
+    //     keyboard. Picking a player closes the keyboard, scrolls the bracket to their set, and docks the
+    //     tracker to the bottom of the screen.
     report.phoneSearch = {};
     const safari2 = await webkit.launch();
     try {
@@ -1130,49 +1133,62 @@ try {
                     }
                     return best;
                 });
-                const inView = () => page.evaluate(id => {
+                // Whether a set is whole inside the bracket's view, above the tracker when there is one
+                const inView = selector => page.evaluate(selector => {
                     const box = document.querySelector('mat-sidenav-content').getBoundingClientRect();
-                    const r = document.querySelector(`[entrantid="${id}"]`).getBoundingClientRect();
-                    return r.top >= box.top && r.bottom <= box.bottom && r.left >= box.left && r.right <= box.right;
-                }, target.id);
-                const before = await inView();
+                    const r = document.querySelector(selector)?.getBoundingClientRect();
+                    const bottom = document.querySelector('.player-tracker')?.getBoundingClientRect().top ?? box.bottom;
+                    return !!r && r.top >= box.top && r.bottom <= bottom && r.left >= box.left && r.right <= box.right;
+                }, selector);
+                const before = await inView(`.set:has([entrantid="${target.id}"])`);
                 // iOS zooms in on a tapped text box under 16px unless the viewport has maximum-scale=1
                 const viewport = await page.evaluate(() => document.querySelector('meta[name=viewport]').content);
                 const size = page.viewportSize();
-                await page.locator('.search-entrant-form input').tap();
+                const inPage = await page.locator('.find-player').isVisible();
+                await page.locator('.header-find').tap();
+                await page.locator('.ps-input').waitFor({ state: 'visible', timeout: 5000 });
+                const focused = await page.evaluate(() => document.activeElement?.matches('.ps-input'));
                 await page.setViewportSize({ width: size.width, height: Math.round(size.height * 0.55) }); // keyboard opens
-                await page.locator('.search-entrant-form input').fill(target.tag);
+                await page.locator('.ps-input').fill(target.tag);
                 await page.waitForTimeout(400);
-                await page.locator('mat-option', { hasText: target.tag }).first().tap();
+                // The search fills what the keyboard leaves of the screen
+                const full = await page.evaluate(() => {
+                    const r = document.querySelector('.cdk-overlay-pane.player-search-panel').getBoundingClientRect();
+                    return { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height), screen: [window.innerWidth, Math.round(window.visualViewport?.height ?? window.innerHeight)],
+                        fontSize: parseFloat(getComputedStyle(document.querySelector('.ps-input')).fontSize), back: !!document.querySelector('.ps-back'), scope: document.querySelector('.ps-scope')?.textContent.trim() };
+                });
+                await page.screenshot({ path: `e2e-out/phone-search-open-${name.replace(/ /g, '-')}.png` }).catch(() => { });
+                await page.locator(`.ps-row[data-player-id="${target.id}"]`).tap();
                 await page.waitForTimeout(100);
-                // The keyboard stays open while the search box has focus
-                const keyboardClosed = await page.evaluate(() => !document.activeElement?.matches('.search-entrant-form input'));
+                // The keyboard stays open while a text box has focus
+                const keyboardClosed = await page.evaluate(() => !document.activeElement?.matches('input')) && await page.locator('.ps-input').count() === 0;
                 await page.setViewportSize(size); // keyboard closes
                 await page.waitForTimeout(2000);
-                const after = await inView();
-                report.phoneSearch[name] = { target: target.tag, before, keyboardClosed, after, viewport, errors };
-                check(`${name}: searching an entrant closes the keyboard and scrolls to them`, !before && keyboardClosed && after && !errors.length, report.phoneSearch[name]);
+                const after = await inView('.set-focused');
+                const focusedSet = await page.locator('.set-focused').innerText().catch(() => '');
+                const tracker = await page.evaluate(() => {
+                    const r = document.querySelector('.player-tracker')?.getBoundingClientRect();
+                    return r ? { left: Math.round(r.left), width: Math.round(r.width), bottom: Math.round(r.bottom), screen: [window.innerWidth, window.innerHeight],
+                        name: document.querySelector('.pt-who b')?.textContent.trim(), headerOn: !!document.querySelector('.header-find-on') } : null;
+                });
+                report.phoneSearch[name] = { target: target.tag, before, inPage, focused, full, keyboardClosed, after, tracker, viewport, errors };
+                check(`${name}: the search opens from the header's icon, focused, and fills the screen above the keyboard`,
+                    !inPage && focused && full.left === 0 && full.top === 0 && full.width === full.screen[0] && Math.abs(full.height - full.screen[1]) <= 1 && full.fontSize >= 16 && full.back && full.scope === 'Later Phase' && !errors.length, report.phoneSearch[name]);
+                check(`${name}: picking a player closes the keyboard and scrolls to their set`, !before && keyboardClosed && after && focusedSet.includes(target.tag) && !errors.length, report.phoneSearch[name]);
+                check(`${name}: the tracker is a bar across the bottom of the screen, naming the player`,
+                    !!tracker && tracker.left === 0 && tracker.width === tracker.screen[0] && Math.abs(tracker.bottom - tracker.screen[1]) <= 1 && String(tracker.name).endsWith(target.tag) && tracker.headerOn, tracker);
                 check(`${name}: maximum-scale=1 on iOS only, so tapping a text box doesn't zoom and Android keeps pinch zoom`, viewport.includes('maximum-scale=1') === (name === 'iPhone 13'), viewport);
                 await page.screenshot({ path: `e2e-out/phone-search-${name.replace(/ /g, '-')}.png` }).catch(() => { });
 
-                // A tap on the bracket's background, away from every set, takes the highlight off the player.
-                // The search highlights them again first: by now a resting pointer may have moved it.
+                // A tap on the bracket's background, away from every set and the tracker, stops tracking the player
                 const highlighted = () => page.locator('.slot-hover, .slot-hover-rounded-corners').count();
-                await page.locator('.search-entrant-form input').tap();
-                await page.locator('.search-entrant-form input').fill('');
-                await page.locator('.search-entrant-form input').fill(target.tag);
-                const option = page.locator('mat-option', { hasText: target.tag }).first();
-                await option.waitFor({ state: 'visible', timeout: 5000 });
-                await page.waitForTimeout(300); // the panel's opening animation
-                await option.tap();
-                for (const start = Date.now(); Date.now() - start < 3000 && !(await highlighted()); ) await page.waitForTimeout(100);
                 const highlightedBefore = await highlighted();
                 const spot = await page.evaluate(() => {
                     const box = document.querySelector('mat-sidenav-content').getBoundingClientRect();
-                    for (let y = box.top + box.height * 0.4; y < box.bottom - 10; y += 10) {
+                    for (let y = box.top + box.height * 0.3; y < box.bottom - 10; y += 10) {
                         for (let x = box.left + 5; x < box.right - 5; x += 10) {
                             const hit = document.elementFromPoint(x, y);
-                            if (hit && hit.closest('app-event') && !hit.closest('.set, .progression-tags, button, input, a, mat-form-field')) return { x, y };
+                            if (hit && hit.closest('app-event') && !hit.closest('.set, .progression-tags, .player-tracker, button, input, a, mat-checkbox')) return { x, y };
                         }
                     }
                     return null;
@@ -1180,16 +1196,220 @@ try {
                 if (spot) await page.touchscreen.tap(spot.x, spot.y);
                 await page.waitForTimeout(400);
                 const highlightedAfter = await highlighted();
-                report.phoneSearch[name].backgroundTap = { highlightedBefore, spot, highlightedAfter, dialogs: await page.locator('mat-dialog-container').count() };
-                check(`${name}: tapping the background takes the highlight off a player`, highlightedBefore > 0 && !!spot && highlightedAfter === 0 && !errors.length, report.phoneSearch[name].backgroundTap);
+                report.phoneSearch[name].backgroundTap = { highlightedBefore, spot, highlightedAfter, tracker: await page.locator('.player-tracker').count(), dialogs: await page.locator('mat-dialog-container').count() };
+                check(`${name}: tapping the background takes the highlight off a player and closes the tracker`,
+                    highlightedBefore > 0 && !!spot && highlightedAfter === 0 && report.phoneSearch[name].backgroundTap.tracker === 0 && !errors.length, report.phoneSearch[name].backgroundTap);
             } catch (e) {
-                report.phoneSearch[name] = { crashed: String(e.message).slice(0, 300) };
-                check(`${name}: searching an entrant scrolls to them`, false, report.phoneSearch[name]);
+                report.phoneSearch[name] = { ...report.phoneSearch[name], crashed: String(e.message).slice(0, 300), errors };
+                check(`${name}: the player search on a phone`, false, report.phoneSearch[name]);
             }
             await context.close();
         }
     } finally {
         await safari2.close();
+    }
+
+    // 10b. The player search on a desktop: the button, "/" and Ctrl+K open it; the list is grouped
+    //      "Still in" and "Out"; typing filters and underlines the match; the arrows and Enter pick;
+    //      with nobody found it offers the event's other phases. A picked player gets the tracker,
+    //      whose arrows step through their sets; its ×, Esc, and a click on the background clear it.
+    report.playerSearch = {};
+    {
+        const { context, page, quiet } = await openPage(browser, () => null, { viewport: { width: 1280, height: 800 } }, { fonts: true });
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+        const text = selector => page.locator(selector).first().textContent({ timeout: 3000 }).then(t => t.replace(/\s+/g, ' ').trim()).catch(() => null);
+        const isOpen = async () => await page.locator('.ps-input').count() === 1;
+        // The list as drawn: each group's heading, then "seed | name | status" for each of its rows
+        const groups = () => page.evaluate(() => [...document.querySelectorAll('.ps-group')].map(group => ({
+            label: group.textContent.replace(/\s+/g, ' ').trim(),
+            rows: [...group.nextElementSibling.querySelectorAll('.ps-row')].map(row => ['.ps-seed', '.ps-name', '.ps-status'].map(part => row.querySelector(part).textContent.replace(/\s+/g, ' ').trim()).join(' | ')),
+        })));
+        const tracker = () => page.evaluate(() => {
+            const bar = document.querySelector('.player-tracker');
+            if (!bar) return null;
+            const of = selector => bar.querySelector(selector)?.textContent.replace(/\s+/g, ' ').trim() ?? null;
+            const box = document.querySelector('mat-sidenav-content').getBoundingClientRect();
+            const set = document.querySelector('.set-focused');
+            const r = set?.getBoundingClientRect();
+            return {
+                name: of('.pt-who b'), status: of('.pt-who small'), round: of('.pt-mid b'), result: of('.pt-mid small'),
+                dots: [...bar.querySelectorAll('.pt-dots i')].map(dot => (dot.classList.contains('pt-cur') ? '*' : '') + (dot.classList.contains('pt-w') ? 'W' : dot.classList.contains('pt-l') ? 'L' : '-')).join(' '),
+                prev: !bar.querySelector('.pt-prev').disabled, next: !bar.querySelector('.pt-next').disabled,
+                set: set?.getAttribute('data-set-id') ?? null, inView: !!r && r.top >= box.top && r.bottom <= box.bottom && r.left >= box.left && r.right <= box.right,
+                dimmed: [...document.querySelectorAll('.set')].filter(card => getComputedStyle(card).opacity !== '1').map(card => card.getAttribute('data-set-id')).sort().join(),
+                highlighted: document.querySelectorAll('.slot-hover, .slot-hover-rounded-corners').length,
+            };
+        });
+        const settle = () => page.waitForTimeout(700);
+        try {
+            // Single elimination with the semi-finals played and the final still empty: two players still in, two out
+            await page.goto(appUrl + eventPath + '/1007');
+            await quiet();
+            await page.waitForTimeout(500);
+            const button = await text('.find-player');
+            await page.locator('.find-player').click();
+            await page.waitForTimeout(300);
+            const opened = { button, open: await isOpen(), focused: await page.evaluate(() => document.activeElement?.matches('.ps-input')), scope: await text('.ps-scope'),
+                backdrop: await page.locator('.player-search-backdrop').count(), hints: await text('.ps-hints') };
+            const everyone = await groups();
+            await page.screenshot({ path: 'e2e-out/player-search-open.png' }).catch(() => { });
+            check('player search: the Find player button opens a search box over the bracket, focused, naming the phase it covers',
+                /Find player/.test(button ?? '') && opened.open && opened.focused && opened.scope === 'Single Elim, No 3rd Place' && opened.backdrop === 1 && /Move.*Jump to player.*Close/.test(opened.hints ?? ''), opened);
+            check('player search: with nothing typed everyone is listed, those still in first with their next round, then those out with their last, each group in seed order',
+                JSON.stringify(everyone) === JSON.stringify([
+                    { label: 'Still in · 2', rows: ['1 | Alpha | Final', '2 | Bravo | Final'] },
+                    { label: 'Out · 2', rows: ['3 | Charlie | Out, Semi-Final', '4 | Delta | Out, Semi-Final'] },
+                ]), everyone);
+
+            await page.locator('.ps-input').fill('AR');
+            await page.waitForTimeout(200);
+            const filtered = { groups: await groups(), hit: await page.locator('.ps-hit').allTextContents() };
+            check('player search: typing filters the list, whatever the case, and marks the part of the name that matches',
+                JSON.stringify(filtered.groups) === JSON.stringify([{ label: 'Out · 1', rows: ['3 | Charlie | Out, Semi-Final'] }]) && filtered.hit.join() === 'ar', filtered);
+
+            await page.locator('.ps-input').fill('');
+            await page.keyboard.press('ArrowDown');
+            await page.keyboard.press('ArrowDown');
+            await page.keyboard.press('ArrowDown');
+            await page.keyboard.press('ArrowUp');
+            const arrowed = await text('.ps-row.active .ps-name');
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+            const escaped = !(await isOpen());
+            await page.keyboard.press('/');
+            await page.waitForTimeout(300);
+            const slash = { open: await isOpen(), typed: await page.locator('.ps-input').inputValue().catch(() => null) };
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+            await page.keyboard.press('Control+k');
+            await page.waitForTimeout(300);
+            const controlK = await isOpen();
+            report.playerSearch.keys = { arrowed, escaped, slash, controlK };
+            check('player search: the arrows move through the list, Esc closes it, and "/" and Ctrl+K open it',
+                arrowed === 'Charlie' && escaped && slash.open && slash.typed === '' && controlK, report.playerSearch.keys);
+
+            // Nobody matches: the other phases are offered, and one opens with the search and its text
+            await page.locator('.ps-input').fill('zzz');
+            await page.waitForTimeout(200);
+            const none = { message: await text('.ps-empty b'), phases: (await page.locator('.ps-phase').allTextContents()).map(t => t.trim()), rows: await page.locator('.ps-row').count() };
+            await page.screenshot({ path: 'e2e-out/player-search-none.png' }).catch(() => { });
+            await page.locator('.ps-phase', { hasText: 'Search Top 4' }).click();
+            await quiet();
+            await page.waitForTimeout(500);
+            const moved = { path: new URL(page.url()).pathname, open: await isOpen(), typed: await page.locator('.ps-input').inputValue().catch(() => null), scope: await text('.ps-scope'), message: await text('.ps-empty b') };
+            await page.keyboard.press('Escape');
+            report.playerSearch.none = { none, moved };
+            check('player search: with nobody found it says so and offers the event\'s other phases',
+                none.message === 'No one in Single Elim, No 3rd Place matches "zzz"' && none.rows === 0
+                && JSON.stringify(none.phases) === JSON.stringify(Object.values(phaseNames).filter(phase => phase !== 'Single Elim, No 3rd Place').map(phase => `Search ${phase}`)), none);
+            check('player search: "Search <phase>" opens that phase with the search open and the text kept',
+                moved.path === eventPath + '/1002' && moved.open && moved.typed === 'zzz' && moved.scope === 'Top 4' && moved.message === 'No one in Top 4 matches "zzz"', moved);
+
+            // A finished double elimination pool: its winner and everyone's placements
+            await page.goto(appUrl + eventPath + '/1001');
+            await quiet();
+            await page.waitForTimeout(500);
+            await page.keyboard.press('/');
+            await page.waitForTimeout(300);
+            const finished = await groups();
+            check('player search: in a finished bracket the list has the winner and each player\'s placement',
+                JSON.stringify(finished) === JSON.stringify([{ label: 'Finished · 4', rows: ['1 | Alpha | 1st', '2 | Bravo | Out, 2nd', '3 | Charlie | Out, 3rd', '4 | Delta | Out, 4th'] }]), finished);
+
+            // Enter picks the first match: the tracker comes up on their last set, their sets stay lit and the others dim
+            await page.locator('.ps-input').fill('brav');
+            await page.keyboard.press('Enter');
+            await settle();
+            const picked = { open: await isOpen(), ...(await tracker()) };
+            await page.screenshot({ path: 'e2e-out/player-tracker.png' }).catch(() => { });
+            check('player search: Enter picks the first match, which closes the search and shows the tracker with the player\'s seed and standing',
+                !picked.open && picked.name === 'Bravo' && picked.status === 'Seed 2 · Out, 2nd', picked);
+            check('tracker: it starts on the player\'s latest set, outlined and in view, with their rows lit and the sets they are not in dimmed',
+                picked.round === 'Grand Final' && picked.result === 'Lost 1-3 vs Alpha' && picked.set === '106' && picked.inView && picked.dimmed === '101,104' && picked.highlighted > 0
+                && picked.dots === 'W L W *L' && picked.prev && !picked.next, picked);
+
+            // The arrows, on screen and on the keyboard, step through the player's sets in the order they played them
+            const steps = [];
+            const step = async act => { await act(); await settle(); const now = await tracker(); steps.push(`${now.set}: ${now.round}, ${now.result} (${now.dots})${now.inView ? '' : ' out of view'}`); return now; };
+            await step(() => page.locator('.pt-prev').click());
+            await step(() => page.keyboard.press('ArrowLeft'));
+            const firstStep = await step(() => page.locator('.pt-prev').click());
+            await step(() => page.keyboard.press('ArrowRight'));
+            await step(() => page.locator('.pt-next').click());
+            report.playerSearch.steps = steps;
+            check('tracker: the arrows step through the player\'s sets round by round, scrolling to each and saying how it went',
+                JSON.stringify(steps) === JSON.stringify([
+                    '105: Losers Final, Won 2-1 vs Charlie (W L *W L)',
+                    '103: Winners Final, Lost 0-2 vs Alpha (W *L W L)',
+                    '102: Winners Semi-Final, Won 2-1 vs Charlie (*W L W L)',
+                    '103: Winners Final, Lost 0-2 vs Alpha (W *L W L)',
+                    '105: Losers Final, Won 2-1 vs Charlie (W L *W L)',
+                ]) && !firstStep.prev && firstStep.next && firstStep.highlighted > 0, steps);
+
+            // The mouse passing over another player doesn't move the highlight, and a set still opens its dialog
+            await page.locator('.set[data-set-id="101"] #names .set-row').first().hover();
+            await page.waitForTimeout(200);
+            const hovered = await page.locator('.slot-hover, .slot-hover-rounded-corners').evaluateAll(rows => [...new Set(rows.map(row => row.closest('.set').getAttribute('data-set-id')))].sort().join());
+
+            // Cleared by the ×, by Esc, and by a click on the bracket's background, but not by dragging the bracket
+            const cleared = {};
+            // The pointer rests on the header meanwhile, where it can't hover a player
+            const gone = async () => { await page.mouse.move(640, 20); await page.waitForTimeout(300); const now = await tracker(); return !now && await page.locator('.slot-hover, .slot-hover-rounded-corners').count() === 0 && await page.locator('.set-focused').count() === 0; };
+            const pick = async name => { await page.keyboard.press('/'); await page.locator('.ps-input').fill(name); await page.keyboard.press('Enter'); await settle(); return (await tracker())?.name; };
+            await page.locator('.pt-close').click();
+            cleared.close = await gone();
+            cleared.again = await pick('alpha');
+            await page.keyboard.press('Escape');
+            cleared.escape = await gone();
+            cleared.third = await pick('delta');
+            const findSpot = () => page.evaluate(() => {
+                const box = document.querySelector('mat-sidenav-content').getBoundingClientRect();
+                for (let y = box.top + box.height * 0.3; y < box.bottom - 120; y += 10) {
+                    for (let x = box.left + 30; x < box.right - 30; x += 10) {
+                        const hit = document.elementFromPoint(x, y);
+                        if (hit && hit.closest('app-event') && !hit.closest('.set, .progression-tags, .player-tracker, button, input, a, mat-checkbox')) return { x, y };
+                    }
+                }
+                return null;
+            });
+            let spot = await findSpot();
+            if (spot) {
+                await page.mouse.move(spot.x, spot.y);
+                await page.mouse.down();
+                await page.mouse.move(spot.x + 60, spot.y + 20, { steps: 4 });
+                await page.mouse.up();
+                await page.waitForTimeout(300);
+                cleared.afterDrag = (await tracker())?.name ?? null;
+                // The drag may have moved the bracket under the pointer
+                spot = await findSpot();
+                if (spot) await page.mouse.click(spot.x, spot.y);
+                cleared.click = await gone();
+            }
+            report.playerSearch.cleared = { hovered, spot, ...cleared };
+            check('tracker: the highlight stays on the tracked player while the mouse is over someone else',
+                hovered === '102,103,105,106', hovered);
+            check('tracker: the ×, Esc, and a click on the bracket\'s background each clear it, and dragging the bracket does not',
+                cleared.close && cleared.again === 'Alpha' && cleared.escape && cleared.third === 'Delta' && !!spot && cleared.afterDrag === 'Delta' && cleared.click && !errors.length, report.playerSearch.cleared);
+
+            // A phase whose players go on to later phases (Progress Pools): those start.gg has placed there have advanced
+            await page.goto(appUrl + eventPath + '/1010');
+            await quiet();
+            await page.waitForTimeout(800);
+            await page.locator('.find-player').click();
+            await page.waitForTimeout(300);
+            const progressing = await groups();
+            await page.keyboard.press('Escape');
+            report.playerSearch.progressing = progressing;
+            check('player search: players start.gg has placed in a later phase are still in, as advanced to it',
+                progressing.length === 1 && /^Still in · 4$/.test(progressing[0].label) && progressing[0].rows.every(row => /\| Advanced to (Three Pools|Top 4)$/.test(row)), progressing);
+            report.playerSearch.errors = errors;
+            check('player search: no page errors', !errors.length, errors);
+        } catch (e) {
+            report.playerSearch.crashed = String(e.message).slice(0, 300);
+            report.playerSearch.errors = errors;
+            check('the player search and the tracker on a desktop', false, report.playerSearch);
+        }
+        await context.close();
     }
 
     // 11. Doubles: start.gg refuses pages that pass the 1000-object cap. Here a set costs 50 objects and
@@ -1547,6 +1767,17 @@ try {
             const widths = all.map(card => [card.card, card.pictures, card.names].join(' '));
             check('team pictures: every card stays 204px wide with a 28px picture column and a 136px tag column, and every picture is inside its row of that column',
                 all.length === 6 && widths.every(w => w === '204 28 136') && sides.every(side => side.row === 28 && side.nameRow === 136 && side.pictures.every(p => p.inside)), { widths });
+
+            // The player search draws a team the same way: its first two players, in the order of its name
+            await page.locator('.find-player').click();
+            await page.waitForTimeout(400);
+            const searchRows = await page.locator('.ps-row').evaluateAll(rows => Object.fromEntries(rows.map(row => [row.querySelector('.ps-name').textContent.trim(),
+                [...row.querySelectorAll('.pa-pic')].map(pic => pic.querySelector('img') ? `picture ${pic.querySelector('img').getAttribute('src').match(/%23(\w+)/)?.[1] ?? '?'}` : `initial ${pic.textContent.trim()}`).join(' | ')])));
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+            report.teamPictures.search = searchRows;
+            check('team pictures: the player search shows a team\'s first two players in the order of its name, and one picture for a single player',
+                JSON.stringify(searchRows) === JSON.stringify({ 'Alpha / Echo': 'initial A | picture 36c', 'Bravo / Foxtrot': 'picture 2a7 | picture c63', 'Charlie / Golf / Hotel': 'initial C | initial G', 'Delta': 'initial D' }), searchRows);
 
             // The set dialog still opens on a team's set
             await page.locator('.set', { hasText: 'Alpha / Echo' }).first().click();

@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, OnInit, effect, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { RequestLimitReached, StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
@@ -14,23 +14,23 @@ import { Location, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatInputModule } from '@angular/material/input';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
+import { FormsModule } from '@angular/forms';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { SetComponent } from '../set/set.component';
 import { LoadingService } from 'src/app/services/loading.service';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { PlayerSearchService } from 'src/app/services/player-search.service';
+import { PlayerAvatarComponent } from '../player-search/player-avatar.component';
+import { PlayerSearchComponent, PlayerSearchData, PlayerSearchResult } from '../player-search/player-search.component';
+import { PlayerTrack, trackPlayers } from '../player-search/player-track';
 
 @Component({
     selector: 'app-event',
     templateUrl: './event.component.html',
     styleUrls: ['./event.component.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    imports: [MatIconButton, MatIconModule, NgStyle, NgClass, MatFormFieldModule, MatAutocompleteModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatMenuModule, RouterLink]
+    imports: [MatIconButton, MatIconModule, NgStyle, NgClass, FormsModule, MatButtonModule, MatCheckboxModule, MatMenuModule, RouterLink, PlayerAvatarComponent]
 })
 export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -75,14 +75,20 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     // A newer phase load makes older ones stale, so they stop instead of mixing two phases' data
     loadId = 0;
     entrants = signal<any[]>([]);
-    entrantCtrl = new FormControl<string | { name: string }>('');
-    entrantCtrlValue = toSignal(this.entrantCtrl.valueChanges, { initialValue: '' });
-    filteredEntrants = computed(() => {
-        const value = this.entrantCtrlValue() || '';
-        const filterValue = typeof value === 'string' ? value.toLowerCase() : value.name?.toLowerCase() || '';
-        const currentEntrants = this.entrants();
-        return filterValue ? currentEntrants.filter(entrant => entrant.name.toLowerCase().includes(filterValue)) : currentEntrants.slice();
-    });
+    // The player search (src/app/components/player-search). Its list is the shown phase's players with
+    // how each stands, worked out from the drawn pools' sets when it opens and again as pools are drawn.
+    private searchRef: MatDialogRef<PlayerSearchComponent, PlayerSearchResult> | null = null;
+    private searchTracks = signal<PlayerTrack[]>([]);
+    // The player picked in the search: their sets stay highlighted and the rest of the bracket dims,
+    // with the tracker under the bracket to step through their sets
+    tracked: PlayerTrack | null = null;
+    // The set of theirs the tracker is on, and its id, which the bracket outlines
+    trackedIndex = 0;
+    focusedSetId: string | null = null;
+    // Where a press on the bracket's background began, while a player is tracked
+    private backgroundDown: { x: number, y: number } | null = null;
+    private stopScrollWatch: (() => void) | null = null;
+    private unregisterSearch: (() => void) | null = null;
     phases = [];
     currentPhaseIndex = -1;
     phaseGroups = [];
@@ -110,8 +116,6 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
-    @ViewChildren('slot') slotElements: any;
-
     constructor(
         private startggService: StartggService,
         private tournamentDataService: TournamentDataService,
@@ -121,7 +125,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         private router: Router,
         private location: Location,
         private cdr: ChangeDetectorRef,
-        private zone: NgZone
+        private zone: NgZone,
+        private playerSearch: PlayerSearchService
     ) {
         this.isDesktop = this.deviceService.isDesktop();
 
@@ -131,6 +136,10 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             clearTimeout(this.crossPhaseTimer);
             this.crossPhaseTimer = setTimeout(() => this.refreshCrossPhase(), 400);
         });
+
+        // The header's search icon (a phone's way in) shows while there are players to find
+        this.unregisterSearch = this.playerSearch.register(() => this.openSearch());
+        effect(() => this.playerSearch.available.set(this.entrants().length > 0));
 
         // Watch for tournament source changes using effect
         effect(() => {
@@ -146,6 +155,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             this.maxRoundsPhase = -1;
             this.entrants.set([]);
             this.playerHovered = -1;
+            this.clearTracked();
+            this.searchRef?.close();
             this.progressionSeeds = null;
             this.progressionTags = new Map();
             this.crossPhase = null;
@@ -379,6 +390,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             this.arrive();
         } catch (error) {
             if (loadId !== this.loadId) return;
+            this.playerSearch.takePending();
             console.error(error);
             this.loadingService.error(error instanceof StartggError ? error.message : 'Could not draw this bracket.');
         }
@@ -430,7 +442,6 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             });
         });
         if (newEntrants.length) this.entrants.update(entrants => [...entrants, ...newEntrants]);
-        this.entrantCtrl.setValue('');
 
         // A grand final reset shares the grand final's round: a played one gets its own column after it,
         // an unplayed one is dropped. start.gg sometimes lists it before the grand final, so look for it.
@@ -496,6 +507,10 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         this.tagPool(phaseGroup);
         this.drawPool(phaseGroupIndex, phaseGroup);
         if (phaseGroup.id == this.arrival?.poolId) this.arrive();
+        this.refreshTracks();
+        // "Search <phase>" from a search that found nobody: the search opens again here, with its text
+        const pendingText = this.playerSearch.takePending();
+        if (pendingText != null) this.openSearch(pendingText);
 
         setTimeout(() => {
             this.getScrollToTopOffset();
@@ -526,6 +541,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             if (loadId !== this.loadId) return;
             this.progressionSeeds = byPool;
             this.phaseGroups.forEach(phaseGroup => phaseGroup && this.tagPool(phaseGroup));
+            this.refreshTracks();
         } catch (error) {
             if (loadId === this.loadId) console.warn('Could not load where this phase\'s players go next', error);
         }
@@ -1220,50 +1236,193 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         return column % 3 == 0 ? '204px' : '22px';
     }
 
-    entrantSearched(event) {
-        const element = this.slotElements.toArray().find(element => element.nativeElement.getAttribute('entrantId') == event.option.value.id);
-        if (!element) return;
-        this.playerHovered = event.option.value.id;
+    // How every player of the shown phase stands, from the pools drawn so far (player-track.ts)
+    private playerTracks(): Map<string, PlayerTrack> {
+        // The players start.gg has already placed in a later phase
+        const advanced = new Map<string, string>();
+        for (const phaseGroup of this.phaseGroups) {
+            if (!phaseGroup) continue;
+            for (const seed of this.progressionSeeds?.get(String(phaseGroup.id)) ?? []) {
+                if (seed?.entrant?.id != null) advanced.set(String(seed.entrant.id), seed.phase?.name || 'the next phase');
+            }
+        }
+        return trackPlayers(this.phaseGroups, {
+            // One entry per pool of the phase, drawn or not
+            placements: this.maxRounds.length == 1,
+            feedsLaterPhase: this.phases.some(phase => phase.id != this.phaseId && phase.progressingInData?.some(source => source?.origin == this.phaseId)),
+            advanced,
+        });
+    }
+
+    // New sets are in (a pool was drawn, or the next phase's seeds arrived): the open search's list and
+    // the tracked player follow them
+    private refreshTracks() {
+        if (!this.searchRef && !this.tracked) return;
+        const tracks = this.playerTracks();
+        if (this.searchRef) this.searchTracks.set([...tracks.values()]);
+        if (!this.tracked) return;
+        const current = this.tracked.steps[this.trackedIndex]?.set?.id;
+        const track = tracks.get(String(this.tracked.id));
+        if (!track) return;
+        this.tracked = track;
+        const index = track.steps.findIndex(step => step.set.id == current);
+        this.trackedIndex = index < 0 ? Math.min(this.trackedIndex, track.steps.length - 1) : index;
+    }
+
+    // Opens the player search: a large box over the bracket, or the whole screen on a phone. It closes
+    // with the player picked, or with another phase to search for the same text.
+    openSearch(text = '') {
+        if (this.searchRef || !this.entrants().length) return;
+        // The phone layout, as the header has it (AppComponent.largeWindowSize)
+        const phone = !window.matchMedia('(min-width: 769px)').matches;
+        this.searchTracks.set([...this.playerTracks().values()]);
+        const data: PlayerSearchData = {
+            tracks: this.searchTracks,
+            phaseName: this.phases[this.currentPhaseIndex]?.name || 'this phase',
+            otherPhases: this.phases.filter(phase => phase.id != this.phaseId).map(phase => ({ id: phase.id, name: phase.name })),
+            text,
+            phone,
+        };
+        const ref = this.dialog.open<PlayerSearchComponent, PlayerSearchData, PlayerSearchResult>(PlayerSearchComponent, {
+            data,
+            panelClass: phone ? ['player-search-panel', 'player-search-phone'] : 'player-search-panel',
+            backdropClass: 'player-search-backdrop',
+            width: phone ? '100vw' : '620px',
+            maxWidth: phone ? '100vw' : 'calc(100vw - 32px)',
+            height: phone ? '100%' : undefined,
+            position: { top: phone ? '0' : '96px' },
+            autoFocus: '.ps-input',
+            ariaLabel: 'Find a player',
+            enterAnimationDuration: '0ms',
+            exitAnimationDuration: '0ms',
+        });
+        this.searchRef = ref;
+        // Focus in the same turn as the tap, or iOS leaves the keyboard closed
+        try {
+            ref.componentRef?.changeDetectorRef.detectChanges();
+            document.querySelector<HTMLElement>('.player-search-panel .ps-input')?.focus();
+        } catch { }
+        ref.afterClosed().subscribe(result => {
+            if (this.searchRef === ref) this.searchRef = null;
+            if (!result) return;
+            if ('player' in result) {
+                this.trackPlayer(result.player.id);
+            } else {
+                this.playerSearch.searchNextPhaseFor(result.text);
+                this.goToPhase(result.phase);
+            }
+        });
+    }
+
+    // Tracks a player: their rows are highlighted and the rest of the bracket dims, the tracker shows
+    // under the bracket, and the bracket scrolls to the set they are in now (their next one, or their
+    // last once they are done)
+    trackPlayer(playerId) {
+        const track = this.playerTracks().get(String(playerId));
+        if (!track?.steps.length) return;
+        this.tracked = track;
+        this.playerHovered = track.id;
+        this.playerSearch.tracking.set(true);
+        const next = track.steps.findIndex(step => !step.set.winnerId);
+        this.showTrackedStep(next < 0 ? track.steps.length - 1 : next);
+    }
+
+    // The tracker's arrows: the set before or after the one it is on
+    stepTracked(direction: number) {
+        if (!this.tracked) return;
+        const index = this.trackedIndex + direction;
+        if (index < 0 || index >= this.tracked.steps.length) return;
+        this.showTrackedStep(index);
+    }
+
+    clearTracked() {
+        this.stopScrollWatch?.();
+        this.backgroundDown = null;
+        this.focusedSetId = null;
+        if (!this.tracked) return;
+        this.tracked = null;
+        this.playerHovered = -1;
+        this.playerSearch.tracking.set(false);
+    }
+
+    // Outlines one of the tracked player's sets and scrolls the bracket so it is in the middle of the
+    // screen (of what the phone's tracker leaves of it)
+    private showTrackedStep(index: number) {
+        const step = this.tracked?.steps[index];
+        if (!step) return;
+        this.trackedIndex = index;
+        this.focusedSetId = String(step.set.id);
+        this.stopScrollWatch?.();
 
         const container = document.querySelector<HTMLElement>('mat-sidenav-content');
-        container.addEventListener('scroll', () => {
-            this.canHover = false;
-        }, { once: true });
-        const allowHover = () => this.canHover = true;
-        container.addEventListener('scrollend', allowHover, { once: true });
-        setTimeout(allowHover, 1500); // Safari before 26 has no scrollend
-
-        // Scroll the bracket itself so the slot ends up in the middle of the screen
         const scroll = () => {
+            const pool = step.poolId != null ? document.getElementById('pool-' + step.poolId) : null;
+            const element = Array.from((pool ?? container).querySelectorAll<HTMLElement>('[data-set-id]'))
+                .find(candidate => candidate.getAttribute('data-set-id') == String(step.set.id));
+            if (!element) return;
             const box = container.getBoundingClientRect();
-            const slot = element.nativeElement.getBoundingClientRect();
+            const place = element.getBoundingClientRect();
+            // On a phone the tracker lies across the bottom of the bracket
+            const tracker = document.querySelector<HTMLElement>('.player-tracker')?.getBoundingClientRect();
+            const covered = tracker && tracker.width >= box.width - 1 ? Math.max(0, box.bottom - tracker.top) : 0;
             container.scrollTo({
-                left: container.scrollLeft + slot.left - box.left - (box.width - slot.width) / 2,
-                top: container.scrollTop + slot.top - box.top - (box.height - slot.height) / 2,
+                left: container.scrollLeft + place.left - box.left - (box.width - place.width) / 2,
+                top: container.scrollTop + place.top - box.top - (box.height - covered - place.height) / 2,
                 behavior: 'smooth'
             });
         };
 
-        // On a phone, close the keyboard. That resizes the page and can stop the scroll partway,
-        // so scroll again once the size settles. The blur waits a tick because the autocomplete
-        // focuses the search box again right after this event, and a focused box keeps the keyboard
-        // open and makes iOS scroll back up to it.
-        setTimeout(() => {
-            (document.activeElement as HTMLElement)?.blur();
-            scroll();
-        });
+        // Once the tracker is drawn. On a phone the keyboard closes after a pick, which resizes the
+        // page and can stop the scroll partway, so it scrolls again when the size settles.
+        const first = setTimeout(scroll);
         let timer;
         const again = () => { clearTimeout(timer); timer = setTimeout(scroll, 150); };
         window.addEventListener('resize', again);
         window.visualViewport?.addEventListener('resize', again);
-        setTimeout(() => {
+        const stop = () => {
+            clearTimeout(first);
+            clearTimeout(timer);
+            clearTimeout(end);
             window.removeEventListener('resize', again);
             window.visualViewport?.removeEventListener('resize', again);
-        }, 1500);
+            if (this.stopScrollWatch === stop) this.stopScrollWatch = null;
+        };
+        const end = setTimeout(stop, 1500);
+        this.stopScrollWatch = stop;
     }
 
-    entrantSearchDisplay(entrant) {
-        return entrant ? entrant.name : '';
+    // Whether a set is one of the tracked player's (a projected one too): the others dim
+    isOnPath(set) {
+        const id = this.tracked?.id;
+        return id != null && set.slots.some(slot => slot?.entrant?.id == id);
+    }
+
+    // "/" and Ctrl+K (⌘K on a Mac) open the search. With a player tracked, the left and right arrows
+    // step through their sets and Esc stops tracking.
+    @HostListener('window:keydown', ['$event'])
+    onKeydown(event: KeyboardEvent) {
+        if (event.defaultPrevented || event.isComposing) return;
+        const target = event.target as Element | null;
+        const typing = !!target?.closest?.('input, textarea, select, [contenteditable]');
+        const command = event.ctrlKey || event.metaKey;
+        const overlay = this.dialog.openDialogs.length > 0 || !!document.querySelector('.mat-mdc-menu-panel');
+
+        const commandK = command && !event.altKey && !event.shiftKey && (event.key ?? '').toLowerCase() === 'k';
+        const slash = event.key === '/' && !command && !event.altKey && !typing;
+        if (commandK || slash) {
+            if (!this.entrants().length) return;
+            // Ctrl+K is the browser's own search in some browsers
+            event.preventDefault();
+            if (!overlay) this.openSearch();
+            return;
+        }
+
+        if (!this.tracked || typing || overlay || command || event.altKey) return;
+        if (event.key === 'Escape') this.clearTracked();
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.preventDefault();
+            this.stepTracked(event.key === 'ArrowLeft' ? -1 : 1);
+        }
     }
 
     getEntrantImage(entrant) {
@@ -1282,22 +1441,35 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         return entrant.participants[0].user.images?.[0] ?? null;
     }
 
+    // A tracked player keeps the highlight: the mouse passing over other players doesn't move it
     onSlotEnter(slot) {
-        if (this.canHover) this.playerHovered = slot.entrant?.id ?? -1;
+        if (this.canHover && !this.tracked) this.playerHovered = slot.entrant?.id ?? -1;
     }
 
     onSlotLeave() {
-        if (this.canHover) this.playerHovered = -1;
+        if (this.canHover && !this.tracked) this.playerHovered = -1;
     }
 
-    // A phone has no mouse to leave a slot, so a highlighted player (from a tap, a search, or a link) stays
-    // highlighted. A tap on the bracket's background, away from the sets and controls, takes it off.
+    // A phone has no mouse to leave a slot, so a highlighted player (from a tap or a link) stays
+    // highlighted. A press on the bracket's background, away from the sets and controls, takes it off.
+    // A tracked player goes on a tap or click there, not on a press that drags or scrolls the bracket.
     @HostListener('pointerdown', ['$event'])
     onBackgroundPointerDown(event: PointerEvent) {
-        if (this.playerHovered === -1) return;
+        this.backgroundDown = null;
+        if (this.playerHovered === -1 && !this.tracked) return;
         const target = event.target as Element | null;
-        if (target?.closest?.('.set, .progression-tags, button, input, a, mat-form-field, mat-checkbox')) return;
-        this.playerHovered = -1;
+        if (target?.closest?.('.set, .progression-tags, .player-tracker, button, input, a, mat-checkbox')) return;
+        if (this.tracked) this.backgroundDown = { x: event.clientX, y: event.clientY };
+        else this.playerHovered = -1;
+    }
+
+    @HostListener('click', ['$event'])
+    onBackgroundClick(event: MouseEvent) {
+        const down = this.backgroundDown;
+        this.backgroundDown = null;
+        if (!down || !this.tracked) return;
+        if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 8) return;
+        this.clearTracked();
     }
 
     getSlotBackgroundColor(slot, set, needsRoundedCorners = false) {
@@ -1346,6 +1518,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.listeners.abort();
+        this.searchRef?.close();
+        this.clearTracked();
+        this.unregisterSearch?.();
         clearTimeout(this.highlightTimer);
         clearTimeout(this.hoverTimer);
         clearTimeout(this.crossPhaseTimer);

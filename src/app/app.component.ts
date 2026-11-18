@@ -15,6 +15,7 @@ import { LoadingService } from './services/loading.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from './services/auth.service';
 import { isBracketPath } from './app-routing.module';
+import { PlayerSearchService } from './services/player-search.service';
 
 @Component({
     selector: 'app-root',
@@ -49,7 +50,8 @@ export class AppComponent implements AfterViewInit {
         private loadingService: LoadingService,
         private cdr: ChangeDetectorRef,
         private router: Router,
-        public authService: AuthService
+        public authService: AuthService,
+        public playerSearch: PlayerSearchService
     ) {
         this.largeQuery.addEventListener('change', () => this.syncLayout());
         window.addEventListener('pageshow', () => this.syncLayout());

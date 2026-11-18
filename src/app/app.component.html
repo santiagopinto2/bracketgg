@@ -23,6 +23,13 @@
         }
         }
 
+        <!-- On a phone the bracket's player search opens from here, so it is in reach wherever the bracket has scrolled -->
+        @if (!isLarge && playerSearch.available()) {
+        <button mat-icon-button type="button" class="header-find" [class.header-find-on]="playerSearch.tracking()" aria-label="Find a player" title="Find a player" (click)="playerSearch.open()">
+            <mat-icon>search</mat-icon>
+        </button>
+        }
+
         <!-- The icon shows the theme a click switches to -->
         <button mat-icon-button type="button" class="theme-toggle" [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
             [title]="themeService.theme() === 'dark' ? 'Light mode' : 'Dark mode'" (click)="themeService.toggle()">

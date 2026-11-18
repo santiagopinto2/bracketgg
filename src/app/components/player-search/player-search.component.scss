@@ -1,0 +1,304 @@
+// The panel itself (corners, border, shadow, and the phone's full screen) is drawn by Material
+// outside this component: .player-search-panel in src/styles.scss.
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.ps {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    color: var(--surface-text);
+    font-size: 14px;
+    line-height: 1.35;
+    letter-spacing: normal;
+}
+
+// The box
+.ps-in {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 60px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--dialog-line);
+    color: var(--surface-text-muted);
+}
+
+.ps-icon {
+    flex: none;
+}
+
+.ps-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    color: var(--surface-text);
+    caret-color: var(--link);
+    font: inherit;
+    font-size: 20px;
+
+    &::placeholder {
+        color: var(--dialog-text-faint);
+        opacity: 1;
+    }
+}
+
+// The phase the search covers
+.ps-scope {
+    flex: none;
+    max-width: 40%;
+    padding: 4px 9px;
+    border-radius: 10px;
+    background: var(--chip-bg);
+    color: var(--surface-text);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ps-back {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--surface-text);
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 2px solid var(--highlight);
+    }
+}
+
+// The matches
+.ps-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(480px, calc(100vh - 260px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.ps-group {
+    padding: 12px 20px 4px;
+    color: var(--dialog-text-faint);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.ps-list {
+    padding: 0 8px 8px;
+}
+
+.ps-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 46px;
+    min-width: 0;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+
+    &.active {
+        background: var(--dialog-hover);
+        box-shadow: inset 0 0 0 1px var(--tag-border);
+    }
+}
+
+.ps-seed {
+    flex: none;
+    width: 26px;
+    color: var(--dialog-text-faint);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.ps-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ps-sponsor,
+.ps-bar {
+    color: var(--surface-text-muted);
+}
+
+// The part of the name that matches
+.ps-hit {
+    color: var(--search-match);
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+}
+
+.ps-status {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 50%;
+    color: var(--dialog-text-faint);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.ps-in-status,
+.ps-won {
+    color: var(--dialog-win-text);
+}
+
+.ps-in-status::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.ps-more {
+    padding: 4px 20px 14px;
+    color: var(--dialog-text-faint);
+    font-size: 12px;
+}
+
+// Nobody matches
+.ps-empty {
+    padding: 26px 22px 22px;
+    color: var(--surface-text-muted);
+    text-align: center;
+
+    mat-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 34px;
+        opacity: 0.55;
+    }
+
+    b {
+        display: block;
+        margin: 8px 0 4px;
+        color: var(--surface-text);
+        font-size: 15px;
+        font-weight: 500;
+        overflow-wrap: anywhere;
+    }
+
+    p {
+        margin: 0 0 14px;
+        font-size: 13px;
+    }
+}
+
+.ps-phases {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.ps-phase {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--tag-border);
+    border-radius: 16px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--tag-hover-bg);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--highlight);
+        outline-offset: 1px;
+    }
+}
+
+// The keys, along the bottom
+.ps-hints {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 9px 14px;
+    border-top: 1px solid var(--dialog-line);
+    color: var(--dialog-text-faint);
+    font-size: 12px;
+
+    span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+}
+
+kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border: 1px solid var(--tag-border);
+    border-radius: 5px;
+    background: var(--surface-hover);
+    color: var(--surface-text-muted);
+    font: 500 11px/1 Roboto, sans-serif;
+}
+
+// A phone: the whole screen, down to the keyboard
+.ps-phone {
+    .ps-in {
+        height: 56px;
+        gap: 8px;
+        padding: 0 14px 0 8px;
+    }
+
+    // 16px or more, so iOS doesn't zoom in on the box
+    .ps-input {
+        font-size: 17px;
+    }
+
+    .ps-body {
+        max-height: none;
+    }
+
+    .ps-row {
+        height: 48px;
+    }
+}
