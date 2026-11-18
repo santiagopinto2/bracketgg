@@ -115,7 +115,7 @@ const pageShown = page => page.evaluate(() => {
         chips: all('.hero-chips .chip', root).filter(visible).map(text),
         meta: all('.hero-meta li', root).map(text),
         stats: all('.stats', root).length,
-        startgg: href(root.querySelector('.hero-actions a')),
+        heroButtons: all('.hero-actions, .hero .tbtn', root).length,
         tabs: all('.tabs > *', root).map(el => text(el).replace(/\s*([\d,]+)$/, ' $1')),
         attendeesTab: href(root.querySelector('.tabs a')),
         results: all('.result', root).filter(visible).map(card => ({
@@ -174,10 +174,10 @@ export async function tournamentPageChecks({ browser, openPage, appUrl, check, r
             out.desktop = { requests: count(log), ...shown };
             check('tournament page: one request for the tournament and one for the top 8 of its two biggest events',
                 same(out.desktop.requests, { total: 2, tournament: 1, tournamentResults: 1 }) && /e0: event\(id: 601\)[\s\S]*e1: event\(id: 602\)/.test(log.find(r => r.kind === 'tournamentResults')?.query ?? ''), out.desktop.requests);
-            check('tournament page: the header has the name, a "Completed" chip, the dates, the city, the organizer, and no row of stat numbers',
+            check('tournament page: the header has the name, a "Completed" chip, the dates, the city, the organizer, and no stat numbers, Share, or start.gg buttons',
                 shown.name === 'Showcase Open' && same(shown.chips, ['Completed', 'In person', '#SO']) && same(shown.meta, ['February 16 to 18, 2024', 'San Jose, CA', 'Run by Dr. T'])
-                && shown.stats === 0 && shown.startgg === 'https://www.start.gg/tournament/tp-tourney',
-                { name: shown.name, chips: shown.chips, meta: shown.meta, stats: shown.stats, startgg: shown.startgg });
+                && shown.stats === 0 && shown.heroButtons === 0,
+                { name: shown.name, chips: shown.chips, meta: shown.meta, stats: shown.stats, heroButtons: shown.heroButtons });
             check('tournament page: Attendees is a tab with the count, a link to the Attendees page',
                 shown.attendeesTab === base + '/attendees'
                 && same(shown.tabs, ['Overview', 'Results', 'Events 10', 'Attendees 1,234', 'Streams 3', 'Schedule', 'Location']), { tab: shown.attendeesTab, tabs: shown.tabs });

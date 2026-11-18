@@ -273,12 +273,6 @@ app-tournament .tp-page {
         }
     }
 
-    .hero-actions {
-        display: flex;
-        gap: 8px;
-        padding-bottom: 4px;
-    }
-
     // The tabs stay at the top of the page while it scrolls
     .tabs {
         position: sticky;
@@ -1201,16 +1195,6 @@ app-tournament .tp-page {
             flex-direction: column;
             gap: 7px;
             margin-top: 12px;
-        }
-
-        .hero-actions {
-            grid-column: 1 / -1;
-            margin-top: 16px;
-            padding: 0;
-
-            .tbtn {
-                flex: 1;
-            }
         }
 
         .tabs {
