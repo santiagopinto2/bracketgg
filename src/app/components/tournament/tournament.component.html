@@ -7,6 +7,23 @@
     </span>
 </ng-template>
 
+<!-- A row's picture. A team has its first two players' on a diagonal, the second in front, in the room of one -->
+<ng-template #face let-row="row" let-size="size">
+    @if (row.players.length) {
+    <span class="avs" [class]="size">
+        @for (player of row.players; track $index) {
+        <span class="av" [attr.data-i]="player.initial" [attr.title]="player.tag || null">
+            @if (player.pic) {
+            <img [src]="player.pic" alt="" loading="lazy" (error)="hide($event)" />
+            }
+        </span>
+        }
+    </span>
+    } @else {
+    <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: row.pic, initials: row.initials, size: size }"></ng-container>
+    }
+</ng-template>
+
 <!-- A player's or team's name, the sponsor dimmed -->
 <ng-template #who let-row="row">
     @if (row.team) {
@@ -160,7 +177,7 @@
                                 @if (champion.pic) {
                                 <img class="champ-bg" [src]="champion.pic" alt="" (error)="hide($event)" />
                                 }
-                                <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: champion.pic, initials: champion.initials, size: 'xl' }"></ng-container>
+                                <ng-container [ngTemplateOutlet]="face" [ngTemplateOutletContext]="{ row: champion, size: 'xl' }"></ng-container>
                                 <div class="champ-text">
                                     <span class="label">
                                         <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H4.500c0 3 1.500 4.500 3.700 4.700M16 6h3.500c0 3-1.500 4.500-3.700 4.700M12 13v4M8.500 20h7M10 17h4" /></svg>
@@ -174,7 +191,7 @@
                                 @for (row of rows.slice(1); track $index) {
                                 <li>
                                     <span class="pl" [class.p2]="row.placement === 2" [class.p3]="row.placement === 3">{{ row.place }}</span>
-                                    <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: row.pic, initials: row.initials, size: 'sm' }"></ng-container>
+                                    <ng-container [ngTemplateOutlet]="face" [ngTemplateOutletContext]="{ row: row, size: 'sm' }"></ng-container>
                                     <span class="who"><ng-container [ngTemplateOutlet]="who" [ngTemplateOutletContext]="{ row: row }"></ng-container></span>
                                 </li>
                                 }
@@ -233,7 +250,7 @@
                                     @for (row of event.podium; track $index) {
                                     <li>
                                         <span class="place" [class]="'p' + row.placement">{{ row.place }}</span>
-                                        <ng-container [ngTemplateOutlet]="avatar" [ngTemplateOutletContext]="{ pic: row.pic, initials: row.initials, size: 'xs' }"></ng-container>
+                                        <ng-container [ngTemplateOutlet]="face" [ngTemplateOutletContext]="{ row: row, size: 'xs' }"></ng-container>
                                         <span class="nm"><ng-container [ngTemplateOutlet]="who" [ngTemplateOutletContext]="{ row: row }"></ng-container></span>
                                     </li>
                                     }
