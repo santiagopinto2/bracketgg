@@ -431,6 +431,11 @@ app-tournament .tp-page {
             font-size: 0.38em;
         }
 
+        // A picture with a transparent background (a character render) would show the initials through it
+        &:has(> img:not(.failed))::before {
+            content: none;
+        }
+
         img {
             position: absolute;
             inset: 0;
