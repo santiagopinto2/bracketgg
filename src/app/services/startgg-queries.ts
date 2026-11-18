@@ -3,6 +3,11 @@
 // The site's server (server/gql-allowlist.js) loads this file too and runs only these exact texts, so
 // a visitor's request can't make it ask start.gg for anything else. Keep this file free of imports and
 // of TypeScript that Node's type stripping can't read (enums, namespaces, parameter properties).
+//
+// Some queries ask for a `state` (of a set, phase, or event) or a tournament's `endAt` that the app
+// doesn't read: the server's cache keeps an answer for 6 hours when these say it's finished
+// (server/gql-cache.js, `finished`). Scalars cost nothing, so they don't change a query's object count.
+// Every query has its own operation name, which the cache's stats count by.
 
 // Sets asked for per entrant in the landing page's top 8, to find who they lost to
 export const SETS_PER_STANDING = 50;
@@ -48,7 +53,7 @@ function tournamentText(full: boolean): string {
                                 }
                             }
                         }`;
-    return `query Tournament($slug: String!) {
+    return `query ${full ? 'Tournament' : 'TournamentLite'}($slug: String!) {
                 tournament(slug: $slug) {
                     images {
                         url
@@ -123,7 +128,7 @@ export const tournamentLiteQuery = tournamentText(false);
 export function tournamentResultsQuery(count: number): string {
     const ids = Array.from({ length: count }, (_, k) => k);
     return `query TournamentResults(${ids.map(k => `$id${k}: ID!`).join(', ')}) {
-                ${ids.map(k => `e${k}: event(id: $id${k}) { id standings(query: { page: 1, perPage: 8 }) { nodes { placement isFinal entrant { id name participants { id gamerTag user { images(type: "profile") { url width height } } } } } } }`).join('\n                ')}
+                ${ids.map(k => `e${k}: event(id: $id${k}) { id state standings(query: { page: 1, perPage: 8 }) { nodes { placement isFinal entrant { id name participants { id gamerTag user { images(type: "profile") { url width height } } } } } } }`).join('\n                ')}
             }`;
 }
 
@@ -135,6 +140,7 @@ export const eventPhasesQuery = `query EventPhases($slug: String!) {
                     id
                     name
                     type
+                    state
                     phases {
                         id
                         name
@@ -155,6 +161,7 @@ export const eventPhasesQuery = `query EventPhases($slug: String!) {
 // (Genesis X R2 Pools: 240 seeds cost 961, the other 144 cost 577; measured 2026-11-13).
 export const phaseProgressionsQuery = `query PhaseProgressions($phaseId: ID!, $page: Int!, $perPage: Int!) {
                 phase(id: $phaseId) {
+                    state
                     seeds(query: {
                         page: $page
                         perPage: $perPage
@@ -184,6 +191,7 @@ export const phaseProgressionsQuery = `query PhaseProgressions($phaseId: ID!, $p
 // 2026-11-13); pictures don't count.
 export const phaseEntrantsQuery = `query PhaseEntrants($phaseId: ID!, $page: Int!, $perPage: Int!) {
                 phase(id: $phaseId) {
+                    state
                     seeds(query: {
                         page: $page
                         perPage: $perPage
@@ -246,6 +254,7 @@ const attendeeFields = `id
 export function attendeesQuery(ofEvent: boolean): string {
     return `query Attendees($slug: String!, $page: Int!, $perPage: Int!, $search: String${ofEvent ? ', $eventId: ID!' : ''}) {
                 tournament(slug: $slug) {
+                    endAt
                     participants(query: {
                         page: $page
                         perPage: $perPage
@@ -278,6 +287,7 @@ export function attendeesQuery(ofEvent: boolean): string {
 // per four-player team (measured 2026-11-14).
 export const seededAttendeesQuery = `query SeededAttendees($phaseId: ID!, $page: Int!, $perPage: Int!, $search: String) {
                 phase(id: $phaseId) {
+                    state
                     seeds(query: {
                         page: $page
                         perPage: $perPage
@@ -320,6 +330,7 @@ export const attendeeDetailsQuery = `query AttendeeDetails($id: ID!) {
                         initialSeedNum
                         event {
                             id
+                            state
                         }
                         standing {
                             placement
@@ -435,6 +446,7 @@ export const phaseQuery = `query Phase($phaseId: ID!) {
                 phase(id: $phaseId) {
                     id
                     bracketType
+                    state
                     phaseGroups(query : {
                         page: 1
                         perPage: 100
@@ -565,7 +577,7 @@ export function poolSlicesQuery(count: number): string {
 export function setScoresQuery(count: number): string {
     const ids = Array.from({ length: count }, (_, k) => k);
     return `query SetScores(${ids.map(k => `$id${k}: ID!`).join(', ')}) {
-                ${ids.map(k => `s${k}: set(id: $id${k}) { slots { standing { stats { score { value } } } } }`).join('\n')}
+                ${ids.map(k => `s${k}: set(id: $id${k}) { state slots { standing { stats { score { value } } } } }`).join('\n')}
             }`;
 }
 
@@ -573,6 +585,7 @@ export function setScoresQuery(count: number): string {
 // accounts. About 16 objects for a singles set (measured 2026-11-14).
 export const setDetailsQuery = `query SetDetails($id: ID!) {
                 set(id: $id) {
+                    state
                     stream {
                         streamName
                         streamSource

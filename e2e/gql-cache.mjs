@@ -4,7 +4,10 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const express = require('express');
-const { createGqlCache, ttlMs } = require('../server/gql-cache.js');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { createGqlCache, ttlMs, ttlFor, queryName, LONG_TTL_MS } = require('../server/gql-cache.js');
 const { loadAllowlist } = require('../server/gql-allowlist.js');
 const { createSiteGate, SiteBusyError } = require('../server/site-gate.js');
 const Q = await import('../src/app/services/startgg-queries.ts');
@@ -20,6 +23,65 @@ const sliceTtls = Array.from({ length: Q.MAX_POOL_SLICES }, (_, i) => ttlMs(Q.po
 check("a set's stream and accounts stay fresh for 5 minutes, its scores for 15 s", ttlMs(Q.setDetailsQuery) === 5 * 60_000 && ttlMs(Q.setScoresQuery(3)) === 15_000, [ttlMs(Q.setDetailsQuery), ttlMs(Q.setScoresQuery(3))]);
 check('pool slices get the 15 s set results TTL', sliceTtls.every(ttl => ttl === 15_000) && ttlMs(Q.poolSetsQuery) === 15_000, [...new Set(sliceTtls)]);
 check('the seeds a phase takes from an earlier one stay fresh for a minute, a phase\'s players for five', ttlMs(Q.phaseProgressionsQuery) === 60_000 && ttlMs(Q.phaseEntrantsQuery) === 5 * 60_000, [ttlMs(Q.phaseProgressionsQuery), ttlMs(Q.phaseEntrantsQuery)]);
+
+// Every query has its own operation name, which the stats count by
+{
+    const names = Q.allQueries().map(queryName);
+    const distinct = new Set(['Tournament', 'TournamentLite', 'TournamentResults', 'EventPhases', 'PhaseEntrants', 'PhaseProgressions', 'PoolSeeds', 'Attendees', 'SeededAttendees', 'AttendeeDetails', 'EventOverview', 'Phase', 'PoolSets', 'PoolSlices', 'SetScores', 'SetDetails']);
+    check('every query has an operation name', names.every(n => distinct.has(n)) && new Set(names).size === distinct.size && queryName(Q.tournamentLiteQuery) === 'TournamentLite', [...new Set(names)]);
+}
+
+// The TTL from the answer: 6 hours only when it says everything in it is finished
+{
+    const T = 1_800_000_000_000; // a fixed "now" for these checks
+    const ttl = (query, data) => ttlFor(query, { data }, T);
+    const pool = nodes => ({ phaseGroup: { sets: { nodes } } });
+    const done = (id, extra = {}) => ({ id, state: 3, winnerId: 1, displayScore: '3 - 1', ...extra });
+    const sec = ms => Math.floor(ms / 1000);
+    const cases = {
+        // Sets
+        poolAllCompleted: [ttl(Q.poolSetsQuery, pool([done(1), done(2)])), LONG_TTL_MS],
+        poolWithDQ: [ttl(Q.poolSetsQuery, pool([done(1), { id: 2, state: 2, winnerId: 5, displayScore: 'DQ' }])), LONG_TTL_MS],
+        poolMixed: [ttl(Q.poolSetsQuery, pool([done(1), { id: 2, state: 2, winnerId: null }])), 15_000],
+        poolNullState: [ttl(Q.poolSetsQuery, pool([done(1), { id: 2, state: null }])), 15_000],
+        poolPreview: [ttl(Q.poolSetsQuery, pool([done('preview_9_1_1')])), 15_000],
+        poolEmpty: [ttl(Q.poolSetsQuery, pool([])), 15_000],
+        poolNull: [ttl(Q.poolSetsQuery, { phaseGroup: null }), 15_000],
+        slicesAllCompleted: [ttl(Q.poolSlicesQuery(2), { s0: pool([done(1)]).phaseGroup, s1: pool([done(2)]).phaseGroup }), LONG_TTL_MS],
+        slicesOneEmpty: [ttl(Q.poolSlicesQuery(2), { s0: pool([done(1)]).phaseGroup, s1: pool([]).phaseGroup }), 15_000],
+        slicesOneLive: [ttl(Q.poolSlicesQuery(2), { s0: pool([done(1)]).phaseGroup, s1: pool([{ id: 3, state: 6 }]).phaseGroup }), 15_000],
+        scoresCompleted: [ttl(Q.setScoresQuery(2), { s0: { state: 3, slots: [] }, s1: { state: 3, slots: [] } }), LONG_TTL_MS],
+        scoresOneLive: [ttl(Q.setScoresQuery(2), { s0: { state: 3, slots: [] }, s1: { state: 2, slots: [] } }), 15_000],
+        detailsCompleted: [ttl(Q.setDetailsQuery, { set: { state: 3, stream: null, slots: [] } }), LONG_TTL_MS],
+        detailsLive: [ttl(Q.setDetailsQuery, { set: { state: 2, stream: null, slots: [] } }), 5 * 60_000],
+        // Events and phases
+        eventCompleted: [ttl(Q.eventPhasesQuery, { event: { id: 1, state: 'COMPLETED', phases: [] } }), LONG_TTL_MS],
+        eventActive: [ttl(Q.eventPhasesQuery, { event: { id: 1, state: 'ACTIVE', phases: [] } }), 5 * 60_000],
+        overviewCompleted: [ttl(Q.eventOverviewQuery({ lostTo: true }), { event: { id: 1, state: 'COMPLETED' } }), LONG_TTL_MS],
+        resultsBoth: [ttl(Q.tournamentResultsQuery(2), { e0: { id: 1, state: 'COMPLETED' }, e1: { id: 2, state: 'COMPLETED' } }), LONG_TTL_MS],
+        resultsOneActive: [ttl(Q.tournamentResultsQuery(2), { e0: { id: 1, state: 'COMPLETED' }, e1: { id: 2, state: 'ACTIVE' } }), 5 * 60_000],
+        phaseCompleted: [ttl(Q.phaseEntrantsQuery, { phase: { state: 'COMPLETED', seeds: { nodes: [] } } }), LONG_TTL_MS],
+        progressionsActive: [ttl(Q.phaseProgressionsQuery, { phase: { state: 'ACTIVE', seeds: { nodes: [] } } }), 60_000],
+        phaseGroupsCompleted: [ttl(Q.phaseQuery, { phase: { id: 1, state: 'COMPLETED', phaseGroups: { nodes: [] } } }), LONG_TTL_MS],
+        // Tournaments
+        tournamentAllCompleted: [ttl(Q.tournamentQuery, { tournament: { endAt: sec(T) - 3600, events: [{ state: 'COMPLETED' }] } }), LONG_TTL_MS],
+        tournamentDaysAgoOneCreated: [ttl(Q.tournamentLiteQuery, { tournament: { endAt: sec(T) - 3 * 86400, events: [{ state: 'COMPLETED' }, { state: 'CREATED' }] } }), LONG_TTL_MS],
+        tournamentDaysAgoOneActive: [ttl(Q.tournamentQuery, { tournament: { endAt: sec(T) - 3 * 86400, events: [{ state: 'COMPLETED' }, { state: 'ACTIVE' }] } }), 5 * 60_000],
+        tournamentHoursAgo: [ttl(Q.tournamentQuery, { tournament: { endAt: sec(T) - 3600, events: [{ state: 'COMPLETED' }, { state: 'CREATED' }] } }), 5 * 60_000],
+        tournamentNotEnded: [ttl(Q.tournamentQuery, { tournament: { endAt: sec(T) + 3600, events: [{ state: 'COMPLETED' }] } }), 5 * 60_000],
+        tournamentNoEndAt: [ttl(Q.tournamentQuery, { tournament: { endAt: null, events: [{ state: 'COMPLETED' }] } }), 5 * 60_000],
+        attendeesDaysAgo: [ttl(Q.attendeesQuery(false), { tournament: { endAt: sec(T) - 2 * 86400, participants: { nodes: [] } } }), LONG_TTL_MS],
+        attendeesUpcoming: [ttl(Q.attendeesQuery(true), { tournament: { endAt: sec(T) + 86400, participants: { nodes: [] } } }), 5 * 60_000],
+        attendeeAllCompleted: [ttl(Q.attendeeDetailsQuery, { participant: { entrants: [{ event: { id: 1, state: 'COMPLETED' } }] } }), LONG_TTL_MS],
+        attendeeOneActive: [ttl(Q.attendeeDetailsQuery, { participant: { entrants: [{ event: { id: 1, state: 'COMPLETED' } }, { event: { id: 2, state: 'ACTIVE' } }] } }), 5 * 60_000],
+        // Queries without a rule, and odd answers, keep their own time
+        poolSeeds: [ttl(Q.poolSeedsQuery, { phaseGroup: { state: 3, seeds: { nodes: [] } } }), 60_000],
+        notAnObject: [ttlFor(Q.poolSetsQuery, { data: 'x' }, T), 15_000],
+        noData: [ttlFor(Q.eventPhasesQuery, {}, T), 5 * 60_000],
+    };
+    const wrong = Object.fromEntries(Object.entries(cases).filter(([, [got, want]]) => got !== want));
+    check('answers about finished sets, events, phases, and tournaments are kept 6 hours, anything else its usual time', Object.keys(wrong).length === 0, wrong);
+}
 
 // A fake start.gg: answers per query, counts calls and the tokens they came with, can be slow
 let upstreamCalls = 0;
@@ -159,6 +221,113 @@ try {
 } finally {
     server.close();
     cache.stop();
+}
+
+// A cache of its own, served on its own port, for the checks below
+async function serve(options) {
+    const c = createGqlCache({ allowed, tokenFor, fetchImpl: fakeFetch, now: () => clock, ...options });
+    const a = express();
+    a.use(express.json());
+    a.post('/api/gql', c.handle);
+    const s = await new Promise(r => { const x = a.listen(0, () => r(x)); });
+    const url = `http://localhost:${s.address().port}/api/gql`;
+    const ask = async (query, variables) => {
+        const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-as': 'user:viewer-a' }, body: JSON.stringify({ query, variables }) });
+        return { status: res.status, cache: res.headers.get('x-cache'), body: await res.json() };
+    };
+    return { cache: c, ask, close: () => { s.close(); c.stop(); } };
+}
+
+// 12a. Finished answers stay; live ones go after their usual time. Stats count per query.
+{
+    const done = id => ({ id, state: 3, winnerId: 1, displayScore: '2 - 0' });
+    const replies = {
+        1: { phaseGroup: { sets: { nodes: [done(1), done(2)] } } },
+        2: { phaseGroup: { sets: { nodes: [done(3), { id: 4, state: 2, winnerId: null, displayScore: null }] } } },
+    };
+    reply = (q, v) => queryName(q) === 'PoolSets' ? { status: 200, body: { data: replies[v.id] ?? { phaseGroup: null } } }
+        : queryName(q) === 'EventPhases' ? { status: 200, body: { data: { event: { id: 9, state: v.slug === 'done' ? 'COMPLETED' : 'ACTIVE', phases: [] } } } }
+        : { status: 200, body: { data: { ok: true } } };
+    upstreamCalls = 0;
+    const { cache: c, ask, close } = await serve({});
+    try {
+        await ask(...sets(1));
+        await ask(...sets(2));
+        await ask(Q.eventPhasesQuery, { slug: 'done' });
+        await ask(Q.eventPhasesQuery, { slug: 'live' });
+        const shared = await Promise.all([ask(...sets(3)), ask(...sets(3))]); // a pool with no answer (null): short, and shared
+        clock += 16_000;
+        const mixedLater = await ask(...sets(2));
+        clock += 60_000 - 16_000;
+        const doneMinute = await ask(...sets(1));
+        clock += 9 * 60_000;
+        const eventDone = await ask(Q.eventPhasesQuery, { slug: 'done' });
+        const eventLive = await ask(Q.eventPhasesQuery, { slug: 'live' });
+        clock += LONG_TTL_MS - 10 * 60_000 - 1000;
+        const doneAlmost6h = await ask(...sets(1));
+        clock += 2000;
+        const done6h = await ask(...sets(1));
+        check('an all-completed set answer is still a HIT after 1 minute and is asked again after 6 hours', doneMinute.cache === 'HIT' && doneAlmost6h.cache === 'HIT' && done6h.cache === 'MISS', { doneMinute: doneMinute.cache, doneAlmost6h: doneAlmost6h.cache, done6h: done6h.cache });
+        check('a set answer with a set still being played is asked again after 15 s', mixedLater.cache === 'MISS', mixedLater.cache);
+        check("a completed event's answer is kept past 5 minutes, a live one isn't", eventDone.cache === 'HIT' && eventLive.cache === 'MISS', { done: eventDone.cache, live: eventLive.cache });
+
+        const got = c.report();
+        const pools = got.byQuery.PoolSets;
+        const events = got.byQuery.EventPhases;
+        check('the stats count hits, misses, shared requests, start.gg calls, and long-kept answers per query, and the uptime',
+            pools?.hits === 2 && pools.misses === 5 && pools.shared === 1 && pools.upstream === 5 && pools.long === 2
+            && events?.hits === 1 && events.misses === 3 && events.upstream === 3 && events.long === 1
+            && got.hits === 3 && got.misses === 8 && got.long === 3 && got.upstream === upstreamCalls && got.uptimeS > 6 * 3600 && got.entries >= 1
+            && shared.every(r => r.status === 200),
+            { pools, events, totals: { hits: got.hits, misses: got.misses, long: got.long, upstream: got.upstream, uptimeS: got.uptimeS }, upstreamCalls });
+    } finally {
+        close();
+    }
+}
+
+// 12b. The cache survives a restart: saved on stop, loaded by a new cache without the expired answers.
+// A corrupt file means starting empty.
+{
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gql-cache-'));
+    const file = path.join(dir, 'gql-cache.json');
+    reply = (q, v) => queryName(q) === 'PoolSets' ? { status: 200, body: { data: { phaseGroup: { sets: { nodes: [{ id: v.id, state: v.id === 1 ? 3 : 2 }] } } } } }
+        : { status: 200, body: { data: { ok: true } } };
+    try {
+        const first = await serve({ file });
+        await first.ask(...sets(1));            // finished: 6 hours
+        await first.ask(...sets(2));            // live: 15 s
+        await first.ask(...players('saved'));   // 5 minutes
+        first.close();                          // stop saves the file
+        const savedOk = fs.existsSync(file) && JSON.parse(fs.readFileSync(file, 'utf8')).entries.length === 3;
+
+        clock += 60_000;
+        upstreamCalls = 0;
+        const second = await serve({ file });
+        const loaded = second.cache.report().persist.loaded;
+        const finishedHit = await second.ask(...sets(1));
+        const playersHit = await second.ask(...players('saved'));
+        const liveMiss = await second.ask(...sets(2));
+        second.close();
+        check('a new cache loads the saved answers: still-fresh ones are HITs, expired ones dropped',
+            savedOk && loaded === 2 && finishedHit.cache === 'HIT' && playersHit.cache === 'HIT' && liveMiss.cache === 'MISS' && upstreamCalls === 1,
+            { savedOk, loaded, finished: finishedHit.cache, players: playersHit.cache, live: liveMiss.cache, upstreamCalls });
+
+        fs.writeFileSync(file, '{"version":1,"entries":[["abc", 1, 2, "x", "y"],');
+        const third = await serve({ file });
+        const afterCorrupt = await third.ask(...sets(1));
+        const thirdSize = third.cache.size().entries;
+        third.close();
+        const noFile = await serve({ file: path.join(dir, 'missing', 'gql-cache.json') });
+        const fromNothing = await noFile.ask(...sets(1));
+        noFile.close();
+        const createdDir = fs.existsSync(path.join(dir, 'missing', 'gql-cache.json'));
+        check('a corrupt or missing file starts an empty cache that works, and saving makes the folder',
+            afterCorrupt.status === 200 && afterCorrupt.cache === 'MISS' && thirdSize === 1 && fromNothing.status === 200 && createdDir,
+            { corrupt: afterCorrupt, thirdSize, missing: fromNothing.status, createdDir });
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+        reply = () => ({ status: 200, body: { data: { ok: true } } });
+    }
 }
 
 // 12. The gate on its own, with a fake clock: 3 a second, waiting at most 1.5 s
