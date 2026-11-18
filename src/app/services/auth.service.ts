@@ -19,11 +19,6 @@ export class AuthService {
   // Other tabs of the site hear about a login or logout at once
   private channel: BroadcastChannel | null = typeof BroadcastChannel === 'function' ? new BroadcastChannel('bracketgg-auth') : null;
 
-  // Counts session checks and changes of state. A session check's answer is used only if nothing
-  // newer happened while it was on its way: on /callback the check sent when the app starts can
-  // answer "logged out" after the login has finished, and must not undo it.
-  private generation = 0;
-
   constructor(private http: HttpClient) {
     this.channel?.addEventListener('message', event => {
       if (event.data === 'login' || event.data === 'logout') this.checkSession();
@@ -34,10 +29,8 @@ export class AuthService {
   // Asks the server whether this browser's session is logged in. The server refreshes an expired
   // start.gg token first, so this stays true after a week away as long as start.gg accepts the refresh.
   async checkSession(): Promise<boolean> {
-    const mine = ++this.generation;
     try {
       const res = await firstValueFrom(this.http.get<{ loggedIn: boolean, theme?: string }>('/api/auth/session'));
-      if (mine !== this.generation) return this.isAuthenticated();
       this.savedTheme.set(res?.loggedIn ? res.theme ?? null : null);
       this.isAuthenticated.set(!!res?.loggedIn);
     } catch {
@@ -82,7 +75,6 @@ export class AuthService {
       console.error('Token exchange failed:', error);
       throw new Error('start.gg did not accept the login. Try logging in again.');
     }
-    this.generation++;
     this.isAuthenticated.set(true);
     this.channel?.postMessage('login');
     // Only a path on this site, never another site
@@ -92,7 +84,6 @@ export class AuthService {
   // The server ended the session (start.gg refused the refresh token): show the visitor as logged out
   sessionEnded(): void {
     if (!this.isAuthenticated()) return;
-    this.generation++;
     this.isAuthenticated.set(false);
     this.channel?.postMessage('logout');
   }
@@ -104,7 +95,6 @@ export class AuthService {
     } catch (error) {
       console.error('Logout failed:', error);
     }
-    this.generation++;
     this.isAuthenticated.set(false);
     this.channel?.postMessage('logout');
   }
