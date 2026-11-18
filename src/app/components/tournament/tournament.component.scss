@@ -574,6 +574,7 @@ app-tournament .tp-page {
             --f: 23px;
 
             .av {
+                box-sizing: border-box;
                 border: 2px solid var(--tp-gold);
             }
         }
