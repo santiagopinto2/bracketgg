@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { LoadingService } from './loading.service';
@@ -28,6 +28,11 @@ export class TooComplexError extends StartggError {
 
 // A background request that was not sent, or whose answer ended the background loading (phase-prefetch.ts)
 export class BackgroundStopped extends StartggError { }
+
+// A request a limited load (StartggService.limited) wasn't allowed to send: its budget was spent
+export class RequestLimitReached extends StartggError { }
+
+const SITE_BUSY_MESSAGE = 'BracketGG is busy. Try again in a few seconds, or log in with start.gg to skip the wait.';
 
 // How background requests (phase-prefetch.ts) are let through. `admit` resolves when one may go and
 // throws BackgroundStopped when it may not; `stop` ends the background loading, after a busy or failed answer.
@@ -95,6 +100,8 @@ export class StartggService {
     private loadedPhases = new Map<string, { at: number, phase: any }>();
     private loadedPools = new Map<string, { at: number, phaseId: string, sets: any[] }>();
     private loadedProgressions = new Map<string, { at: number, finished: boolean, seeds: any[] }>();
+    // Counts up each time a phase, pool or phase's seeds is loaded, for what works from everything loaded (Show Projected across phases)
+    readonly loadedChanged = signal(0);
 
     constructor(
         private http: HttpClient,
@@ -104,11 +111,11 @@ export class StartggService {
     // Sends a query (one of startgg-queries.ts's texts) and returns its `data`. Identical requests already
     // on their way share one request, except that the visitor's own never wait on a background one. The
     // server adds the start.gg token: the visitor's own if they logged in, otherwise the site's.
-    private query(query: string, variables: Record<string, any>, lane: BackgroundLane | null = null): Promise<any> {
+    private query(query: string, variables: Record<string, any>, lane: BackgroundLane | null = null, stopWhenBusy = false): Promise<any> {
         const key = query + JSON.stringify(variables);
         const shared = this.inFlight.get(key);
         if (shared && (lane || !shared.background)) return shared.promise;
-        const promise: Promise<any> = this.send(query, variables, lane).finally(() => {
+        const promise: Promise<any> = this.send(query, variables, lane, stopWhenBusy).finally(() => {
             if (this.inFlight.get(key)?.promise === promise) this.inFlight.delete(key);
         });
         this.inFlight.set(key, { promise, background: !!lane });
@@ -123,7 +130,19 @@ export class StartggService {
         return view;
     }
 
-    private async send(query: string, variables: Record<string, any>, lane: BackgroundLane | null = null): Promise<any> {
+    // This service for a load the visitor started that may send at most `budget.left` requests, counted
+    // down as they go (RequestLimitReached past that), and stops at a busy answer instead of waiting it out
+    limited(budget: { left: number }): StartggService {
+        const view = Object.create(this) as StartggService;
+        view.query = (query: string, variables: Record<string, any>) => {
+            if (budget.left <= 0) return Promise.reject(new RequestLimitReached('request limit reached'));
+            budget.left--;
+            return this.query(query, variables, null, true);
+        };
+        return view;
+    }
+
+    private async send(query: string, variables: Record<string, any>, lane: BackgroundLane | null = null, stopWhenBusy = false): Promise<any> {
         for (let attempt = 0; ; attempt++) {
             let res: any;
             if (lane) await lane.admit();
@@ -137,6 +156,7 @@ export class StartggService {
                     throw new BackgroundStopped(reason);
                 }
                 if (this.isSiteBusy(error.status, error.error)) {
+                    if (stopWhenBusy) throw new StartggError(SITE_BUSY_MESSAGE);
                     this.waitOutSiteBusy(attempt, error.headers?.get('Retry-After'));
                     continue;
                 }
@@ -169,7 +189,7 @@ export class StartggService {
     }
 
     private waitOutSiteBusy(attempt: number, retryAfter: string | null) {
-        if (attempt >= this.maxRateLimitRetries) throw new StartggError('BracketGG is busy. Try again in a few seconds, or log in with start.gg to skip the wait.');
+        if (attempt >= this.maxRateLimitRetries) throw new StartggError(SITE_BUSY_MESSAGE);
         const delayMs = Math.min(30, Math.max(1, Number(retryAfter) || 5)) * 1000 + Math.random() * 1000;
         this.gate.pause(delayMs);
         this.loadingService.notice(`BracketGG is busy, retrying in ${Math.ceil(delayMs / 1000)} s. Log in with start.gg to skip the wait.`);
@@ -425,6 +445,7 @@ export class StartggService {
         map.delete(key);
         map.set(key, value);
         while (map.size > max) map.delete(map.keys().next().value as string);
+        this.loadedChanged.update(n => n + 1);
     }
 
     // The phase a pool belongs to, from the phases loaded so far
@@ -440,27 +461,39 @@ export class StartggService {
         this.remember(this.loadedPools, String(poolId), { at: Date.now(), phaseId, sets: structuredClone(sets) }, MAX_LOADED_POOLS);
     }
 
-    // A fresh copy of a pool's sets loaded before, or null
-    private loadedPool(poolId): any[] | null {
+    // A fresh copy of a pool's sets loaded before, or null. `stale` takes one of any age.
+    private loadedPool(poolId, stale = false): any[] | null {
         const hit = this.loadedPools.get(String(poolId));
-        return hit && this.isFresh(hit.at, hit.phaseId) ? structuredClone(hit.sets) : null;
+        return hit && (stale || this.isFresh(hit.at, hit.phaseId)) ? structuredClone(hit.sets) : null;
     }
 
     // Every phase loaded so far and still fresh, by phase id: start.gg's phase (as getPhase gives it) and
     // its pools' sets by pool id, for the pools loaded. For what needs more than the shown phase (Show
-    // Projected across phases). The copies are the caller's to change.
-    getLoadedPhases(): Map<string, { phase: any, pools: Map<string, any[]> }> {
+    // Projected across phases), which takes them at any age (`stale`). The copies are the caller's to change.
+    getLoadedPhases(stale = false): Map<string, { phase: any, pools: Map<string, any[]> }> {
         const phases = new Map<string, { phase: any, pools: Map<string, any[]> }>();
         for (const [phaseId, { at, phase }] of this.loadedPhases) {
-            if (!this.isFresh(at, phaseId)) continue;
+            if (!stale && !this.isFresh(at, phaseId)) continue;
             const pools = new Map<string, any[]>();
             for (const group of phase?.phaseGroups?.nodes ?? []) {
-                const sets = this.loadedPool(group?.id);
+                const sets = this.loadedPool(group?.id, stale);
                 if (sets) pools.set(String(group.id), sets);
             }
             phases.set(phaseId, { phase: structuredClone(phase), pools });
         }
         return phases;
+    }
+
+    // A phase's seeds with where each comes from (getPhaseProgressions), the latest loaded at any age, or null
+    getLoadedProgressions(phaseId): any[] | null {
+        const hits = [...this.loadedProgressions.entries()].filter(([key]) => key.startsWith(`${phaseId}:`));
+        return hits.length ? structuredClone(hits[hits.length - 1][1].seeds) : null;
+    }
+
+    // A phase's players (getPhaseEntrants) if they were loaded in the last few minutes, without asking for them
+    peekPhaseEntrants(phaseId): any[] | null {
+        const hits = [...this.cache.entries()].filter(([key, hit]) => key.startsWith(`players:${phaseId}:`) && Date.now() - hit.at < this.cacheMs);
+        return hits.length ? structuredClone(hits[hits.length - 1][1].value) : null;
     }
 
     // A pool's sets, reused while fresh (see loadedPhases)
@@ -613,7 +646,7 @@ export class StartggService {
             // A failure here only costs those sets their numbers; the winner still shows
             const data = await this.query(setScoresQuery(chunk.length), variables).catch(error => {
                 // A stopped background load stops here too, so sets without their scores are never kept
-                if (error instanceof BackgroundStopped) throw error;
+                if (error instanceof BackgroundStopped || error instanceof RequestLimitReached) throw error;
                 console.warn('Could not load scores', error);
                 return null;
             });

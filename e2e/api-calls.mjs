@@ -125,6 +125,59 @@ const setsOf = { 2001: poolSets(100), 2002: poolSets(200), 2003: unstartedVarian
     2011: byePools[0].sets, 2012: byePools[1].sets, 2013: byePools[2].sets,
     2014: cutPoolSets(1400), 2015: poolSets(1500), 2022: notStarted(cutPoolSets(2200)), 2023: hiddenLosers.sets, 2024: hiddenLosers.byes.sets, 2025: [] };
 
+// Show Projected across phases. "Feeder Pools" (phase 1016, two 4-player pools that stop before their
+// grand finals) sends each pool's winners final winner (placement 1) and losers final winner (placement 2)
+// on to "Projected Top 4" (1017), where start.gg has placed only Echo so far. Both are opened by their
+// URL only, and only the checks that use them add them to the event's phases (withCrossPhase).
+const feederPlayers = { 1: ['Alpha', 1], 2: ['Bravo', 2], 3: ['Charlie', 3], 4: ['Delta', 4], 5: ['Echo', 5], 6: ['Foxtrot', 6], 7: ['Golf', 7], 8: ['Hotel', 8] };
+const feederSlot = (who, score) => who ? { entrant: { id: who, name: feederPlayers[who][0], initialSeedNum: feederPlayers[who][1] }, standing: score == null ? null : { stats: { score: { value: score } } } } : { entrant: null, standing: null };
+// Seeds a and d meet in one winners semi-final, b and c in the other. `won` names each played set's winner
+// (ws1, ws2, wf, lr1, lf); the players of a later set follow from the sets before it.
+function feederPool(idBase, [a, b, c, d], won = {}) {
+    const ids = { ws1: 1, ws2: 2, wf: 3, lr1: 4, lf: 5 };
+    const sets = {};
+    const result = (key, placement) => {
+        const set = sets[key];
+        if (!set.winnerId) return null;
+        return placement == 1 ? set.winnerId : set.slots.map(slot => slot.entrant.id).find(id => id !== set.winnerId);
+    };
+    const make = (key, round, fullRoundText, feeds) => {
+        const winnerId = won[key] ?? null;
+        sets[key] = { id: idBase + ids[key], round, fullRoundText, winnerId, slots: feeds.map(([from, placement]) => {
+            const who = typeof from === 'number' ? from : result(from, placement);
+            const link = typeof from === 'number' ? { prereqType: 'seed', prereqId: String(idBase + 10 + from), prereqPlacement: null }
+                : { prereqType: 'set', prereqId: String(idBase + ids[from]), prereqPlacement: placement };
+            return { ...link, ...feederSlot(who, winnerId ? (who === winnerId ? 2 : 0) : null) };
+        }) };
+    };
+    make('ws1', 1, 'Winners Semi-Final', [[a], [d]]);
+    make('ws2', 1, 'Winners Semi-Final', [[b], [c]]);
+    make('wf', 2, 'Winners Final', [['ws1', 1], ['ws2', 1]]);
+    make('lr1', -1, 'Losers Round 1', [['ws1', 2], ['ws2', 2]]);
+    make('lf', -2, 'Losers Final', [['wf', 2], ['lr1', 1]]);
+    return [sets.lf, sets.lr1, sets.ws1, sets.ws2, sets.wf];
+}
+// Pool A: Alpha beat Delta, Charlie upset Bravo, Bravo beat Delta; the winners final is still to play (or,
+// with `charlieWon`, Charlie won it). Pool B: Echo won the winners side; its losers side is still to play.
+const feederA = (charlieWon = false) => feederPool(3000, [1, 2, 3, 4], { ws1: 1, ws2: 3, lr1: 2, ...(charlieWon ? { wf: 3 } : {}) });
+const top4Seat = (id, who = null) => ({ prereqType: 'seed', prereqId: String(id), prereqPlacement: null, ...feederSlot(who, null) });
+const top4Link = (id, placement) => ({ prereqType: 'set', prereqId: String(id), prereqPlacement: placement, entrant: null, standing: null });
+const top4Sets = [
+    { id: 3205, round: -2, fullRoundText: 'Losers Final', winnerId: null, slots: [top4Link(3203, 2), top4Link(3204, 1)] },
+    { id: 3204, round: -1, fullRoundText: 'Losers Round 1', winnerId: null, slots: [top4Link(3201, 2), top4Link(3202, 2)] },
+    { id: 3201, round: 1, fullRoundText: 'Winners Semi-Final', winnerId: null, slots: [top4Seat(3301), top4Seat(3304)] },
+    { id: 3202, round: 1, fullRoundText: 'Winners Semi-Final', winnerId: null, slots: [top4Seat(3302, 5), top4Seat(3303)] },
+    { id: 3203, round: 2, fullRoundText: 'Winners Final', winnerId: null, slots: [top4Link(3201, 1), top4Link(3202, 1)] },
+    { id: 3206, round: 3, fullRoundText: 'Grand Final', winnerId: null, slots: [top4Link(3203, 1), top4Link(3205, 1)] },
+];
+Object.assign(poolsOf, { 1016: [2030, 2031], 1017: [2032] });
+Object.assign(setsOf, { 2030: feederA(), 2031: feederPool(3100, [5, 6, 7, 8], { ws1: 5, ws2: 6, wf: 5 }), 2032: top4Sets });
+// Projected Top 4's seeds: from pool A's and pool B's placements 1 and 2, only Echo (pool B's 1st) placed
+progressionSeedsOf[1017] = [[3301, 2030, 1], [3302, 2031, 1, 5], [3303, 2030, 2], [3304, 2031, 2]].map(([id, pool, placement, entrant], i) =>
+    ({ id, groupSeedNum: i + 1, entrant: entrant ? { id: entrant } : null, phaseGroup: { id: 2032, displayIdentifier: 'A' }, progressionSource: { originPlacement: placement, originOrder: 1, originPhaseGroup: { id: pool } } }));
+const crossPhases = [{ id: 1016, name: 'Feeder Pools', numSeeds: 8, groupCount: 2, progressingInData: [] },
+    { id: 1017, name: 'Projected Top 4', numSeeds: 4, groupCount: 1, progressingInData: [{ origin: 1016, numProgressing: 4 }] }];
+
 // What the set dialog shows beyond the score. Pool 2001's grand final was best of 5, has a YouTube video
 // that starts at 1:30 and was on a Twitch stream; start.gg gives the stream only to the dialog's own query.
 Object.assign(setsOf[2001].find(set => set.id === 106), { state: 3, totalGames: 5, startedAt: 1794003600, completedAt: 1794005400, vodUrl: 'https://www.youtube.com/watch?v=testvideo01&t=1m30s' });
@@ -134,7 +187,7 @@ const streamOf = { 106: { streamName: 'teststream', streamSource: 'TWITCH' } };
 // The event's landing page: the top 8 of a 60-entrant event, with start.gg's tied placements (5th, 5th, 7th, 7th).
 // Alpha has a sponsor and Bravo an avatar; everyone else gets a colored initial.
 const phaseNames = { 1001: 'Pools', 1002: 'Top 4', 1003: 'Unstarted Pool', 1004: 'Later Phase', 1005: 'Three Pools', 1006: 'Single Elim', 1007: 'Single Elim, No 3rd Place', 1008: 'Round Robin' };
-const phaseStateOf = { 1003: 'CREATED', 1004: 'ACTIVE' };
+const phaseStateOf = { 1003: 'CREATED', 1004: 'ACTIVE', 1016: 'ACTIVE', 1017: 'CREATED' };
 const svg = (width, height, color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${color}"/></svg>`)}`;
 // A user's pictures as start.gg answers: with images(type: "profile") only the profile picture, without its type
 const imagesAsQueried = (images, query) => query.includes('images(type: "profile")') ? images.filter(i => i.type === 'profile').map(({ type, ...rest }) => rest) : images;
@@ -216,7 +269,7 @@ function kindOf(query) {
     const tournamentPage = tournamentPageKind(query);
     if (tournamentPage) return tournamentPage;
     if (query.includes('...PoolSet')) return 'poolSlices';
-    if (query.includes('seedMap')) return 'poolSeeds';
+    if (query.includes('phaseGroup(id') && query.includes('seedMap')) return 'poolSeeds';
     if (query.includes('tournament(slug')) return 'tournament';
     if (query.includes('entrants(query')) return 'entrants';
     if (query.includes('progressionSource')) return 'progressions';
@@ -905,6 +958,150 @@ try {
         check('a refusal that gives only start.gg\'s cap (actual: 1000) halves the page from the pool\'s size: 3 requests for 6 sets',
             sets.length === 3 && sets[1] === 3 && (await tags(page)).includes('Alpha'), report.capOnlyRefusal);
         await context.close();
+    }
+
+    // 9e. Show Projected across phases: Projected Top 4's empty seeds take who Feeder Pools' pools project
+    //     out (the higher seed winning each set still to play), Echo stays where start.gg placed them, and the
+    //     phase is projected from there. Logged in, background loading brings Feeder Pools in by itself; a
+    //     played set there changes who comes out. A visitor gets "Project from pools", which loads it with
+    //     their own requests: at most 60, and none past a busy answer.
+    report.crossPhase = {};
+    {
+        // The event's phases with Feeder Pools and Projected Top 4 in them; `more` may answer other requests
+        const withCrossPhase = (more = () => null) => (query, n) => {
+            if (kindOf(query) === 'eventPhases') {
+                const body = answer(query);
+                body?.data?.event?.phases?.push(...structuredClone(crossPhases));
+                return { body };
+            }
+            return more(query, n);
+        };
+        // Each of Projected Top 4's sets: its players, and which of them are projected
+        const top4 = page => page.evaluate(() => Object.fromEntries([3201, 3202, 3203, 3204, 3205, 3206].map(id => {
+            const set = document.querySelector(`.set[data-set-id="${id}"]`);
+            return [id, set ? [...set.querySelectorAll('.set-tag')].map(tag => (tag.classList.contains('projected') ? '~' : '') + tag.textContent.replace(/\u200e/g, '').trim()) : null];
+        })));
+        const button = page => page.locator('button.project-from-pools');
+        const projectedA = { 3201: ['~Alpha', '~Foxtrot'], 3202: ['Echo', '~Bravo'], 3203: ['~Alpha', '~Bravo'], 3204: ['~Foxtrot', '~Echo'], 3205: ['~Bravo', '~Echo'], 3206: ['~Alpha', '~Bravo'] };
+        const plain = { 3201: ['', ''], 3202: ['Echo', ''], 3203: ['', ''], 3204: ['', ''], 3205: ['', ''], 3206: ['', ''] };
+        const settle = async (page, want, timeout = 8000) => {
+            const start = Date.now();
+            let got = await top4(page);
+            while (JSON.stringify(got) !== JSON.stringify(want) && Date.now() - start < timeout) {
+                await page.waitForTimeout(250);
+                got = await top4(page);
+            }
+            return got;
+        };
+
+        // Logged in: background loading brings Feeder Pools and Projected Top 4's seeds in, nothing to click
+        for (const [name, charlieWon, want] of [
+            ['logged in', false, projectedA],
+            // Charlie beat Alpha in pool A's winners final: Charlie comes out first, Alpha (losers final) second
+            ['logged in, a set played since', true, { 3201: ['~Charlie', '~Foxtrot'], 3202: ['Echo', '~Alpha'], 3203: ['~Charlie', '~Alpha'], 3204: ['~Foxtrot', '~Echo'], 3205: ['~Charlie', '~Echo'], 3206: ['~Alpha', '~Charlie'] }],
+        ]) {
+            setsOf[2030] = feederA(charlieWon);
+            const { context, page, log, background, quiet } = await openPage(browser, withCrossPhase());
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            try {
+                await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+                await page.goto(appUrl + eventPath + '/1017');
+                await quiet();
+                const got = await settle(page, want);
+                const shown = { sets: got, button: await button(page).count(), feederAsked: [...new Set(background.filter(r => phaseAsked(r.query) === 1016).map(r => r.kind))].sort(), own: count(log), errors };
+                report.crossPhase[name] = shown;
+                check(`Show Projected across phases (${name}): the empty seeds hold who Feeder Pools projects out, Echo is real, and the phase is projected from there; no "Project from pools"`,
+                    JSON.stringify(got) === JSON.stringify(want) && shown.button === 0 && shown.feederAsked.includes('poolSlices') && !errors.length, shown);
+                if (!charlieWon) {
+                    await page.screenshot({ path: 'e2e-out/projected-across-phases.png' }).catch(() => { });
+                    // Show Projected off: only Echo, whom start.gg placed
+                    await page.locator('mat-checkbox', { hasText: 'Show Projected' }).click();
+                    const off = await settle(page, plain, 3000);
+                    report.crossPhase.off = off;
+                    check('Show Projected across phases, turned off: only the player start.gg placed', JSON.stringify(off) === JSON.stringify(plain), off);
+                }
+            } catch (e) {
+                check(`Show Projected across phases (${name})`, false, { crashed: String(e.message).slice(0, 300), errors });
+            }
+            await context.close();
+        }
+        setsOf[2030] = feederA();
+
+        // A visitor, with background loading stopped: the single-phase projection and "Project from pools",
+        // which loads Projected Top 4's seeds, Feeder Pools and its pools' sets, then fills the seeds
+        {
+            const { context, page, log, quiet } = await openPage(browser, withCrossPhase(), {}, { loggedIn: false, backgroundRespond: busy });
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
+            try {
+                await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+                await page.goto(appUrl + eventPath + '/1017');
+                await quiet();
+                const before = await top4(page);
+                const offered = await button(page).count();
+                const mark = log.length;
+                await button(page).click();
+                await quiet();
+                const after = await settle(page, projectedA);
+                const asked = count(log, mark);
+                const shown = { before, offered, after, asked, buttonAfter: await button(page).count(), snackbar: await snackText(page), errors };
+                report.crossPhase.visitor = shown;
+                check('Show Projected across phases (visitor): "Project from pools" offered while Feeder Pools isn\'t loaded; a click loads its seeds, phase and pools in 3 requests and fills the seeds',
+                    JSON.stringify(before) === JSON.stringify(plain) && offered === 1 && JSON.stringify(after) === JSON.stringify(projectedA)
+                    && asked.total === 3 && asked.progressions === 1 && asked.phase === 1 && asked.poolSlices === 1 && shown.buttonAfter === 0 && !errors.length, shown);
+            } catch (e) {
+                check('Show Projected across phases (visitor)', false, { crashed: String(e.message).slice(0, 300), errors });
+            }
+            await context.close();
+        }
+
+        // A busy answer stops it at once with the app's busy message, without waiting it out and asking again
+        {
+            const { context, page, log, quiet } = await openPage(browser, withCrossPhase(q => kindOf(q) === 'progressions' ? busy() : null), {}, { loggedIn: false, backgroundRespond: busy });
+            try {
+                await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+                await page.goto(appUrl + eventPath + '/1017');
+                await quiet();
+                const mark = log.length;
+                await button(page).click();
+                await quiet();
+                await page.waitForTimeout(500);
+                const shown = { asked: count(log, mark), snackbar: await snackText(page), sets: await top4(page), button: await button(page).count() };
+                report.crossPhase.busy = shown;
+                check('"Project from pools" on a busy answer: stops after that one request with the busy message, the seeds stay empty, and the button stays',
+                    shown.asked.total === 1 && shown.snackbar.includes('BracketGG is busy') && JSON.stringify(shown.sets) === JSON.stringify(plain) && shown.button === 1, shown);
+            } catch (e) {
+                check('"Project from pools" on a busy answer', false, String(e.message).slice(0, 300));
+            }
+            await context.close();
+        }
+
+        // The limit: a pool start.gg says has 10000 sets would take about 100 requests; it stops at 60
+        {
+            const huge = q => {
+                if (kindOf(q) !== 'phase' || phaseAsked(q) !== 1016) return null;
+                const body = answer(q);
+                body.data.phase.phaseGroups.nodes[1].sets.pageInfo.total = 10000;
+                return { body };
+            };
+            const { context, page, log, quiet } = await openPage(browser, withCrossPhase(huge), {}, { loggedIn: false, backgroundRespond: busy });
+            try {
+                await context.addInitScript(() => localStorage.setItem('showProjected', 'true'));
+                await page.goto(appUrl + eventPath + '/1017');
+                await quiet();
+                const mark = log.length;
+                await button(page).click();
+                await quiet(2000, 180000);
+                const shown = { asked: count(log, mark), snackbar: await snackText(page), button: await button(page).count() };
+                report.crossPhase.limit = shown;
+                check('"Project from pools" sends at most 60 requests a click, then says it stopped',
+                    shown.asked.total <= 60 && shown.asked.total >= 50 && shown.snackbar.includes('Stopped after 60 requests'), shown);
+            } catch (e) {
+                check('"Project from pools" request limit', false, String(e.message).slice(0, 300));
+            }
+            await context.close();
+        }
     }
 
     // 10. Phone: searching an entrant scrolls the bracket to them, even as the keyboard closes

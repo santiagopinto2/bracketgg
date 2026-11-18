@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, OnInit, ViewChildren, effect, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { StartggError, StartggService } from 'src/app/services/startgg.service';
+import { RequestLimitReached, StartggError, StartggService } from 'src/app/services/startgg.service';
 import { TournamentDataService } from 'src/app/services/tournamentData.service';
 import { SetOrderConstants } from './set-order-constants';
 import { charactersBySide } from './set-characters';
@@ -8,6 +8,8 @@ import { inNameOrder } from 'src/app/services/team-order';
 import { rememberArrival } from 'src/app/services/arrival-state';
 import { inject } from '@angular/core';
 import { PhasePrefetch } from 'src/app/services/phase-prefetch';
+import { progressionSeeds } from 'src/app/services/phase-prefetch-plan';
+import { Missing, PROJECTION_MAX_REQUESTS, PoolFill, emptySeedSlots, isMissing, projectAcrossPhases, projectPool } from './projection';
 import { Location, NgStyle, NgClass } from '@angular/common';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -97,6 +99,14 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     isGrabbing = false;
     showUpsets = false;
     showProjected = false;
+    // Show Projected across phases (projection.ts): who the earlier phases' pools project into the shown
+    // pools' empty seeds, worked out from what is loaded, again only when that changes (crossPhaseKey)
+    private crossPhase: { fills: Map<string, PoolFill>, missing: Missing } | null = null;
+    private crossPhaseKey = '';
+    private crossPhaseTimer: any;
+    // What that needs isn't all loaded: "Project from pools" loads it
+    projectionMissing = false;
+    projectionLoading = false;
     // setHeight should be a multiple of 4 plus 0.67
     setHeight = 52.67;
 
@@ -115,6 +125,13 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
     ) {
         this.isDesktop = this.deviceService.isDesktop();
 
+        // More phases loaded (in the background, say): Show Projected across phases is worked out again
+        effect(() => {
+            this.startggService.loadedChanged();
+            clearTimeout(this.crossPhaseTimer);
+            this.crossPhaseTimer = setTimeout(() => this.refreshCrossPhase(), 400);
+        });
+
         // Watch for tournament source changes using effect
         effect(() => {
             const tournament = this.tournamentDataService.tournamentSource();
@@ -131,6 +148,9 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             this.playerHovered = -1;
             this.progressionSeeds = null;
             this.progressionTags = new Map();
+            this.crossPhase = null;
+            this.crossPhaseKey = '';
+            this.projectionMissing = false;
             this.arrival = null;
             this.arrivedAt = null;
             this.userMoved = false;
@@ -354,6 +374,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
             this.loadingService.updateValue(false);
             // The event's other phases now load in the background (phase-prefetch.ts)
             this.prefetch.shownPhaseLoaded(phaseId);
+            this.refreshCrossPhase();
             // A link with no pool, or to a pool that isn't here: look for its player or set in the whole phase
             this.arrive();
         } catch (error) {
@@ -718,107 +739,101 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         return null;
     }
 
-    // Fills every empty slot with who would get there if the higher seed won each set from here on.
-    // Each slot says where its player comes from (prereqType "set", prereqId, prereqPlacement 1 for
-    // the winner or 2 for the loser), so this follows start.gg's own links and works for any bracket
-    // shape, including later phases whose losers bracket starts with players from an earlier phase.
+    // Every empty slot filled with who would get there if the better seed won each set from here on
+    // (projection.ts), the seeds start.gg hasn't placed anyone in with who the earlier phases project
     getProjected(phaseGroup) {
-        let projectedPhaseGroup = structuredClone(phaseGroup.sets.nodes);
-        let setsById = new Map<string, any>(projectedPhaseGroup.flat(2).map(set => [String(set.id), set]));
-        let done = new Set<string>();
-        const hidden = this.getHiddenLosersSources(projectedPhaseGroup.flat(2), setsById);
+        return projectPool(phaseGroup.sets.nodes, this.crossPhase?.fills.get(String(phaseGroup.id)) ?? null);
+    }
 
-        const fill = (set, depth) => {
-            if (done.has(String(set.id)) || depth > 64) return;
-            done.add(String(set.id));
-            // The reset is only played if the losers side wins the grand final, so it isn't projected
-            if (set.fullRoundText === 'Grand Final Reset') return;
-            set.slots.forEach((slot, slotIndex) => {
-                if (slot.entrant || slot.prereqType !== 'set') return;
-                let source = setsById.get(String(slot.prereqId));
-                let placement = slot.prereqPlacement;
-                // A set start.gg doesn't send: whoever reaches it is the loser of a winners round 1 set
-                if (!source && hidden.has(String(slot.prereqId))) {
-                    source = hidden.get(String(slot.prereqId));
-                    placement = 2;
-                }
-                if (!source) return;
-                fill(source, depth + 1);
-                let advancing = this.getSetPlacement(source, placement);
-                if (advancing.entrant) set.slots[slotIndex] = this.setProjectedSlot(advancing);
+    // Works out Show Projected across phases from everything loaded so far and redraws the projected
+    // pools: only with Show Projected on, a shown phase that takes players from an earlier one, and a
+    // drawn pool with a seed start.gg hasn't placed anyone in. Nothing is asked of start.gg here.
+    private refreshCrossPhase(force = false) {
+        clearTimeout(this.crossPhaseTimer);
+        const drawn = this.phaseGroups.filter(group => group);
+        const waiting = this.showProjected && this.phases[this.currentPhaseIndex]?.progressingInData?.length
+            ? drawn.filter(group => emptySeedSlots(group.sets.nodes.flat(2)) > 0) : [];
+        const key = `${this.loadId}:${this.startggService.loadedChanged()}:${drawn.length}:${this.showProjected}`;
+        if (!force && key === this.crossPhaseKey) return;
+        this.crossPhaseKey = key;
+        const had = !!this.crossPhase;
+        this.crossPhase = null;
+        this.projectionMissing = false;
+        if (waiting.length) {
+            const loaded = this.startggService.getLoadedPhases(true);
+            const pools = new Map<string, any[]>();
+            loaded.forEach(phase => phase.pools.forEach((sets, poolId) => pools.set(poolId, sets)));
+            const seeds = new Map<string, any[] | null>();
+            const result = projectAcrossPhases(this.phaseId, waiting.map(group => group.id), {
+                phases: this.phases,
+                phase: phaseId => loaded.get(String(phaseId))?.phase ?? null,
+                poolSets: poolId => pools.get(String(poolId)) ?? null,
+                seeds: phaseId => seeds.has(phaseId) ? seeds.get(phaseId) : seeds.set(phaseId, this.startggService.getLoadedProgressions(phaseId)).get(phaseId),
             });
-        };
-        setsById.forEach(set => fill(set, 0));
-
-        return projectedPhaseGroup;
+            this.prepareProjected(result.fills);
+            this.crossPhase = result;
+            this.projectionMissing = isMissing(result.missing) && (result.unplaced == null || result.unplaced > result.filled);
+        }
+        if (!this.crossPhase && !had) return;
+        this.phaseGroups.forEach((group, i) => {
+            if (!group) return;
+            try {
+                this.projected[i] = this.getProjected(group);
+            } catch (error) {
+                console.warn('Could not project this pool', error);
+            }
+        });
     }
 
-    // Losers round 1 can link to sets start.gg leaves out of what it sends. Before a pool starts their ids
-    // say what they are (preview_<pool>_<round>_<k>, w = winners round 1's id round):
-    //   round -(w+1), k: holds the loser of winners round 1's set k (nobody, if that set is a bye)
-    //   round -(w+2), k: a losers round 1 bye, holding whoever reaches it from -(w+1) sets 2k and 2k+1
-    // In a started pool the ids are numbers, which only say their order: they are matched in order to
-    // winners round 1's sets, and only when they all feed one losers round and there are exactly as many
-    // as winners round 1 has sets (no byes). Maps each hidden id to the winners round 1 set whose loser
-    // it holds (Port Priority DX's Melee and Rivals II pools, 2026-11-14).
-    getHiddenLosersSources(sets, setsById) {
-        const hidden = new Map<string, any>();
-        const feeding = sets.filter(set => set.round < 0).flatMap(set => set.slots
-            .filter(slot => slot.prereqType === 'set' && slot.prereqPlacement == 1 && !setsById.has(String(slot.prereqId)))
-            .map(slot => ({ id: String(slot.prereqId), round: set.round })));
-        const missing = [...new Set<string>(feeding.map(feed => feed.id))];
-        const winnersRounds = sets.map(set => set.round).filter(round => round > 0);
-        if (!missing.length || !winnersRounds.length) return hidden;
+    // Players projected out of an earlier phase, made ready to draw like the shown phase's own: their
+    // name and sponsor, and their pictures if that phase's players were loaded
+    private prepareProjected(fills: Map<string, PoolFill>) {
+        const slots = [...fills.values()].flatMap(fill => [...fill.bySeedId.values()]);
+        if (!slots.length) return;
+        const players = new Map<any, any>();
+        for (const phase of this.phases) for (const player of this.startggService.peekPhaseEntrants(phase.id) ?? []) players.set(player.id, player);
+        for (const slot of slots) slot.entrant = this.prepareEntrant({ ...slot.entrant, participants: players.get(slot.entrant.id)?.participants });
+    }
 
-        const preview = id => { const match = /^preview_(\d+)_(-?\d+)_(\d+)$/.exec(String(id)); return match && { pool: match[1], round: Number(match[2]), k: Number(match[3]) }; };
-        if (missing.every(id => preview(id))) {
-            const winnersIdRounds = sets.map(set => preview(set.id)).filter(parsed => parsed && parsed.round > 0).map(parsed => parsed.round);
-            if (!winnersIdRounds.length) return hidden;
-            const w = Math.min(...winnersIdRounds);
-            const resolve = id => {
-                const { pool, round, k } = preview(id);
-                if (round === -(w + 1)) return setsById.get(`preview_${pool}_${w}_${k}`) ?? null;
-                if (round === -(w + 2)) {
-                    const reached = [2 * k, 2 * k + 1].map(j => setsById.get(`preview_${pool}_${w}_${j}`)).filter(Boolean);
-                    return reached.length === 1 ? reached[0] : null;
+    // "Project from pools": loads what Show Projected across phases still needs (earlier phases, their
+    // pools' sets, and phases' seeds) as the visitor's own requests, at most PROJECTION_MAX_REQUESTS of
+    // them. A busy answer stops it with the app's busy message, and so does reaching the limit.
+    async projectFromPools() {
+        if (this.projectionLoading || !this.crossPhase) return;
+        const loadId = this.loadId;
+        const startgg = this.startggService.limited({ left: PROJECTION_MAX_REQUESTS });
+        this.projectionLoading = true;
+        this.loadingService.updateValue(true);
+        let message: string | null = null;
+        try {
+            // Each round's loads can show more that is needed (an earlier phase's own seeds): a few rounds at most
+            for (let round = 0; round < 8 && this.crossPhase && isMissing(this.crossPhase.missing); round++) {
+                const { phases, seeds, pools } = this.crossPhase.missing;
+                const before = JSON.stringify([[...phases], [...seeds], [...pools].map(([phaseId, ids]) => [phaseId, [...ids]])]);
+                for (const phaseId of phases) await startgg.getPhase(phaseId);
+                for (const phaseId of seeds) await startgg.getPhaseProgressions(phaseId, progressionSeeds(this.phases.find(phase => String(phase.id) === phaseId)));
+                for (const [phaseId, ids] of pools) {
+                    const groups = ((await startgg.getPhase(phaseId)).phaseGroups?.nodes ?? []).filter(group => ids.has(String(group.id)));
+                    if (groups.length > 1) await startgg.getPhaseSetsByPool(phaseId, new Map(groups.map((group): [any, number] => [group.id, group.sets?.pageInfo?.total ?? 0])), () => { });
+                    else for (const group of groups) await startgg.getPhaseGroupSets(group.id, group.sets?.pageInfo?.total ?? 0);
                 }
-                return null;
-            };
-            missing.forEach(id => { const source = resolve(id); if (source) hidden.set(id, source); });
-            return hidden;
+                if (loadId !== this.loadId) return;
+                this.refreshCrossPhase(true);
+                const missing = this.crossPhase?.missing;
+                if (missing && JSON.stringify([[...missing.phases], [...missing.seeds], [...missing.pools].map(([phaseId, ids]) => [phaseId, [...ids]])]) === before) break;
+            }
+        } catch (error) {
+            message = error instanceof RequestLimitReached ? `Stopped after ${PROJECTION_MAX_REQUESTS} requests to start.gg. Log in with start.gg to load the earlier phases in the background.`
+                : error instanceof StartggError ? error.message : 'Could not load the earlier phases.';
+            if (!(error instanceof StartggError)) console.error(error);
+        } finally {
+            this.projectionLoading = false;
+            if (loadId === this.loadId) {
+                this.refreshCrossPhase(true);
+                if (message) this.loadingService.error(message);
+                else this.loadingService.updateValue(false);
+            }
         }
-
-        const first = sets.filter(set => set.round === Math.min(...winnersRounds));
-        const feedRounds = new Set(feeding.map(feed => feed.round));
-        if (feedRounds.size !== 1 || missing.length !== first.length || [...missing, ...first.map(set => set.id)].some(id => Number.isNaN(Number(id)))) return hidden;
-        missing.sort((a, b) => Number(a) - Number(b));
-        [...first].sort((a, b) => Number(a.id) - Number(b.id)).forEach((set, i) => hidden.set(missing[i], set));
-        return hidden;
-    }
-
-    // The slot that finishes a set in `placement` (1 winner, 2 loser): the real result if the set is
-    // done, else the higher seed wins
-    getSetPlacement(set, placement) {
-        let slots = set.slots;
-        if (set.winnerId && slots[0].entrant && slots[1].entrant) {
-            let winner = slots.find(slot => slot.entrant.id == set.winnerId);
-            let loser = slots.find(slot => slot.entrant.id != set.winnerId);
-            if (winner && loser) return structuredClone(placement == 1 ? winner : loser);
-        }
-        return this.getLowerHigherSeed(slots, placement != 1);
-    }
-
-    setProjectedSlot(slot) {
-        let newSlot = structuredClone(slot);
-        newSlot.isProjected = true;
-        if (newSlot.standing) newSlot.standing.stats.score.value = null;
-        return newSlot;
-    }
-
-    getLowerHigherSeed(slots, isLower) {
-        if (!slots[0].entrant || !slots[1].entrant) return { entrant: null, standing: null };
-        if (isLower) return structuredClone(slots.reduce((prev, current) => prev.entrant.initialSeedNum > current.entrant.initialSeedNum ? prev : current));
-        return structuredClone(slots.reduce((prev, current) => prev.entrant.initialSeedNum < current.entrant.initialSeedNum ? prev : current));
     }
 
     isProjected(slot) {
@@ -1319,6 +1334,8 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
 
     onShowProjectedChange(event) {
         localStorage.setItem('showProjected', event.checked);
+        this.showProjected = event.checked;
+        this.refreshCrossPhase();
     }
 
     getScrollToTopOffset() {
@@ -1331,6 +1348,7 @@ export class EventComponent implements OnInit, AfterViewInit, OnDestroy {
         this.listeners.abort();
         clearTimeout(this.highlightTimer);
         clearTimeout(this.hoverTimer);
+        clearTimeout(this.crossPhaseTimer);
         const content = document.querySelector<HTMLElement>('mat-sidenav-content');
         if (content) content.style.overflowAnchor = '';
     }

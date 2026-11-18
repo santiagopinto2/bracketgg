@@ -54,6 +54,12 @@
                 <p style="margin-top: 14px">Show Projected</p>
             </mat-checkbox>
 
+            <!-- Show Projected across phases needs earlier phases that aren't loaded: this loads them -->
+            @if (showProjected && projectionMissing) {
+            <button mat-button type="button" class="project-from-pools" [disabled]="projectionLoading"
+                title="Load the earlier phases and fill this phase's empty seeds with who their pools project" (click)="projectFromPools()">Project from pools</button>
+            }
+
             <mat-checkbox [(ngModel)]="showUpsets" (change)="onShowUpsetsChange($event)">
                 <p style="margin-top: 14px">Show Upsets</p>
             </mat-checkbox>
