@@ -196,7 +196,7 @@ export async function tournamentPageChecks({ browser, openPage, appUrl, check, r
                 same(shown.results, [
                     { name: 'Alpha Singles', link: base + '/event/alpha-singles', sub: '512 entrants · 4 phases', bracket: base + '/event/alpha-singles/brackets/6103', jump: 'Top 8 bracket', champion: 'SPN Ace',
                         places: ['2nd Blaze', '3rd RED Comet', '4th Dash', '5th Echo', '5th TM Flint', '7th Gale', '7th Halo'] },
-                    { name: 'Beta Singles', link: base + '/event/beta-singles', sub: '256 entrants · 2 phases', bracket: base + '/event/beta-singles/brackets/6202', champion: 'Ivy',
+                    { name: 'Beta Singles', link: base + '/event/beta-singles', sub: '256 entrants · 2 phases', bracket: base + '/event/beta-singles/brackets/6202', jump: 'Top 8 bracket', champion: 'Ivy',
                         places: ['2nd XY Jinx', '3rd Kite', '4th Lux', '5th Mako', '5th Nova', '7th Onyx', '7th Pike'] },
                 ]) && !shown.resultTabs.length, { results: shown.results, tabs: shown.resultTabs });
             check('tournament page: the eight biggest events as cards in two columns, each with its game, top 3, phases, and start time',
