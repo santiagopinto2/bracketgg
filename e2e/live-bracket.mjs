@@ -119,7 +119,7 @@ try {
     await browser.close();
 }
 
-// 3. Show Projected across phases, straight from start.gg (STARTGG_TOKEN, about 12 requests): for finished
+// 3. Show Projected across phases, straight from start.gg (STARTGG_TOKEN, about 25 requests): for finished
 //    events, the next phase's seeds are emptied as if start.gg hadn't placed anyone yet, and projected from
 //    the earlier phase's real pools. Every seed should get the player start.gg placed there.
 if (process.env.STARTGG_TOKEN) {
@@ -132,10 +132,13 @@ if (process.env.STARTGG_TOKEN) {
             const pools = new Map();
             for (const group of loaded.get(String(earlier.id))?.phaseGroups?.nodes ?? []) {
                 const sets = [];
-                for (let page = 1; page <= 3; page++) {
-                    const nodes = (await ask(poolSetsQuery, { id: Number(group.id), page, perPage: 90 }))?.phaseGroup?.sets?.nodes ?? [];
+                // Small pages: sets with characters reported cost up to about 60 objects each
+                for (let page = 1; page <= 12; page++) {
+                    const data = await ask(poolSetsQuery, { id: Number(group.id), page, perPage: 12 });
+                    if (!data?.phaseGroup) throw new Error(`no sets for pool ${group.id}, page ${page}`);
+                    const nodes = data.phaseGroup.sets?.nodes ?? [];
                     sets.push(...nodes);
-                    if (nodes.length < 90) break;
+                    if (nodes.length < 12) break;
                 }
                 pools.set(String(group.id), sets);
             }
