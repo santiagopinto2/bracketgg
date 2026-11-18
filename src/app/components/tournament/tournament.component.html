@@ -317,8 +317,7 @@
 
                 @if (v.schedule.days.length) {
                 <section id="tp-schedule" class="panel schedule">
-                    <h2 class="panel-title">Schedule</h2>
-                    <p class="panel-note">{{ v.schedule.note }}</p>
+                    <h2 class="panel-title">Schedule @if (v.schedule.zone) {<em>{{ v.schedule.zone }}</em>}</h2>
                     @for (day of v.schedule.days; track day.label) {
                     <h3 class="sday">{{ day.label }}</h3>
                     @for (slot of day.slots; track slot.time) {

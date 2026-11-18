@@ -135,7 +135,9 @@ const pageShown = page => page.evaluate(() => {
         where: text(root.querySelector('.where')),
         directions: href(root.querySelector('.directions')),
         streams: all('.streams li', root).map(li => ({ name: text(li.querySelector('.s-name b')), detail: text(li.querySelector('small')), state: text(li.querySelector('.s-state')), href: href(li.querySelector('a')) })),
-        scheduleNote: text(root.querySelector('.panel-note')),
+        scheduleTitle: text(root.querySelector('.schedule .panel-title')),
+        scheduleZone: text(root.querySelector('.schedule .panel-title em')),
+        scheduleNote: text(root.querySelector('.schedule .panel-note, .schedule > p')),
         schedule: all('.schedule .sday, .schedule .slot', root).map(el => el.matches('.sday') ? text(el) : `${text(el.querySelector('time'))}: ${all('li', el).map(text).join(', ')}`),
         scheduleLink: href(root.querySelector('.schedule .slot a')),
         // Nothing wider than the page; the tabs scroll sideways on their own, and the blurred pictures are clipped
@@ -205,12 +207,12 @@ export async function tournamentPageChecks({ browser, openPage, appUrl, check, r
                     { name: 'showcase_main', detail: 'Twitch · 22.9K followers', state: 'Offline', href: 'https://www.twitch.tv/showcase_main' },
                     { name: 'ShowcaseTube', detail: 'YouTube · 500 followers', state: 'Offline', href: null },
                 ]), shown.streams);
-            check('tournament page: Schedule lists start times by day in the tournament\'s time zone, each event a link',
-                shown.scheduleNote === 'When each event starts, in Pacific Time (PST).' && same(shown.schedule, [
+            check('tournament page: Schedule names the time zone beside its heading, with no line under it, and lists start times by day, each event a link',
+                /^Schedule ?PST$/.test(shown.scheduleTitle ?? '') && shown.scheduleZone === 'PST' && shown.scheduleNote === null && same(shown.schedule, [
                     'Friday, February 16', '10:00 AM: Alpha Singles, Alpha Doubles', '12:00 PM: Beta Singles', '7:00 PM: Gamma Singles',
                     'Saturday, February 17', '10:00 AM: Delta Teams', '12:00 PM: Epsilon Singles, Zeta Singles', '2:00 PM: Eta Singles',
                     'Sunday, February 18', '10:00 AM: Theta Singles', '12:00 PM: Iota Doubles',
-                ]) && shown.scheduleLink === base + '/event/alpha-singles', { note: shown.scheduleNote, schedule: shown.schedule, link: shown.scheduleLink });
+                ]) && shown.scheduleLink === base + '/event/alpha-singles', { title: shown.scheduleTitle, zone: shown.scheduleZone, note: shown.scheduleNote, schedule: shown.schedule, link: shown.scheduleLink });
             check('tournament page: nothing is wider than the page, and the text is in the page\'s own font', shown.fits && shown.font === 'Archivo', { fits: shown.fits, font: shown.font });
 
             // Show all, the filters, and the sort menu
