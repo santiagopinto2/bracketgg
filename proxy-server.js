@@ -7,6 +7,8 @@
 //   STARTGG_CLIENT_ID, STARTGG_CLIENT_SECRET, STARTGG_REDIRECT_URI   the start.gg OAuth app, for logging in
 //   STARTGG_SITE_TOKEN      the site's own start.gg token, used for visitors who aren't logged in
 //   SESSIONS_FILE           where logins are kept (a JSON file on a writable volume), so they survive a restart
+//   GQL_CACHE_FILE          where the start.gg answer cache is saved, so it survives a restart; defaults to
+//                           gql-cache.json next to SESSIONS_FILE, and without either the cache isn't saved
 //   COOKIE_SECURE=false     only for testing over plain http on a host other than localhost
 //   SITE_TOKEN_PER_MINUTE (70), SITE_TOKEN_MAX_WAIT_MS (15000)   the site token's rate gate
 //   PORT (3000), STATIC_DIR, STARTGG_GQL_URL, STARTGG_TOKEN_URL, STARTGG_REFRESH_URL (tests point these at a fake start.gg)
@@ -43,9 +45,11 @@ async function main() {
   app.use('/api', express.json({ limit: '64kb' }));
 
   // start.gg's GraphQL API, through a cache shared by every viewer (server/gql-cache.js)
-  const gqlCache = createGqlCache({ allowed, tokenFor: auth.tokenFor, siteGate });
+  const cacheFile = process.env.GQL_CACHE_FILE
+    || (process.env.SESSIONS_FILE ? path.join(path.dirname(process.env.SESSIONS_FILE), 'gql-cache.json') : null);
+  const gqlCache = createGqlCache({ allowed, tokenFor: auth.tokenFor, siteGate, file: cacheFile });
   app.post('/api/gql', sameOrigin, gqlCache.handle);
-  app.get('/api/gql/stats', (req, res) => res.json({ ...gqlCache.stats, ...gqlCache.size(), gate: siteGate.stats(), sessions: sessions.size() }));
+  app.get('/api/gql/stats', (req, res) => res.json({ ...gqlCache.report(), gate: siteGate.stats(), sessions: sessions.size() }));
 
   // Logging in (server/auth.js)
   app.use('/api/auth', rateLimit({ max: 60 }));
@@ -68,6 +72,7 @@ async function main() {
   const server = app.listen(PORT, () => console.log(`BracketGG server running on http://localhost:${PORT}`));
   const stop = () => {
     sessions.stop();
+    gqlCache.stop(); // saves the cache
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 3000).unref();
   };

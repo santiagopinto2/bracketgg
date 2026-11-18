@@ -29,6 +29,8 @@ Angular viewer for start.gg brackets, live at https://bracket.santiagopinto.dev.
 
 - Logging in is optional. Visitors who aren't logged in are served with the site's own token (`STARTGG_SITE_TOKEN`), held to 70 requests a minute by `server/site-gate.js`; past that `/api/gql` answers 503 `SITE_BUSY` with Retry-After.
 - Logged-in visitors' start.gg tokens stay on the server (`server/sessions.js`, saved to `SESSIONS_FILE`); the browser holds only the HttpOnly `bgg_session` cookie. `server/auth.js` refreshes tokens and ends a session only when start.gg refuses its refresh token.
+- The cache (`server/gql-cache.js`) keeps an answer 15 s (sets), 1 minute (pools, progressions), or 5 minutes (the rest), and 6 hours when the answer says it's finished: every set in it `state` 3 (or a DQ with a winner), the event, every event, or the phase `COMPLETED`, or the tournament's `endAt` passed with every event completed, or a day past with none being played (`FINISHED`). Some queries ask for a `state` or `endAt` only for this. Anything else keeps the short time.
+- The cache is saved to `GQL_CACHE_FILE` (default `gql-cache.json` next to `SESSIONS_FILE`) every 5 minutes and on SIGTERM, and loaded at start without expired answers; a bad file means starting empty. `GET /api/gql/stats` shows the totals, `uptimeS`, and `byQuery` (hits, misses, shared, upstream, and long per operation name).
 - Environment: `STARTGG_CLIENT_ID`, `STARTGG_CLIENT_SECRET`, `STARTGG_REDIRECT_URI`, `STARTGG_SITE_TOKEN`, `SESSIONS_FILE` (on a writable volume); the full list is at the top of `proxy-server.js`. Needs Node 22.18+.
 
 ## Themes
@@ -63,6 +65,6 @@ CI (`.github/workflows/ci.yml`, `e2e/compare.sh`) builds and tests every PR and 
 ## Where things live (for whoever picks this up next)
 
 - Deploy: `~/ops/bin/bracketgg-build` (after main's CI passes); the live checkout is `/srv/santi/bracketgg`, the container is `bracketgg` in `/srv/santi/compose.yml`.
-- Server state: sessions in `/srv/santi/bracketgg-data/sessions.json`. Secrets: `~/.config/secrets/bracketgg.env`, `bracketgg-site-token.env`, `startgg.env`.
+- Server state: sessions in `/srv/santi/bracketgg-data/sessions.json`, the start.gg cache in `gql-cache.json` beside it. Secrets: `~/.config/secrets/bracketgg.env`, `bracketgg-site-token.env`, `startgg.env`.
 - Work in progress sits in worktrees `~/projects/bracketgg-<name>` on a branch of the same purpose, each with an open PR. `git worktree list` and `gh pr list` show them.
 - Nothing builds or tests on the VM: CI does, and installs go to Santi's PC (`~/ops/bin/goat`).
