@@ -210,9 +210,19 @@ try {
     let cookie;
     {
         const { context, page, authorizeRequests } = visitor;
+        // The session check the app sends as /callback starts answers (logged out, no cookie yet) only
+        // after the login has finished, as it sometimes does on a slow machine: it must not undo the login.
+        const lateSession = async route => {
+            const response = await route.fetch();
+            await new Promise(r => setTimeout(r, 2000));
+            await route.fulfill({ response }).catch(() => { });
+        };
+        await context.route('**/api/auth/session', lateSession);
         await loginIcon(page).click();
         await page.waitForURL(app + '/tournament/test-tourney', { timeout: 15000 }).catch(() => { });
         await logoutIcon(page).waitFor({ timeout: 10000 }).catch(() => { });
+        await page.waitForTimeout(2500); // the late session check has answered
+        await context.unroute('**/api/auth/session', lateSession);
         const asked = authorizeRequests[0];
         const session = await sessionCookie(context);
         cookie = session && `bgg_session=${session.value}`;
