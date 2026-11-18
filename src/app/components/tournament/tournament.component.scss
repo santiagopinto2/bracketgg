@@ -518,21 +518,14 @@ app-tournament .tp-page {
         }
     }
 
-    // A team's two pictures, in the room of one (--s): each --d wide on a diagonal, the second in
-    // front, as on a bracket's set cards. The first has a circle cut out where the second sits, --gap
-    // wider than it, so whatever is behind the row shows between them.
+    // A team's two pictures, as the event overview's standings have them: side by side at a single
+    // picture's size (--d), the second tucked --lap under the first. The second has a circle cut out
+    // where the first sits, --gap wider than it, so whatever is behind the row shows between them.
     .avs {
-        --at: calc(var(--s) - var(--d));
-        --mid: calc(var(--s) - var(--d) / 2);
-        position: relative;
+        display: flex;
         flex: none;
-        width: var(--s);
-        height: var(--s);
 
         .av {
-            position: absolute;
-            left: 0;
-            top: 0;
             width: var(--d);
             height: var(--d);
 
@@ -541,37 +534,37 @@ app-tournament .tp-page {
             }
 
             &:first-child {
-                -webkit-mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at var(--mid) var(--mid), transparent 98%, #000 100%);
-                mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at var(--mid) var(--mid), transparent 98%, #000 100%);
+                z-index: 1;
             }
 
-            &:not(:first-child) {
-                left: var(--at);
-                top: var(--at);
-                z-index: 1;
+            + .av {
+                margin-left: calc(-1 * var(--lap));
+                // The first picture's center, from this one's left edge
+                -webkit-mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at calc(var(--lap) - var(--d) / 2) 50%, transparent 98%, #000 100%);
+                mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at calc(var(--lap) - var(--d) / 2) 50%, transparent 98%, #000 100%);
             }
         }
 
         &.xs {
-            --s: 22px;
-            --d: 14px;
+            --d: 22px;
+            --lap: 7px;
             --gap: 1.5px;
-            --f: 8.5px;
+            --f: 10px;
         }
 
         &.sm {
-            --s: 34px;
-            --d: 22px;
+            --d: 34px;
+            --lap: 10px;
             --gap: 2px;
-            --f: 11.5px;
+            --f: 13px;
         }
 
         // The champions: each picture has the gold ring inside its edge, where the cutout leaves it whole
         &.xl {
-            --s: 84px;
-            --d: 54px;
+            --d: 84px;
+            --lap: 26px;
             --gap: 3px;
-            --f: 23px;
+            --f: 26px;
 
             .av {
                 box-sizing: border-box;
@@ -1207,9 +1200,9 @@ app-tournament .tp-page {
         }
 
         .avs.xl {
-            --s: 72px;
-            --d: 46px;
-            --f: 20px;
+            --d: 72px;
+            --lap: 22px;
+            --f: 23px;
         }
 
         .champ {
@@ -1392,6 +1385,12 @@ app-tournament .tp-page {
 
         .champ strong {
             font-size: 25px;
+        }
+
+        .avs.xl {
+            --d: 60px;
+            --lap: 19px;
+            --f: 20px;
         }
 
         .controls {

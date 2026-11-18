@@ -7,7 +7,7 @@
     </span>
 </ng-template>
 
-<!-- A row's picture. A team has its first two players' on a diagonal, the second in front, in the room of one -->
+<!-- A row's picture. A team has its first two players' side by side, the first in front, as in the event overview's standings -->
 <ng-template #face let-row="row" let-size="size">
     @if (row.players.length) {
     <span class="avs" [class]="size">
