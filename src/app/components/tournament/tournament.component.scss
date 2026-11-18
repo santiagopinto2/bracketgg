@@ -466,6 +466,66 @@ app-tournament .tp-page {
         }
     }
 
+    // A team's two pictures, as the event overview's standings have them: side by side at a single
+    // picture's size (--d), the second tucked --lap under the first. The second has a circle cut out
+    // where the first sits, --gap wider than it, so whatever is behind the row shows between them.
+    .avs {
+        display: flex;
+        flex: none;
+
+        .av {
+            width: var(--d);
+            height: var(--d);
+
+            &::before {
+                font-size: var(--f);
+            }
+
+            &:first-child {
+                z-index: 1;
+            }
+
+            + .av {
+                margin-left: calc(-1 * var(--lap));
+                // The first picture's center, from this one's left edge
+                -webkit-mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at calc(var(--lap) - var(--d) / 2) 50%, transparent 98%, #000 100%);
+                mask-image: radial-gradient(circle calc(var(--d) / 2 + var(--gap)) at calc(var(--lap) - var(--d) / 2) 50%, transparent 98%, #000 100%);
+
+                // Their initial sits in the middle of the part that shows
+                &::before {
+                    transform: translateX(calc((var(--lap) + var(--gap)) / 2));
+                }
+            }
+        }
+
+        &.xs {
+            --d: 22px;
+            --lap: 7px;
+            --gap: 1.5px;
+            --f: 10px;
+        }
+
+        &.sm {
+            --d: 34px;
+            --lap: 10px;
+            --gap: 2px;
+            --f: 13px;
+        }
+
+        // The champions: each picture has the gold ring inside its edge, where the cutout leaves it whole
+        &.xl {
+            --d: 84px;
+            --lap: 26px;
+            --gap: 3px;
+            --f: 26px;
+
+            .av {
+                box-sizing: border-box;
+                border: 2px solid var(--tp-gold);
+            }
+        }
+    }
+
     .team {
         margin-right: 0.4em;
         color: var(--tp-faint);
@@ -1086,6 +1146,12 @@ app-tournament .tp-page {
             height: 72px;
         }
 
+        .avs.xl {
+            --d: 72px;
+            --lap: 22px;
+            --f: 23px;
+        }
+
         .champ {
             gap: 14px;
             padding: 20px 16px;
@@ -1240,6 +1306,12 @@ app-tournament .tp-page {
 
         .champ strong {
             font-size: 25px;
+        }
+
+        .avs.xl {
+            --d: 60px;
+            --lap: 19px;
+            --f: 20px;
         }
 
         .controls {

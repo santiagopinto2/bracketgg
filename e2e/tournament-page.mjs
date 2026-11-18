@@ -12,10 +12,21 @@ const ADDRESS = '150 W Test St, San Jose, CA 95113, USA';
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 const placements = [1, 2, 3, 4, 5, 5, 7, 7];
-// Standings as start.gg answers: Ace has a sponsor and a picture, Comet a sponsor and no user at all
+// Standings as start.gg answers: Ace has a sponsor and a picture, Comet a sponsor and no user at all.
+// A team's players come in the other order than its name's, as start.gg can send them; on a team
+// Echo and Flint have pictures too.
+const pictureColors = { Ace: '#2a7', Echo: '#b63', Flint: '#36b' };
+const participantsOf = (name, k) => {
+    const tags = name.split(' / ');
+    const players = tags.map((tag, p) => {
+        const color = tags.length > 1 ? pictureColors[tag] : name.includes('Ace') ? pictureColors.Ace : null;
+        return { id: 9100 + k * 2 + p, gamerTag: tag.split(' | ').pop(), user: tag.includes('Comet') ? null : { images: color ? [{ url: svg(40, 40, color), width: 40, height: 40 }] : [] } };
+    });
+    return players.reverse();
+};
 const standings = (names, { isFinal = true, places = placements } = {}) => ({ nodes: names.map((name, k) => ({
     placement: places[k], isFinal,
-    entrant: { id: 9000 + k, name, participants: name.split(' / ').map((_, p) => ({ id: 9100 + k * 2 + p, user: name.includes('Comet') ? null : { images: name.includes('Ace') ? [{ url: svg(40, 40, '#2a7'), width: 40, height: 40 }] : [] } })) },
+    entrant: { id: 9000 + k, name, participants: participantsOf(name, k) },
 })) });
 const game = (id, name, displayName, color) => ({ id, name, displayName, images: [{ url: svg(96, 128, color), type: 'primary' }] });
 const phases = (firstId, ...names) => names.map((name, k) => ({ id: firstId + k, name }));
@@ -110,7 +121,12 @@ const pageShown = page => page.evaluate(() => {
     // "3rd RED Comet": the placement, the sponsor, the tag
     const row = el => !el ? null : [text(el.querySelector('.pl, .place')), text(el.querySelector('.team')), text(el.querySelector('b'))].filter(Boolean).join(' ');
     const scroller = document.querySelector('mat-sidenav-content');
+    // A row's pictures: each one's color, or the initials shown without one
+    const faces = el => all('.av', el).map(av => av.querySelector('img') ? decodeURIComponent(av.querySelector('img').src).match(/fill="(#\w+)"/)?.[1] ?? 'picture' : av.dataset.i);
+    const size = el => el ? [el.getBoundingClientRect().width, el.getBoundingClientRect().height] : null;
     return {
+        podFaces: Object.fromEntries(all('.ev', root).map(card => [text(card.querySelector('.ev-name')), all('.pod li', card).map(faces)])),
+        podFaceSizes: [size(root.querySelector('.pod li > .av')), size(root.querySelector('.pod li > .avs'))],
         name: text(root.querySelector('.tournament-name')),
         chips: all('.hero-chips .chip', root).filter(visible).map(text),
         meta: all('.hero-meta li', root).map(text),
@@ -197,6 +213,9 @@ export async function tournamentPageChecks({ browser, openPage, appUrl, check, r
                 && same(shown.events[2], { name: 'Alpha Doubles', href: base + '/event/alpha-doubles', game: 'Super Test Bros. · Teams', n: '120 teams', pod: ['1st Ace / Blaze', '2nd Comet / Dash', '3rd Echo / Flint'], note: null, trail: 'Bracket', when: 'Fri 10:00 AM' })
                 && shown.events[3].trail === '5 phases' && shown.events[3].when === 'Fri 7:00 PM' && shown.events[7].note === 'No results reported' && !shown.events[7].pod.length,
                 { count: shown.eventCount, columns: shown.eventColumns, more: shown.more, events: shown.events });
+            check('tournament page: a team in a top 3 has its first two players\' pictures side by side in the order of its name, as tall as a single player\'s one',
+                same(shown.podFaces['Alpha Doubles'], [['#2a7', 'B'], ['C', 'D'], ['#b63', '#36b']]) && same(shown.podFaces['Alpha Singles'], [['#2a7'], ['BL'], ['CO']])
+                && same(shown.podFaceSizes, [[22, 22], [37, 22]]), { doubles: shown.podFaces['Alpha Doubles'], singles: shown.podFaces['Alpha Singles'], sizes: shown.podFaceSizes });
             check('tournament page: When and Where has the dates with the time zone, the address, and a directions link, and no map',
                 ['February 16 to 18, 2024', 'Friday 10:00 AM to Sunday 11:59 PM', 'Pacific Standard Time (PST)', '150 W Test St', 'San Jose, CA 95113', 'Get directions'].every(part => shown.where.includes(part))
                 && shown.directions === 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(ADDRESS) && await page.locator('.tp-page .where svg.map, .tp-page .where iframe, .tp-page .where canvas').count() === 0,

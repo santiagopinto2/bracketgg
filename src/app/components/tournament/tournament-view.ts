@@ -12,6 +12,9 @@ export interface PlayerRow {
     tag: string;
     pic: string;
     initials: string;
+    // A team's first two players in the order of its name, shown in place of the one picture; none
+    // for a single player
+    players: { tag: string, pic: string, initial: string }[];
 }
 
 export interface EventCard {
@@ -118,6 +121,7 @@ export function toRow(standing: any, teams: boolean): PlayerRow {
         // A team has no picture of its own: the first player's in its name who has one
         pic: participants.map((p: any) => p?.user?.images?.[0]?.url).find(Boolean) ?? '',
         initials: initialsOf(tag),
+        players: teams && participants.length > 1 ? participants.slice(0, 2).map((p: any) => ({ tag: p?.gamerTag ?? '', pic: p?.user?.images?.[0]?.url ?? '', initial: initialsOf(p?.gamerTag)[0] })) : [],
     };
 }
 

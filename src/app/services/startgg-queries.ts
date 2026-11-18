@@ -37,6 +37,7 @@ function tournamentText(full: boolean): string {
                                     name
                                     participants {
                                         id
+                                        gamerTag
                                         user {
                                             images(type: "profile") {
                                                 url
