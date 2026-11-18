@@ -166,8 +166,10 @@ export const eventPhasesQuery = `query EventPhases($slug: String!) {
 // One page of a phase's seeds with where each comes from: the pool of an earlier phase, and the
 // placement there, that fills it (`progressionSource`), the pool of this phase it plays in, and the
 // entrant once start.gg has placed one. The bracket view asks this of the phases that take players
-// from the shown phase, to draw the tags that say where a pool's players go next. 4 objects per seed
-// (Genesis X R2 Pools: 240 seeds cost 961, the other 144 cost 577; measured 2026-11-13).
+// from the shown phase, to draw the tags that say where a pool's players go next, and Show Projected
+// reads it to fill seeds start.gg hasn't placed anyone in (projection.ts), by the seed's id and its
+// number in its pool. 4 objects per seed, the id and number free (Genesis X R2 Pools: 240 seeds cost
+// 961, the other 144 cost 577; measured 2026-11-13 and again with the id and number 2026-11-18).
 export const phaseProgressionsQuery = `query PhaseProgressions($phaseId: ID!, $page: Int!, $perPage: Int!) {
                 phase(id: $phaseId) {
                     state
@@ -176,6 +178,8 @@ export const phaseProgressionsQuery = `query PhaseProgressions($phaseId: ID!, $p
                         perPage: $perPage
                     }) {
                         nodes {
+                            id
+                            groupSeedNum
                             entrant {
                                 id
                             }
@@ -456,6 +460,9 @@ export function eventOverviewQuery({ lostTo = false, rankings = false, socials =
             }`;
 }
 
+// A bracket phase: its type and state, and each pool with its set count and seedMap (the order its
+// seeds are drawn in, which says who the sets start.gg doesn't send hold; projection.ts). The seedMap
+// costs nothing (Genesis X R1 Pools' 64 pools: 2 objects with it and without; measured 2026-11-18).
 export const phaseQuery = `query Phase($phaseId: ID!) {
                 phase(id: $phaseId) {
                     id
@@ -471,6 +478,7 @@ export const phaseQuery = `query Phase($phaseId: ID!) {
                         nodes {
                             id
                             displayIdentifier
+                            seedMap
                             sets(
                                 page: 1
                                 perPage: 1

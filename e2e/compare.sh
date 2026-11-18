@@ -1,6 +1,6 @@
 #!/bin/sh
 # CI's checks, in four parts that run side by side as separate jobs (.github/workflows/ci.yml):
-#   sh e2e/compare.sh branch   unit-style checks (gql-cache, prefetch-plan), this branch's build, e2e/api-calls.mjs, and e2e/auth.mjs
+#   sh e2e/compare.sh branch   unit-style checks (gql-cache, prefetch-plan, projection), this branch's build, e2e/api-calls.mjs, and e2e/auth.mjs
 #   sh e2e/compare.sh main     the base branch's build through e2e/api-calls.mjs, as a report only
 #   sh e2e/compare.sh visual   both builds' screenshots, pixel for pixel (e2e/visual-diff.mjs)
 #   sh e2e/compare.sh live     the checks against the real start.gg, then a browser walk through real brackets
@@ -60,6 +60,8 @@ run_branch() {
   echo "gql-cache: ok"
   node e2e/prefetch-plan.mjs > $out/prefetch-plan.json 2>&1 || { cat $out/prefetch-plan.json; echo "prefetch-plan tests failed"; exit 1; }
   echo "prefetch-plan: ok"
+  node e2e/projection.mjs > $out/projection.json 2>&1 || { cat $out/projection.json; echo "projection tests failed"; exit 1; }
+  echo "projection: ok"
   build_branch
   node scripts/check-bundle.js dist/bracketgg/browser unused-in-browser || exit 1
   mkdir -p /tmp/leak && echo "const e={clientSecret:'not-the-placeholder'};" > /tmp/leak/main.js

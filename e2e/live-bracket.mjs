@@ -1,5 +1,6 @@
 // A walk through the real Genesis X Melee Singles brackets in a browser, for the progression tags:
-// screenshots in the dark theme (two in light too) and a JSON report of what happened. It asks the real start.gg (about
+// screenshots in the dark theme (two in light too) and a JSON report of what happened. Then Show
+// Projected across phases checked against two finished events, straight from start.gg. It asks the real start.gg (about
 // 30 requests) through the app's own server, which needs the site token:
 //
 //   PORT=4304 STATIC_DIR=<build> STARTGG_SITE_TOKEN=<token> node proxy-server.js
@@ -8,6 +9,9 @@
 // It only reports. start.gg being slow or rate limiting must not fail a build, so it always exits 0.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
+import { askStartgg } from './startgg-live.mjs';
+const { phaseProgressionsQuery, phaseQuery, poolSetsQuery } = await import('../src/app/services/startgg-queries.ts');
+const { projectAcrossPhases } = await import('../src/app/components/event/projection.ts');
 
 const [appUrl = 'http://localhost:4304', outDir = 'e2e-out/live-bracket'] = process.argv.slice(2);
 const brackets = '/tournament/genesis-x/event/melee-singles/brackets';
@@ -113,5 +117,49 @@ try {
     }
 } finally {
     await browser.close();
+}
+
+// 3. Show Projected across phases, straight from start.gg (STARTGG_TOKEN, about 25 requests): for finished
+//    events, the next phase's seeds are emptied as if start.gg hadn't placed anyone yet, and projected from
+//    the earlier phase's real pools. Every seed should get the player start.gg placed there.
+if (process.env.STARTGG_TOKEN) {
+    const ask = async (query, variables) => (await askStartgg(process.env.STARTGG_TOKEN, query, variables)).json?.data;
+    const crossPhase = async (name, phases, shownPhaseId) => {
+        try {
+            const [earlier, shown] = phases;
+            const loaded = new Map();
+            for (const phase of phases) loaded.set(String(phase.id), (await ask(phaseQuery, { phaseId: phase.id }))?.phase);
+            const pools = new Map();
+            for (const group of loaded.get(String(earlier.id))?.phaseGroups?.nodes ?? []) {
+                const sets = [];
+                // Small pages: sets with characters reported cost up to about 60 objects each
+                for (let page = 1; page <= 12; page++) {
+                    const data = await ask(poolSetsQuery, { id: Number(group.id), page, perPage: 12 });
+                    if (!data?.phaseGroup) throw new Error(`no sets for pool ${group.id}, page ${page}`);
+                    const nodes = data.phaseGroup.sets?.nodes ?? [];
+                    sets.push(...nodes);
+                    if (nodes.length < 12) break;
+                }
+                pools.set(String(group.id), sets);
+            }
+            const seedsOf = new Map();
+            for (const phase of phases) seedsOf.set(String(phase.id), (await ask(phaseProgressionsQuery, { phaseId: phase.id, page: 1, perPage: 200 }))?.phase?.seeds?.nodes ?? []);
+            const real = seedsOf.get(String(shownPhaseId));
+            seedsOf.set(String(shownPhaseId), real.map(seed => ({ ...seed, entrant: null })));
+            const shownPools = loaded.get(String(shownPhaseId))?.phaseGroups?.nodes?.map(group => group.id) ?? [];
+            const result = projectAcrossPhases(shownPhaseId, shownPools, {
+                phases, phase: id => loaded.get(id) ?? null, poolSets: id => pools.get(id) ?? null, seeds: id => seedsOf.get(id) ?? null,
+            });
+            const projected = new Map([...result.fills.values()].flatMap(fill => [...fill.bySeedId].map(([id, slot]) => [id, slot.entrant?.id])));
+            const differ = real.filter(seed => projected.has(String(seed.id)) && projected.get(String(seed.id)) !== seed.entrant?.id).map(seed => seed.id);
+            report.steps[name] = { seeds: real.length, filled: projected.size, same: projected.size - differ.length, differ, missing: [...result.missing.pools.keys(), ...result.missing.phases, ...result.missing.seeds] };
+        } catch (e) {
+            report.steps[name] = { failed: String(e.message).slice(0, 300) };
+        }
+    };
+    // Genesis X: Top 64 into Top 8 (every one of Top 8's players comes out of Top 64)
+    await crossPhase('projectedTop8', [{ id: 1560208, progressingInData: [{ origin: 1572545 }] }, { id: 1560209, progressingInData: [{ origin: 1560208 }] }], 1560209);
+    // A weekly (NYC Melee's Stock Exchange 73): two pools with byes into a Top 16, half of it on the losers side
+    await crossPhase('projectedTop16', [{ id: 2447128, progressingInData: [] }, { id: 2447129, progressingInData: [{ origin: 2447128 }] }], 2447129);
 }
 console.log(JSON.stringify(report, null, 2));
