@@ -51,6 +51,24 @@ export function scriptedDrag(page, from, by, { steps = 12, hold = 0 } = {}) {
     }, { from, by, steps, hold });
 }
 
+// What a finger at `at` ({ x, y } in the viewport) lands on: the element (tag and classes), whether
+// it is part of a sheet's handle (data-sheet-handle), and the dialog surface's transform. Until
+// Material's open animation ends, the surface is scaled down from 0.8 inside its panel, so the top of
+// the panel holds no sheet and a touch there never reaches SheetDragDirective. With `wait` (ms), waits
+// up to that long for the handle to be there.
+export async function handleAt(page, at, { wait = 0 } = {}) {
+    if (wait) await page.waitForFunction(({ x, y }) => !!document.elementFromPoint(x, y)?.closest('[data-sheet-handle]'), at, { timeout: wait, polling: 50 }).catch(() => { });
+    return page.evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y);
+        const surface = document.querySelector('.mat-mdc-dialog-surface');
+        return {
+            handle: !!el?.closest('[data-sheet-handle]'),
+            hit: el ? [el.tagName.toLowerCase(), ...el.classList].join('.') : null,
+            surface: surface ? getComputedStyle(surface).transform : null,
+        };
+    }, at);
+}
+
 // Records, from here on, whether each touchmove on the page was stopped (preventDefault): a move that
 // isn't is the browser's to scroll or pull to refresh with. `window.__touchMoves` holds them.
 export const watchTouchMoves = page => page.evaluate(() => {

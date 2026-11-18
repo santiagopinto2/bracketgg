@@ -10,7 +10,7 @@
 import { chromium, webkit, devices } from 'playwright';
 import { readFileSync } from 'node:fs';
 import { attendeeAnswer, attendeeChecks, attendeeEventPhases, attendeeKind, attendeeTournament } from './attendees.mjs';
-import { scriptedDrag, scrollBehind, sheetPane, touchDrag, touchMoves, watchTouchMoves } from './touch-drag.mjs';
+import { handleAt, scriptedDrag, scrollBehind, sheetPane, touchDrag, touchMoves, watchTouchMoves } from './touch-drag.mjs';
 import { tournamentPageChecks, tournamentPageKind, tournamentPageTournament, tournamentResultsAnswer } from './tournament-page.mjs';
 
 const appUrl = process.argv[2] ?? 'http://localhost:4300';
@@ -2864,20 +2864,22 @@ try {
                 await quiet();
                 await open(page, 106);
                 await quiet(600);
-                await page.waitForTimeout(400);
                 const rest = await sheetPane(page);
                 const handle = { x: page.viewportSize().width / 2, y: rest.top + 9 };
                 const short = { by: Math.round(rest.height * 0.12) };
+                // The touches go to whatever is under the handle point, which is the handle only once
+                // the dialog's open animation has scaled the sheet to its full size
+                short.at = await handleAt(page, handle, { wait: 5000 });
                 short.stopped = await scriptedDrag(page, handle, short.by, { hold: 300 });
                 await page.waitForTimeout(500);
                 Object.assign(short, { after: await sheetPane(page), open: await page.locator('mat-dialog-container').count() === 1 });
-                const long = { by: Math.round(rest.height * 0.6) };
+                const long = { by: Math.round(rest.height * 0.6), at: await handleAt(page, handle) };
                 long.stopped = await scriptedDrag(page, handle, long.by);
                 long.closed = await page.locator('mat-dialog-container').waitFor({ state: 'detached', timeout: 3000 }).then(() => true, () => false);
                 report.setDialog.dragSafari = { rest, short, long };
                 check('set dialog on an iPhone (WebKit, scripted touches): a short drag from the handle springs back, a long one closes the dialog, and every move is stopped',
-                    short.open && short.after.top === rest.top && short.after.transform === '' && long.closed
-                    && short.stopped.length > 0 && short.stopped.every(Boolean) && long.stopped.every(Boolean), report.setDialog.dragSafari);
+                    short.at.handle && long.at.handle && short.open && short.after.top === rest.top && short.after.transform === '' && long.closed
+                    && short.stopped.length > 0 && short.stopped.every(Boolean) && long.stopped.length > 0 && long.stopped.every(Boolean), report.setDialog.dragSafari);
             } catch (e) {
                 report.setDialog.dragSafari = { crashed: String(e.message).slice(0, 300) };
                 check('dragging the set dialog on an iPhone', false, report.setDialog.dragSafari);
