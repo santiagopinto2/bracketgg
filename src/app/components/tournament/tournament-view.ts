@@ -85,7 +85,7 @@ export interface TournamentView {
     address: { title: string, rest: string, full: string, directions: string } | null;
     contact: { text: string, href: string } | null;
     // Start times by day
-    schedule: { note: string, days: { label: string, slots: { time: string, events: { name: string, link: string }[] }[] }[] };
+    schedule: { zone: string, days: { label: string, slots: { time: string, events: { name: string, link: string }[] }[] }[] };
 }
 
 // start.gg's event type for one player per entrant
@@ -272,6 +272,7 @@ export function buildView(t: any, now: number): TournamentView {
     }
 
     // The schedule: each day's start times, each with its events, biggest first
+    // The schedule's times are in the tournament's time zone, named beside the heading: its abbreviation ("PST"), or its name where there's none
     const zoneGeneric = t.startAt ? c.part(t.startAt, { timeZoneName: 'longGeneric' }, 'timeZoneName') || c.part(t.startAt, { timeZoneName: 'long' }, 'timeZoneName') : '';
     const zoneShort = t.startAt ? c.part(t.startAt, { timeZoneName: 'short' }, 'timeZoneName') : '';
     const days: TournamentView['schedule']['days'] = [];
@@ -316,7 +317,7 @@ export function buildView(t: any, now: number): TournamentView {
         address,
         contact: contactOf(t),
         schedule: {
-            note: zoneGeneric ? `When each event starts, in ${zoneGeneric}${zoneShort && zoneShort !== zoneGeneric ? ` (${zoneShort})` : ''}.` : 'When each event starts.',
+            zone: zoneShort || zoneGeneric,
             days,
         },
     };
