@@ -119,6 +119,8 @@ export class TournamentComponent implements AfterViewInit, OnDestroy {
 
     // A picture that failed to load gives way to the initials or the plain box behind it
     hide(event: Event) {
-        (event.target as HTMLElement).style.display = 'none';
+        const img = event.target as HTMLElement;
+        img.classList.add('failed');
+        img.style.display = 'none';
     }
 }
