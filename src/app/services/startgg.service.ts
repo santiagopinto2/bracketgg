@@ -5,6 +5,7 @@ import { LoadingService } from './loading.service';
 import { RequestGate } from './request-gate';
 import { scoresFromDisplayScore, scoresInProgress } from './display-score';
 import { generatePoolSets } from './generated-bracket';
+import { orderPhases } from './phase-order';
 import { MAX_POOL_SLICES, MAX_RESULT_EVENTS, MAX_SET_SCORES, SETS_PER_STANDING, attendeeDetailsQuery, attendeesQuery, eventOverviewQuery, eventPhasesQuery, phaseEntrantsQuery, phaseProgressionsQuery, phaseQuery, poolSeedsQuery, poolSetsQuery, poolSlicesQuery, seededAttendeesQuery, setDetailsQuery, setScoresQuery, tournamentLiteQuery, tournamentQuery, tournamentResultsQuery } from './startgg-queries';
 
 // A failed start.gg request, with a message fit to show the user.
@@ -187,6 +188,7 @@ export class StartggService {
                 data = await this.query(tournamentLiteQuery, { slug: String(tourneySlug) });
             }
             if (!data?.tournament) throw new StartggError('Tournament not found on start.gg.');
+            for (const event of data.tournament.events ?? []) if (event?.phases) event.phases = orderPhases(event.phases);
             return data.tournament;
         });
     }
@@ -207,6 +209,7 @@ export class StartggService {
         return this.cached(`event:${eventSlug}:${numEntrants}`, async () => {
             const data = await this.query(eventPhasesQuery, { slug: String(eventSlug) });
             if (!data?.event) throw new StartggError('Event not found on start.gg.');
+            if (data.event.phases) data.event.phases = orderPhases(data.event.phases);
             return data.event;
         });
     }
@@ -339,6 +342,7 @@ export class StartggService {
                 }
             }
             if (!data?.event) throw new StartggError('Event not found on start.gg.');
+            if (data.event.phases) data.event.phases = orderPhases(data.event.phases);
             return data.event;
         });
     }

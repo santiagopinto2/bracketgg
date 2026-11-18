@@ -2,6 +2,7 @@
 // values the template prints. No Angular here, so it can be read and tested on its own.
 
 import { inNameOrder } from '../../services/team-order';
+import { lastPhase } from '../../services/phase-order';
 
 export interface PlayerRow {
     placement: number;
@@ -199,7 +200,7 @@ export function buildView(t: any, now: number): TournamentView {
         const entrants = Number(e.numEntrants) || 0;
         const phases: any[] = e.phases ?? [];
         const podium = finalRows(e.standings?.nodes, teams, e.state === 'COMPLETED').slice(0, 3);
-        const last = phases[phases.length - 1];
+        const last = lastPhase(phases);
         const game = e.videogame?.name ?? '';
         return {
             id: e.id,
