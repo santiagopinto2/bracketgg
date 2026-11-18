@@ -454,7 +454,7 @@ export async function attendeeChecks({ browser, openPage, appUrl, eventPath, che
         page.on('pageerror', e => errors.push(String(e.message).slice(0, 200)));
         const at = () => { const url = new URL(page.url()); return url.pathname + url.search; };
         await guarded('links', async () => {
-            // The tournament page: the sidebar's link with the count, and the count among the page's stat numbers
+            // The tournament page: the sidebar's link with the count, and the page's Attendees tab
             await page.goto(appUrl + '/tournament/test-tourney');
             await quiet();
             const side = await page.locator('mat-sidenav .attendees-link').evaluate(el => {
@@ -465,15 +465,15 @@ export async function attendeeChecks({ browser, openPage, appUrl, eventPath, che
                     countSmaller: parseFloat(getComputedStyle(el.querySelector('.attendees-count')).fontSize) < parseFloat(getComputedStyle(el.querySelector('.attendees-text')).fontSize),
                     countColor: getComputedStyle(el.querySelector('.attendees-count')).color, underHome: item.top >= home.bottom - 1 && item.bottom <= firstEvent.top, active: el.classList.contains('attendees-active') };
             });
-            const meta = await page.locator('.tp-page .stats a.attendees-link').evaluate(el => ({ text: `${el.querySelector('b').textContent.trim()} ${el.querySelector('span').textContent.trim()}`, href: el.getAttribute('href') }));
-            await page.locator('.tp-page .stats a.attendees-link').click();
+            const meta = await page.locator('.tp-page .tabs a.tab-attendees').evaluate(el => ({ text: `${el.querySelector('span').textContent.trim()} ${el.querySelector('em').textContent.trim()}`, href: el.getAttribute('href') }));
+            await page.locator('.tp-page .tabs a.tab-attendees').click();
             await quiet();
             const list = await listShown(page);
             const active = await page.locator('mat-sidenav .attendees-link').evaluate(el => el.classList.contains('attendees-active'));
             out.links = { side, meta, at: at(), count: list.count, names: list.rows.map(r => r.name), back: await page.locator('.back-link').getAttribute('href'), active };
-            check('attendees: the sidebar has "Attendees" under Home with the tournament\'s count small and dim on the right, and the tournament page\'s count links to the page',
+            check('attendees: the sidebar has "Attendees" under Home with the tournament\'s count small and dim on the right, and the tournament page\'s Attendees tab links to the page',
                 side.text === 'Attendees' && side.count === '5' && side.href === '/tournament/test-tourney/attendees' && side.countRight && side.countSmaller && side.countColor === 'rgb(169, 169, 169)' && side.underHome && !side.active
-                && meta.text === '5 Attendees' && meta.href === '/tournament/test-tourney/attendees' && out.links.at === '/tournament/test-tourney/attendees' && list.count === '5 attendees'
+                && meta.text === 'Attendees 5' && meta.href === '/tournament/test-tourney/attendees' && out.links.at === '/tournament/test-tourney/attendees' && list.count === '5 attendees'
                 && same(out.links.names, ['SPN | Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']) && out.links.back === '/tournament/test-tourney' && active, out.links);
 
             // The event page's entrant count opens the page with that event picked

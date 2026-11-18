@@ -38,7 +38,7 @@ export class TournamentComponent implements AfterViewInit, OnDestroy {
     // The result shown on a phone, and the tab last jumped to
     resultTab = signal(0);
     activeTab = signal('tp-top');
-    // What was just copied: 'link', 'address', or ''
+    // What was just copied: 'address' or ''
     copied = signal('');
 
     // Each result event's top 8 by event id, once loaded; until then its card shows the top 3
@@ -108,13 +108,6 @@ export class TournamentComponent implements AfterViewInit, OnDestroy {
 
     setSort(event: Event) {
         this.sort.set((event.target as HTMLSelectElement).value as EventSort);
-    }
-
-    // The phone's share sheet where there is one; otherwise the page's link is copied
-    share(title: string) {
-        const url = window.location.href;
-        if (typeof navigator.share === 'function') navigator.share({ title, url }).catch(() => { });
-        else this.copy(url, 'link');
     }
 
     copy(text: string, what: string) {

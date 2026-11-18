@@ -70,11 +70,9 @@ export interface TournamentView {
     // "San Jose, CA"
     place: string;
     owner: { tag: string, pic: string, initials: string } | null;
-    startggUrl: string;
     attendeesLink: string;
     numAttendees: number;
     attendees: string;
-    games: number;
     events: EventCard[];
     hasSingles: boolean;
     hasTeams: boolean;
@@ -302,11 +300,9 @@ export function buildView(t: any, now: number): TournamentView {
         dateRange: t.startAt ? dateRangeOf(c, t.startAt, t.endAt) : '',
         place: [t.city, t.addrState || (t.city ? t.countryCode : '')].filter(Boolean).join(', ') || (t.isOnline ? 'Online' : ''),
         owner: ownerTag ? { tag: ownerTag, pic: t.owner.images?.[0]?.url ?? '', initials: initialsOf(ownerTag) } : null,
-        startggUrl: 'https://www.start.gg/' + t.slug,
         attendeesLink: '/' + t.slug + '/attendees',
         numAttendees: Number(t.numAttendees) || 0,
         attendees: number(t.numAttendees),
-        games: new Set(rawEvents.map(e => e.videogame?.id ?? e.videogame?.name).filter(Boolean)).size,
         events,
         hasSingles: events.some(e => !e.teams),
         hasTeams: events.some(e => e.teams),
