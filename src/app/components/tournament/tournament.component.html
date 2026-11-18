@@ -83,17 +83,6 @@
                     </a>
                 </div>
             </div>
-
-            <div class="stats">
-                @if (v.numAttendees) {
-                <a class="attendees-link" [routerLink]="v.attendeesLink"><b>{{ v.attendees }}</b><span>{{ v.numAttendees === 1 ? 'Attendee' : 'Attendees' }}</span></a>
-                }
-                <button type="button" (click)="go('tp-events')"><b>{{ v.events.length }}</b><span>{{ v.events.length === 1 ? 'Event' : 'Events' }}</span></button>
-                <button type="button" (click)="go('tp-events')"><b>{{ v.games }}</b><span>{{ v.games === 1 ? 'Game' : 'Games' }}</span></button>
-                @if (v.streams.length) {
-                <button type="button" (click)="go('tp-streams')"><b>{{ v.streams.length }}</b><span>{{ v.streams.length === 1 ? 'Stream' : 'Streams' }}</span></button>
-                }
-            </div>
         </section>
 
         <nav class="tabs" aria-label="Tournament sections">

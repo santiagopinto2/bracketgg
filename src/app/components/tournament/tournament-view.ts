@@ -74,7 +74,6 @@ export interface TournamentView {
     attendeesLink: string;
     numAttendees: number;
     attendees: string;
-    games: number;
     events: EventCard[];
     hasSingles: boolean;
     hasTeams: boolean;
@@ -306,7 +305,6 @@ export function buildView(t: any, now: number): TournamentView {
         attendeesLink: '/' + t.slug + '/attendees',
         numAttendees: Number(t.numAttendees) || 0,
         attendees: number(t.numAttendees),
-        games: new Set(rawEvents.map(e => e.videogame?.id ?? e.videogame?.name).filter(Boolean)).size,
         events,
         hasSingles: events.some(e => !e.teams),
         hasTeams: events.some(e => e.teams),
